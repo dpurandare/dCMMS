@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RiskAssessment",
+  "description": "Safety and operational risk assessments required by OSHA and other standards",
+  "type": "object",
+  "properties": {
+    "assessmentId": {"type": "string"},
+    "siteId": {"type": "string"},
+    "assetId": {"type": ["string", "null"]},
+    "type": {"type": "string", "enum": ["routine", "non-routine", "emergency", "change"]},
+    "assessedBy": {"type": "string"},
+    "assessmentDate": {"type": "string", "format": "date-time"},
+    "validUntil": {"type": "string", "format": "date-time"},
+    "activity": {"type": "string"},
+    "hazards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "hazardType": {"type": "string"},
+          "description": {"type": "string"},
+          "likelihood": {"type": "string", "enum": ["rare", "unlikely", "possible", "likely", "almost-certain"]},
+          "severity": {"type": "string", "enum": ["negligible", "minor", "moderate", "major", "catastrophic"]},
+          "existingControls": {"type": "array", "items": {"type": "string"}},
+          "additionalControls": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "requiredPpe": {"type": "array", "items": {"type": "string"}},
+    "permitRequired": {"type": "boolean"},
+    "emergencyProcedures": {"type": "array", "items": {"type": "string"}},
+    "status": {"type": "string", "enum": ["draft", "reviewed", "approved", "expired"]},
+    "approvedBy": {"type": "string"},
+    "reviewDate": {"type": "string", "format": "date-time"}
+  },
+  "required": ["assessmentId", "type", "assessedBy", "assessmentDate", "validUntil", "activity", "hazards", "status"]
+}

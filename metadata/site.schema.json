@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Site",
+  "type": "object",
+  "properties": {
+    "siteId": {"type": "string"},
+    "name": {"type": "string"},
+    "type": {"type": "string", "enum": ["solar", "wind", "hybrid", "storage"]},
+    "location": {
+      "type": "object",
+      "properties": {
+        "lat": {"type": "number"},
+        "lon": {"type": "number"},
+        "address": {"type": "string"},
+        "state": {"type": "string"},
+        "country": {"type": "string"},
+        "climateZone": {"type": "string"},
+        "seismicZone": {"type": "string"}
+      },
+      "required": ["lat", "lon", "state", "country"]
+    },
+    "capacity": {
+      "type": "object",
+      "properties": {
+        "installedCapacityMw": {"type": "number"},
+        "gridCapacityMw": {"type": "number"},
+        "storageCapacityMwh": {"type": "number"}
+      },
+      "required": ["installedCapacityMw"]
+    },
+    "grid": {
+      "type": "object",
+      "properties": {
+        "connectionPoint": {"type": "string"},
+        "voltageLevel": {"type": "number"},
+        "substationName": {"type": "string"},
+        "meteringPoint": {"type": "string"},
+        "discomName": {"type": "string"}
+      },
+      "required": ["connectionPoint", "voltageLevel"]
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "gridCode": {"type": "string"},
+        "ceigApprovalNo": {"type": "string"},
+        "ceigApprovalExpiry": {"type": "string", "format": "date-time"},
+        "environmentalClearance": {"type": "string"},
+        "pollutionControlCertificate": {"type": "string"},
+        "lastSafetyAudit": {"type": "string", "format": "date-time"},
+        "nextSafetyAuditDue": {"type": "string", "format": "date-time"}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "waterSource": {"type": "string"},
+        "wasteManagementProtocol": {"type": "string"},
+        "hazardousMaterialStorage": {"type": "boolean"},
+        "environmentalMonitoringRequired": {"type": "boolean"}
+      }
+    },
+    "contacts": {
+      "type": "object",
+      "properties": {
+        "siteManager": {"type": "string"},
+        "safetyOfficer": {"type": "string"},
+        "gridOperator": {"type": "string"},
+        "emergencyContact": {"type": "string"}
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "required": ["siteId", "name", "type", "location", "capacity", "grid", "compliance", "contacts"]
+}

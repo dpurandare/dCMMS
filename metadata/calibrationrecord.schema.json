@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CalibrationRecord",
+  "description": "Records calibration events for assets/instruments as required by IEC standards",
+  "type": "object",
+  "properties": {
+    "calibrationId": {"type": "string"},
+    "assetId": {"type": "string"},
+    "type": {"type": "string", "enum": ["initial", "periodic", "post-repair", "verification"]},
+    "performedBy": {"type": "string"},
+    "calibrationDate": {"type": "string", "format": "date-time"},
+    "nextDueDate": {"type": "string", "format": "date-time"},
+    "procedure": {"type": "string"},
+    "standard": {"type": "string"},
+    "equipment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "serialNumber": {"type": "string"},
+          "calibrationDue": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "measurements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "parameter": {"type": "string"},
+          "nominal": {"type": "number"},
+          "measured": {"type": "number"},
+          "tolerance": {"type": "number"},
+          "unit": {"type": "string"}
+        }
+      }
+    },
+    "result": {"type": "string", "enum": ["pass", "fail", "conditional"]},
+    "certificate": {"type": "string"},
+    "remarks": {"type": "string"}
+  },
+  "required": ["calibrationId", "assetId", "type", "performedBy", "calibrationDate", "nextDueDate", "result"]
+}

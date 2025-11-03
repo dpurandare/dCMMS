@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnergyOutputFeed",
+  "description": "Schema for telemetry feed reporting current energy output from a site/asset.",
+  "type": "object",
+  "properties": {
+    "feedId": {"type":"string"},
+    "generatedAt": {"type":"string","format":"date-time"},
+    "siteId": {"type":"string"},
+    "assetId": {"type":["string","null"]},
+    "source": {"type":"string","description":"origin system/gateway id"},
+    "intervalSeconds": {"type":"integer","description":"reporting interval in seconds"},
+    "measurements": {
+      "type": "object",
+      "properties": {
+        "activePowerKw": {"type":"number"},
+        "reactivePowerKvar": {"type":"number"},
+        "energyKwh": {"type":"number","description":"cumulative energy reading"},
+        "voltageV": {"type":"number"},
+        "currentA": {"type":"number"},
+        "powerFactor": {"type":"number"},
+        "rpm": {"type":"number","description":"rotor speed for wind turbines if applicable"},
+        "irradianceWm2": {"type":"number","description":"plane-of-array or global horizontal irradiance for solar"}
+      },
+      "additionalProperties": true
+    },
+    "quality": {"type":"string","enum":["good","suspect","bad"],"default":"good"},
+    "metadata": {"type":"object","description":"optional additional metadata (e.g., sensorId mapping, aggregation method)"}
+  },
+  "required": ["feedId","generatedAt","siteId","measurements"]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SensorReading",
+  "type": "object",
+  "properties": {
+    "readingId": {"type":"string"},
+    "assetId": {"type":"string"},
+    "sensorId": {"type":"string"},
+    "timestamp": {"type":"string","format":"date-time"},
+    "metrics": {"type":"object"},
+    "quality": {"type":"string","enum":["good","suspect","bad"]}
+  },
+  "required": ["readingId","assetId","sensorId","timestamp","metrics"]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StatusFeed",
+  "description": "Schema for periodic status updates from sites/assets.",
+  "type": "object",
+  "properties": {
+    "feedId": {"type":"string"},
+    "timestamp": {"type":"string","format":"date-time"},
+    "siteId": {"type":"string"},
+    "assetId": {"type":["string","null"]},
+    "operationalState": {"type":"string","enum":["running","idle","fault","maintenance","offline"]},
+    "uptime": {"type":"number","description":"uptime in seconds since last start"},
+    "alarmCount": {"type":"integer","description":"number of active alarms"},
+    "metadata": {"type":"object"}
+  },
+  "required": ["feedId","timestamp","siteId","operationalState"]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EventAlarm",
+  "type": "object",
+  "properties": {
+    "eventId": {"type":"string"},
+    "timestamp": {"type":"string","format":"date-time"},
+    "siteId": {"type":"string"},
+    "assetId": {"type":["string","null"]},
+    "alarmCode": {"type":"string"},
+    "severity": {"type":"string","enum":["info","warning","minor","major","critical"]},
+    "message": {"type":"string"},
+    "metricsSnapshot": {"type":"object"},
+    "resolved": {"type":"boolean"}
+  },
+  "required": ["eventId","timestamp","siteId","alarmCode","severity"]
+}

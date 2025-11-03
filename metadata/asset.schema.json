@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Asset",
+  "type": "object",
+  "properties": {
+    "assetId": {"type": "string"},
+    "siteId": {"type": "string"},
+    "parentAssetId": {"type": ["string","null"]},
+    "type": {"type": "string"},
+    "category": {"type": "string", "enum": ["turbine", "inverter", "transformer", "panel", "battery", "bos", "sensor"]},
+    "manufacturer": {"type": "string"},
+    "model": {"type": "string"},
+    "serialNumber": {"type": "string"},
+    "commissionDate": {"type": "string", "format":"date-time"},
+    "warrantyExpiry": {"type": ["string","null"], "format":"date-time"},
+    "specifications": {
+      "type": "object",
+      "properties": {
+        "ratedPowerKw": {"type": "number"},
+        "operatingVoltage": {"type": "number"},
+        "safetyRating": {"type": "string"},
+        "environmentalClass": {"type": "string"}
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "certifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {"type": "string"},
+              "issuer": {"type": "string"},
+              "number": {"type": "string"},
+              "validUntil": {"type": "string", "format": "date-time"}
+            }
+          }
+        },
+        "standards": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "lastCalibrationDate": {"type": "string", "format": "date-time"},
+        "nextCalibrationDue": {"type": "string", "format": "date-time"},
+        "calibrationInterval": {"type": "string"},
+        "calibrationProcedure": {"type": "string"}
+      }
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "lat": {"type": "number"},
+        "lon": {"type": "number"},
+        "elevation": {"type": "number"},
+        "indoor": {"type": "boolean"},
+        "accessRequirements": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "maintenance": {
+      "type": "object",
+      "properties": {
+        "criticality": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+        "maintenanceStrategy": {"type": "string", "enum": ["run-to-failure", "preventive", "predictive", "condition-based"]},
+        "pmInterval": {"type": "string"},
+        "requiredPpe": {"type": "array", "items": {"type": "string"}},
+        "lotoRequired": {"type": "boolean"}
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "required": ["assetId", "siteId", "type", "category", "specifications", "compliance", "maintenance"]
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MaintenanceTask",
+  "description": "Detailed schema for maintenance tasks with safety and compliance requirements",
+  "type": "object",
+  "properties": {
+    "taskId": {"type": "string"},
+    "title": {"type": "string"},
+    "description": {"type": "string"},
+    "type": {"type": "string", "enum": ["inspection", "preventive", "corrective", "testing", "calibration"]},
+    "estimatedDurationMinutes": {"type": "integer"},
+    "requiredSkills": {"type": "array", "items": {"type": "string"}},
+    "requiredParts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "partId": {"type": "string"},
+          "quantity": {"type": "number"},
+          "critical": {"type": "boolean"}
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "riskLevel": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+        "requiredPpe": {"type": "array", "items": {"type": "string"}},
+        "permits": {"type": "array", "items": {"type": "string"}},
+        "lotoRequired": {"type": "boolean"},
+        "confinedSpace": {"type": "boolean"},
+        "workingAtHeight": {"type": "boolean"},
+        "specialProcedures": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["riskLevel", "requiredPpe"]
+    },
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "regulatoryRequirement": {"type": "boolean"},
+        "standard": {"type": "string"},
+        "qualification": {"type": "string"},
+        "certification": {"type": "string"}
+      }
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stepId": {"type": "string"},
+          "description": {"type": "string"},
+          "type": {"type": "string", "enum": ["inspection", "measurement", "action", "verification"]},
+          "mandatory": {"type": "boolean"},
+          "expectedValue": {"type": "string"},
+          "tolerance": {"type": "string"},
+          "safetyCheck": {"type": "boolean"}
+        },
+        "required": ["stepId", "description", "type", "mandatory"]
+      }
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string"},
+          "documentId": {"type": "string"},
+          "version": {"type": "string"}
+        }
+      }
+    }
+  },
+  "required": ["taskId", "title", "type", "safety", "checklist"]
+}
