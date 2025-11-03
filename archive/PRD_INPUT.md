@@ -206,9 +206,9 @@ Access patterns: mobile-first for field technicians (offline-capable), web dashb
 
 The dCMMS architecture follows a modern, cloud-native approach with edge-to-cloud data flow, supporting both cloud and on-premise deployments.
 
-![Architecture Diagram](media/Arch1.png)
+![Architecture Diagram](Arch1.png)
 
-![Detailed Architecture Flow](media/Arch2.png)
+![Detailed Architecture Flow](Arch2.png)
 
 ### Step-by-Step Architecture
 
