@@ -1,15 +1,52 @@
 # dCMMS Authentication & Authorization Specifications
 
-**Version:** 1.0
+**Version:** 2.0 (Updated with Industry Research)
 **Date:** November 8, 2025
 **Status:** Draft - For Review
 **Priority:** P0 (Critical for MVP)
 
 ---
 
+## ⚠️ IMPORTANT: Industry-Based Role Specifications
+
+**This document provides technical authentication and authorization patterns.**
+
+**For comprehensive role definitions based on solar, wind, and BESS industry research, see:**
+- **📘 [08_ORGANIZATIONAL_STRUCTURE.md](./08_ORGANIZATIONAL_STRUCTURE.md)** - Detailed role definitions with industry context, staffing models, and organizational charts
+- **📊 [09_ROLE_FEATURE_ACCESS_MATRIX.md](./09_ROLE_FEATURE_ACCESS_MATRIX.md)** - Complete feature-level access matrix for all 17 roles
+
+**Industry-Research-Based Roles (17 total):**
+1. `portfolio-manager` - Multi-site portfolio management
+2. `plant-manager` - Site operations manager (P&L ownership)
+3. `site-engineer` - Technical lead for site operations
+4. `om-coordinator` - Planning and scheduling coordinator
+5. `maintenance-supervisor` - Field crew supervisor
+6. `field-technician-electrical` - Electrical maintenance technician
+7. `field-technician-mechanical` - Mechanical maintenance technician
+8. `wind-turbine-technician` - Wind turbine specialist (windtech)
+9. `bess-specialist` - Battery storage specialist
+10. `scada-operator` - Remote monitoring and control room operator
+11. `inventory-coordinator` - Spare parts and warehouse management
+12. `ehs-officer` - Safety and environmental compliance
+13. `reliability-engineer` - Performance analysis and predictive maintenance
+14. `compliance-officer` - Regulatory compliance and reporting
+15. `contractor-oem` - OEM vendor service technicians
+16. `contractor-om` - Third-party O&M contractors
+17. `system-administrator` - IT administration (existing)
+
+**Key Industry Findings:**
+- **95% of field technicians** use mobile-first (offline capability mandatory)
+- **Vernacular language support** critical for India, LatAm markets
+- **Multi-tenant architecture** required (O&M contractors manage multiple client sites)
+- **Contractor access** must be time-limited and restricted
+- **SCADA operators** monitor 10-50 sites remotely from control centers
+- **Staffing benchmarks:** 1 plant manager + 8-10 techs per 50 MW solar farm
+
+---
+
 ## Table of Contents
 
-1. [Role Definitions](#1-role-definitions)
+1. [Role Definitions (Summary)](#1-role-definitions-summary)
 2. [Permission Matrix](#2-permission-matrix)
 3. [Attribute-Based Access Control](#3-attribute-based-access-control)
 4. [Token Management](#4-token-management)
@@ -19,7 +56,7 @@
 
 ---
 
-## 1. Role Definitions
+## 1. Role Definitions (Summary)
 
 ### 1.1 Core Roles
 
