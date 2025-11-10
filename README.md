@@ -9,6 +9,18 @@ The system enables proactive maintenance through predictive analytics, AI-driven
 ## Repository Structure
 
 - **`PRD_FINAL.md`**: The primary, self-contained Product Requirements Document, including all functional, technical, and architectural requirements.
+- **`GAP_ANALYSIS.md`**: Comprehensive gap analysis identifying 20+ categories of requirements gaps with prioritization (P0-P3).
+- **`specs/`**: Detailed technical specifications addressing gaps identified in PRD:
+  - `01_API_SPECIFICATIONS.md`: Complete REST API design for dCMMS MVP
+  - `02_STATE_MACHINES.md`: Formal state machine definitions for work orders, assets, inventory
+  - `03_AUTH_AUTHORIZATION.md`: Authentication and authorization patterns (updated v2.0)
+  - `04_MOBILE_OFFLINE_SYNC.md`: Mobile offline sync algorithm and conflict resolution
+  - `05_DEPLOYMENT_RUNBOOKS.md`: Step-by-step deployment procedures
+  - `06_MIGRATION_ONBOARDING.md`: Site onboarding and data migration plan
+  - `07_TESTING_STRATEGY.md`: Comprehensive testing framework
+  - `08_ORGANIZATIONAL_STRUCTURE.md`: Industry-researched user roles for solar, wind, BESS operations
+  - `09_ROLE_FEATURE_ACCESS_MATRIX.md`: Comprehensive role-to-feature access matrix (17 roles × 73 features)
+  - `10_DATA_INGESTION_ARCHITECTURE.md`: High-speed, high-volume telemetry ingestion architecture
 - **`archive/`**: Historical documents and superseded files for reference.
   - `PRD_INPUT.md`: Original input document, archived with a notice.
   - `research.md`: Research notes and background materials.
