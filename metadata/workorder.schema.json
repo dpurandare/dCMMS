@@ -1,20 +1,404 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "WorkOrder",
+  "description": "Complete work order schema for dCMMS with all lifecycle fields",
   "type": "object",
   "properties": {
-    "workOrderId": {"type":"string"},
-    "siteId": {"type":"string"},
-    "assetId": {"type":["string","null"]},
-    "type": {"type":"string"},
-    "priority": {"type":"string","enum":["low","medium","high","urgent"]},
-    "status": {"type":"string"},
-    "createdBy": {"type":"string"},
-    "assignedTo": {"type":["string","null"]},
-    "scheduledStart": {"type":["string","null"],"format":"date-time"},
-    "scheduledEnd": {"type":["string","null"],"format":"date-time"},
-    "tasks": {"type":"array","items":{"type":"object"}},
-    "attachments": {"type":"array","items":{"type":"string"}}
+    "workOrderId": {
+      "type": "string",
+      "description": "Unique work order identifier",
+      "pattern": "^WO-[0-9]{8}-[0-9]{4}$"
+    },
+    "siteId": {
+      "type": "string",
+      "description": "Site where work is to be performed"
+    },
+    "assetId": {
+      "type": ["string", "null"],
+      "description": "Primary asset for this work order (null for site-level work)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["preventive", "predictive", "corrective", "inspection", "emergency", "upgrade", "decommission"],
+      "description": "Work order type"
+    },
+    "title": {
+      "type": "string",
+      "description": "Brief title/summary of work",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "description": {
+      "type": ["string", "null"],
+      "description": "Detailed description of work to be performed",
+      "maxLength": 5000
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "urgent"],
+      "description": "Work order priority"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "submitted", "approved", "scheduled", "assigned", "in-progress", "on-hold", "completed", "verified", "closed", "cancelled"],
+      "description": "Current status in work order lifecycle"
+    },
+    "createdBy": {
+      "type": "string",
+      "description": "User ID who created the work order"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when work order was created"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last update"
+    },
+    "updatedBy": {
+      "type": ["string", "null"],
+      "description": "User ID who last updated the work order"
+    },
+    "assignedTo": {
+      "type": ["string", "null"],
+      "description": "User ID or crew ID assigned to execute work"
+    },
+    "assignedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp when work was assigned"
+    },
+    "scheduledStart": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Scheduled start date/time"
+    },
+    "scheduledEnd": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Scheduled end date/time"
+    },
+    "estimatedDurationMinutes": {
+      "type": ["number", "null"],
+      "description": "Estimated duration in minutes",
+      "minimum": 0
+    },
+    "actualStart": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Actual start time (when status changed to in-progress)"
+    },
+    "actualEnd": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Actual completion time"
+    },
+    "actualDurationMinutes": {
+      "type": ["number", "null"],
+      "description": "Actual duration in minutes",
+      "minimum": 0
+    },
+    "tasks": {
+      "type": "array",
+      "description": "List of tasks/steps to complete",
+      "items": {
+        "type": "object",
+        "properties": {
+          "taskId": {"type": "string"},
+          "title": {"type": "string"},
+          "description": {"type": ["string", "null"]},
+          "sequence": {"type": "number", "minimum": 1},
+          "requiresPermit": {"type": "boolean"},
+          "permitType": {"type": ["string", "null"]},
+          "status": {"type": "string", "enum": ["pending", "in-progress", "completed", "skipped"]},
+          "assignedTo": {"type": ["string", "null"]},
+          "completedBy": {"type": ["string", "null"]},
+          "completedAt": {"type": ["string", "null"], "format": "date-time"},
+          "notes": {"type": ["string", "null"]},
+          "measurements": {"type": ["array", "null"], "items": {"type": "object"}},
+          "checklist": {"type": ["array", "null"], "items": {"type": "object"}}
+        },
+        "required": ["taskId", "title", "sequence", "status"]
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "Required skills/competencies",
+      "items": {"type": "string"},
+      "examples": [["electrical-hv", "inverter-repair", "loto-certified"]]
+    },
+    "permits": {
+      "type": "array",
+      "description": "Required permits/authorizations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "permitType": {"type": "string"},
+          "permitId": {"type": ["string", "null"]},
+          "requiredBy": {"type": ["string", "null"]},
+          "issuedBy": {"type": ["string", "null"]},
+          "issuedAt": {"type": ["string", "null"], "format": "date-time"},
+          "expiresAt": {"type": ["string", "null"], "format": "date-time"},
+          "status": {"type": "string", "enum": ["required", "requested", "issued", "expired", "revoked"]}
+        },
+        "required": ["permitType", "status"]
+      }
+    },
+    "partsRequired": {
+      "type": "array",
+      "description": "Parts/materials required for this work",
+      "items": {
+        "type": "object",
+        "properties": {
+          "partId": {"type": "string"},
+          "description": {"type": ["string", "null"]},
+          "quantity": {"type": "number", "minimum": 0},
+          "unit": {"type": "string", "default": "each"},
+          "reserved": {"type": "boolean", "default": false},
+          "reservationId": {"type": ["string", "null"]},
+          "reservedAt": {"type": ["string", "null"], "format": "date-time"}
+        },
+        "required": ["partId", "quantity"]
+      }
+    },
+    "partsUsed": {
+      "type": "array",
+      "description": "Parts actually consumed during work execution",
+      "items": {
+        "type": "object",
+        "properties": {
+          "partId": {"type": "string"},
+          "description": {"type": ["string", "null"]},
+          "quantity": {"type": "number", "minimum": 0},
+          "unit": {"type": "string", "default": "each"},
+          "consumedAt": {"type": "string", "format": "date-time"},
+          "consumedBy": {"type": "string"},
+          "reservationId": {"type": ["string", "null"]},
+          "cost": {"type": ["number", "null"], "minimum": 0},
+          "lotNumber": {"type": ["string", "null"]},
+          "serialNumber": {"type": ["string", "null"]}
+        },
+        "required": ["partId", "quantity", "consumedAt", "consumedBy"]
+      }
+    },
+    "laborRecords": {
+      "type": "array",
+      "description": "Labor time records",
+      "items": {
+        "type": "object",
+        "properties": {
+          "laborId": {"type": "string"},
+          "userId": {"type": "string"},
+          "userName": {"type": ["string", "null"]},
+          "startTime": {"type": "string", "format": "date-time"},
+          "endTime": {"type": ["string", "null"], "format": "date-time"},
+          "durationMinutes": {"type": ["number", "null"], "minimum": 0},
+          "laborType": {"type": "string", "enum": ["regular", "overtime", "emergency", "travel"], "default": "regular"},
+          "laborRate": {"type": ["number", "null"], "minimum": 0},
+          "totalCost": {"type": ["number", "null"], "minimum": 0},
+          "notes": {"type": ["string", "null"]}
+        },
+        "required": ["laborId", "userId", "startTime"]
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Photos, documents, and other attachments",
+      "items": {
+        "type": "object",
+        "properties": {
+          "attachmentId": {"type": "string"},
+          "fileName": {"type": "string"},
+          "fileSize": {"type": "number", "description": "Size in bytes"},
+          "mimeType": {"type": "string"},
+          "url": {"type": "string", "format": "uri"},
+          "thumbnailUrl": {"type": ["string", "null"], "format": "uri"},
+          "description": {"type": ["string", "null"]},
+          "attachmentType": {"type": "string", "enum": ["photo", "video", "document", "signature", "measurement", "other"]},
+          "capturedAt": {"type": ["string", "null"], "format": "date-time"},
+          "capturedBy": {"type": ["string", "null"]},
+          "uploadedAt": {"type": "string", "format": "date-time"},
+          "location": {
+            "type": ["object", "null"],
+            "properties": {
+              "lat": {"type": "number"},
+              "lon": {"type": "number"},
+              "accuracy": {"type": ["number", "null"]}
+            }
+          }
+        },
+        "required": ["attachmentId", "fileName", "fileSize", "mimeType", "url", "uploadedAt"]
+      }
+    },
+    "measurements": {
+      "type": "array",
+      "description": "Measurements taken during work execution",
+      "items": {
+        "type": "object",
+        "properties": {
+          "measurementId": {"type": "string"},
+          "measurementType": {"type": "string"},
+          "value": {"type": ["number", "string"]},
+          "unit": {"type": "string"},
+          "takenAt": {"type": "string", "format": "date-time"},
+          "takenBy": {"type": "string"},
+          "notes": {"type": ["string", "null"]},
+          "withinSpec": {"type": ["boolean", "null"]}
+        },
+        "required": ["measurementId", "measurementType", "value", "unit", "takenAt", "takenBy"]
+      }
+    },
+    "requiredPpe": {
+      "type": "array",
+      "description": "Required personal protective equipment",
+      "items": {"type": "string"},
+      "examples": [["arc-flash-suit", "insulated-gloves", "safety-glasses"]]
+    },
+    "safetyNotes": {
+      "type": ["string", "null"],
+      "description": "Safety precautions and notes",
+      "maxLength": 2000
+    },
+    "rootCause": {
+      "type": ["string", "null"],
+      "description": "Root cause analysis (for corrective work)",
+      "maxLength": 2000
+    },
+    "preventiveActions": {
+      "type": ["string", "null"],
+      "description": "Actions to prevent recurrence",
+      "maxLength": 2000
+    },
+    "completionNotes": {
+      "type": ["string", "null"],
+      "description": "Notes upon completion",
+      "maxLength": 2000
+    },
+    "verifiedBy": {
+      "type": ["string", "null"],
+      "description": "User ID who verified completed work"
+    },
+    "verifiedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Verification timestamp"
+    },
+    "closedBy": {
+      "type": ["string", "null"],
+      "description": "User ID who closed the work order"
+    },
+    "closedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Closure timestamp"
+    },
+    "signature": {
+      "type": ["string", "null"],
+      "description": "Base64-encoded signature image or digital signature",
+      "contentEncoding": "base64"
+    },
+    "costRecords": {
+      "type": "array",
+      "description": "Cost tracking",
+      "items": {
+        "type": "object",
+        "properties": {
+          "costType": {"type": "string", "enum": ["labor", "parts", "equipment", "contractor", "other"]},
+          "amount": {"type": "number", "minimum": 0},
+          "currency": {"type": "string", "default": "USD"},
+          "description": {"type": ["string", "null"]},
+          "poNumber": {"type": ["string", "null"]},
+          "invoiceNumber": {"type": ["string", "null"]}
+        },
+        "required": ["costType", "amount"]
+      }
+    },
+    "totalCost": {
+      "type": ["number", "null"],
+      "description": "Total calculated cost",
+      "minimum": 0
+    },
+    "sla": {
+      "type": ["object", "null"],
+      "description": "Service level agreement tracking",
+      "properties": {
+        "responseTimeHours": {"type": "number", "minimum": 0},
+        "resolutionTimeHours": {"type": "number", "minimum": 0},
+        "responseDeadline": {"type": "string", "format": "date-time"},
+        "resolutionDeadline": {"type": "string", "format": "date-time"},
+        "responseMetAt": {"type": ["string", "null"], "format": "date-time"},
+        "resolutionMetAt": {"type": ["string", "null"], "format": "date-time"},
+        "responseBreached": {"type": "boolean", "default": false},
+        "resolutionBreached": {"type": "boolean", "default": false}
+      }
+    },
+    "automationMetadata": {
+      "type": ["object", "null"],
+      "description": "Metadata if work order was auto-generated",
+      "properties": {
+        "origin": {"type": "string", "enum": ["manual", "alarm", "predictive-model", "pm-schedule", "threshold", "weather"]},
+        "alarmId": {"type": ["string", "null"]},
+        "modelId": {"type": ["string", "null"]},
+        "modelVersion": {"type": ["string", "null"]},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "scheduleId": {"type": ["string", "null"]},
+        "triggeredAt": {"type": ["string", "null"], "format": "date-time"}
+      },
+      "required": ["origin"]
+    },
+    "tags": {
+      "type": "array",
+      "description": "Freeform tags for categorization and search",
+      "items": {"type": "string"},
+      "examples": [["urgent", "safety-critical", "warranty-claim"]]
+    },
+    "customFields": {
+      "type": "object",
+      "description": "Extensible custom fields",
+      "additionalProperties": true
+    },
+    "syncState": {
+      "type": "object",
+      "description": "Mobile offline sync metadata",
+      "properties": {
+        "synced": {"type": "boolean", "default": true},
+        "lastSyncAt": {"type": ["string", "null"], "format": "date-time"},
+        "syncedBy": {"type": ["string", "null"]},
+        "conflictDetected": {"type": "boolean", "default": false},
+        "conflictResolution": {"type": ["string", "null"], "enum": ["server-wins", "client-wins", "manual-merge", null]},
+        "version": {"type": "number", "description": "Optimistic locking version", "minimum": 1}
+      }
+    },
+    "geotagData": {
+      "type": ["object", "null"],
+      "description": "Geolocation where work was performed",
+      "properties": {
+        "lat": {"type": "number", "minimum": -90, "maximum": 90},
+        "lon": {"type": "number", "minimum": -180, "maximum": 180},
+        "accuracy": {"type": ["number", "null"], "description": "Accuracy in meters"},
+        "altitude": {"type": ["number", "null"]},
+        "capturedAt": {"type": "string", "format": "date-time"}
+      },
+      "required": ["lat", "lon"]
+    },
+    "relatedWorkOrders": {
+      "type": "array",
+      "description": "Related work order IDs (e.g., follow-up, parent/child)",
+      "items": {"type": "string"}
+    },
+    "downtimeMinutes": {
+      "type": ["number", "null"],
+      "description": "Asset downtime caused by this work",
+      "minimum": 0
+    },
+    "productionLossMwh": {
+      "type": ["number", "null"],
+      "description": "Estimated production loss in MWh",
+      "minimum": 0
+    }
   },
-  "required": ["workOrderId","siteId","type","status"]
+  "required": ["workOrderId", "siteId", "type", "title", "priority", "status", "createdBy", "createdAt"],
+  "additionalProperties": false
 }
