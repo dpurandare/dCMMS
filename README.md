@@ -47,7 +47,9 @@ The system enables proactive maintenance through predictive analytics, AI-driven
   - `PRD_INPUT.md`: Original input document, archived with a notice.
   - `research.md`: Research notes and background materials.
   - Other archived assets.
-- **`media/`**: Diagrams and images referenced in the PRD (e.g., architecture diagrams).
+- **`media/`**: Diagrams and images referenced in the PRD:
+  - `ARCHITECTURE_DIAGRAMS_V2.md`: Comprehensive architecture diagrams (v2.0) with 5 detailed Mermaid diagrams covering complete system
+  - `Arch1.png`, `Arch2.png`: Legacy diagrams focusing on data pipeline
 - **`metadata/`**: JSON schemas for data entities (e.g., asset, work order, sensor reading schemas).
 
 ## Key Features
@@ -121,10 +123,11 @@ The dCMMS platform follows a three-phase release plan with 100% specification co
 3. Review **`GAP_ANALYSIS.md`** to understand the original requirements gaps
 
 ### For Architects & Tech Leads
-1. Start with **`specs/01_API_SPECIFICATIONS.md`** for API design patterns
-2. Review **`specs/10_DATA_INGESTION_ARCHITECTURE.md`** for system architecture
-3. Check **`specs/03_AUTH_AUTHORIZATION.md`** for security architecture
-4. See **`specs/18_PERFORMANCE_SCALABILITY.md`** for scalability targets
+1. Review **`media/ARCHITECTURE_DIAGRAMS_V2.md`** for complete system architecture with 5 comprehensive diagrams
+2. Start with **`specs/01_API_SPECIFICATIONS.md`** for API design patterns
+3. Review **`specs/10_DATA_INGESTION_ARCHITECTURE.md`** for data ingestion architecture
+4. Check **`specs/03_AUTH_AUTHORIZATION.md`** for security architecture
+5. See **`specs/18_PERFORMANCE_SCALABILITY.md`** for scalability targets
 
 ### For Developers
 1. Review the relevant specification in **`specs/`** for your feature area
