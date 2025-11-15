@@ -1,33 +1,44 @@
 # dCMMS Implementation Task List
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** November 15, 2025
-**Status:** Ready for Execution
+**Status:** Ready for Execution (Updated with Stakeholder Decisions)
 **Sprint Duration:** 2 weeks (flexible)
 **Test Coverage Requirement:** ≥75%
+**Based on:** STAKEHOLDER_DECISIONS.md
+
+**Major Changes from v1.0:**
+- Sprint 0 extended to 4 weeks (high-fidelity UI mockups added)
+- Cloud-agnostic architecture approach
+- IdP adapter pattern implementation
+- ERP integration deferred to Release 3+
+- CEA/MNRE (India) compliance focus only
+- Hindi-only i18n (not 15+ languages)
+- MDM-optional mobile security
 
 ---
 
 ## Table of Contents
 
-1. [Sprint 0: Foundation Setup (Weeks 1-2)](#sprint-0-foundation-setup-weeks-1-2)
-2. [Sprint 1: Asset Management Backend (Weeks 3-4)](#sprint-1-asset-management-backend-weeks-3-4)
-3. [Sprint 2: Work Order Backend (Weeks 5-6)](#sprint-2-work-order-backend-weeks-5-6)
-4. [Sprint 3: Frontend Foundation & Asset UI (Weeks 7-8)](#sprint-3-frontend-foundation--asset-ui-weeks-7-8)
-5. [Sprint 4: Work Order Frontend & Mobile App (Weeks 9-10)](#sprint-4-work-order-frontend--mobile-app-weeks-9-10)
-6. [Sprint 5: MVP Integration & Testing (Weeks 11-12)](#sprint-5-mvp-integration--testing-weeks-11-12)
-7. [Sprint 6: Telemetry Pipeline Foundation (Weeks 13-14)](#sprint-6-telemetry-pipeline-foundation-weeks-13-14)
-8. [Sprint 7: Telemetry Optimization & QuestDB (Weeks 15-16)](#sprint-7-telemetry-optimization--questdb-weeks-15-16)
-9. [Sprint 8: Alerting & Notification System (Weeks 17-18)](#sprint-8-alerting--notification-system-weeks-17-18)
-10. [Sprint 9: Multi-Channel Notifications (Weeks 19-20)](#sprint-9-multi-channel-notifications-weeks-19-20)
-11. [Sprint 10: Analytics & Reporting (Weeks 21-22)](#sprint-10-analytics--reporting-weeks-21-22)
-12. [Sprint 11: Compliance & Release 1 Hardening (Weeks 23-24)](#sprint-11-compliance--release-1-hardening-weeks-23-24)
-13. [Sprint 12: ML Infrastructure & Feature Store (Weeks 25-26)](#sprint-12-ml-infrastructure--feature-store-weeks-25-26)
-14. [Sprint 13: Feature Engineering & Model Training (Weeks 27-28)](#sprint-13-feature-engineering--model-training-weeks-27-28)
-15. [Sprint 14: Model Serving & Explainability (Weeks 29-30)](#sprint-14-model-serving--explainability-weeks-29-30)
-16. [Sprint 15: Predictive Maintenance Integration (Weeks 31-32)](#sprint-15-predictive-maintenance-integration-weeks-31-32)
-17. [Sprint 16: Cost Management (Weeks 33-34)](#sprint-16-cost-management-weeks-33-34)
-18. [Sprint 17: Internationalization & Release 2 (Weeks 35-36)](#sprint-17-internationalization--release-2-weeks-35-36)
+1. [Sprint 0: Foundation Setup (Weeks 1-4) **[EXTENDED]**](#sprint-0-foundation-setup-weeks-1-4)
+2. [Sprint 1: Asset Management Backend (Weeks 5-6)](#sprint-1-asset-management-backend-weeks-5-6)
+3. [Sprint 2: Work Order Backend (Weeks 7-8)](#sprint-2-work-order-backend-weeks-7-8)
+4. [Sprint 3: Frontend Foundation & Asset UI (Weeks 9-10)](#sprint-3-frontend-foundation--asset-ui-weeks-9-10)
+5. [Sprint 4: Work Order Frontend & Mobile App (Weeks 11-12)](#sprint-4-work-order-frontend--mobile-app-weeks-11-12)
+6. [Sprint 5: MVP Integration & Testing (Weeks 13-14)](#sprint-5-mvp-integration--testing-weeks-13-14)
+7. [Sprint 6: Telemetry Pipeline Foundation (Weeks 15-16)](#sprint-6-telemetry-pipeline-foundation-weeks-15-16)
+8. [Sprint 7: Telemetry Optimization & QuestDB (Weeks 17-18)](#sprint-7-telemetry-optimization--questdb-weeks-17-18)
+9. [Sprint 8: Alerting & Notification System (Weeks 19-20)](#sprint-8-alerting--notification-system-weeks-19-20)
+10. [Sprint 9: Multi-Channel Notifications (Weeks 21-22)](#sprint-9-multi-channel-notifications-weeks-21-22)
+11. [Sprint 10: Analytics & Reporting (Weeks 23-24)](#sprint-10-analytics--reporting-weeks-23-24)
+12. [Sprint 11: CEA/MNRE Compliance & Release 1 Hardening (Weeks 25-26) **[UPDATED]**](#sprint-11-ceamnre-compliance--release-1-hardening-weeks-25-26)
+13. [Sprint 12: ML Infrastructure & Feature Store (Weeks 27-28)](#sprint-12-ml-infrastructure--feature-store-weeks-27-28)
+14. [Sprint 13: Feature Engineering & Model Training (Weeks 29-30)](#sprint-13-feature-engineering--model-training-weeks-29-30)
+15. [Sprint 14: Model Serving & Explainability (Weeks 31-32)](#sprint-14-model-serving--explainability-weeks-31-32)
+16. [Sprint 15: Predictive Maintenance Integration (Weeks 33-34)](#sprint-15-predictive-maintenance-integration-weeks-33-34)
+17. [Sprint 16: Cost Management (Weeks 35-36)](#sprint-16-cost-management-weeks-35-36)
+18. [Sprint 17: Hindi i18n & ML Model Cards (Weeks 37-38) **[UPDATED]**](#sprint-17-hindi-i18n--ml-model-cards-weeks-37-38)
+19. [Sprint 18: Release 2 Integration & Production Readiness (Weeks 39-40) **[NEW]**](#sprint-18-release-2-integration--production-readiness-weeks-39-40)
 
 ---
 
@@ -54,41 +65,56 @@ Each task follows this format:
 
 ---
 
-## Sprint 0: Foundation Setup (Weeks 1-2)
+## Sprint 0: Foundation Setup (Weeks 1-4) **[EXTENDED PER STAKEHOLDER DECISION]**
 
-**Goal:** Define architecture, design system, and set up development environment
+**Goal:** Define cloud-agnostic architecture, design system, create high-fidelity UI mockups, and set up development environment
 
-**Specifications:** Spec 01, 05, 07, 11, 13, 17, 19
+**Specifications:** Spec 01, 03, 05, 07, 11, 13, 17, 19, 21
 
-**Sprint Capacity:** 70 points
+**Sprint Capacity:** 140 points (4 weeks × 35 points/week)
 
 **Timeline:**
-- **Week 1:** Architecture, design, and wireframe creation
+- **Week 1:** Cloud-agnostic architecture, design, and API contracts
 - **Week 2:** Infrastructure setup and implementation scaffolding
+- **Week 3:** High-fidelity UI mockup creation (design system, 20+ screens)
+- **Week 4:** Mockup review, approval, and design token extraction
 
-### Week 1: Architecture & Design Tasks
+**Scope Changes:**
+- ✅ **Added:** High-fidelity UI mockups (Weeks 3-4)
+- ✅ **Added:** Cloud-agnostic architecture design
+- ✅ **Added:** IdP adapter pattern design
+- ✅ **Added:** Multi-protocol SCADA architecture
+- ✅ **Added:** MDM-optional mobile security design
 
-#### [DCMMS-001A] Detailed System Architecture Design
+### Week 1: Cloud-Agnostic Architecture & Design Tasks
+
+#### [DCMMS-001A] Cloud-Agnostic System Architecture Design **[UPDATED]**
 - **Assignee:** Backend Developer + Mobile Developer + Frontend Developer
 - **Specification:** Spec 01, 10, 11, 21 (API, Data Ingestion, Data Models, Edge)
 - **Story Points:** 8
 - **Dependencies:** None
 - **Acceptance Criteria:**
-  - System architecture diagram (component view): Frontend, Backend APIs, Data Pipeline, Storage, ML Platform
+  - **Cloud-agnostic system architecture diagram** (component view): Frontend, Backend APIs, Data Pipeline, Storage, ML Platform
+  - Cloud provider comparison matrix (AWS, Azure, GCP) with service mappings
   - Service dependency map showing all interactions
   - High-level data flow diagrams (telemetry ingestion, work order lifecycle, offline sync)
   - Technology stack documentation with rationale (reference TECHNOLOGY_STACK_EVALUATION.md)
-  - Infrastructure architecture: local development vs cloud deployment
-  - Security architecture: authentication flow, authorization, data encryption
-  - Edge computing architecture (K3s gateways, MQTT, local buffering)
-  - Architecture Decision Records (ADRs) for major decisions
-  - Deployment architecture (Docker Compose → Kubernetes)
+  - Infrastructure architecture: local development vs **cloud-agnostic deployment (Kubernetes, not provider-specific)**
+  - Security architecture: **IdP adapter pattern**, authentication flow, authorization, data encryption
+  - Edge computing architecture (K3s gateways, MQTT, local buffering, **multi-protocol SCADA**)
+  - Architecture Decision Records (ADRs) for major decisions:
+    - **ADR: Cloud-agnostic architecture strategy**
+    - **ADR: IdP adapter pattern for flexible authentication**
+    - **ADR: Multi-protocol SCADA support (OPC-UA, Modbus, IEC 61850, DNP3)**
+  - Deployment architecture (Docker Compose → **cloud-agnostic Kubernetes**)
   - Scalability considerations documented (horizontal scaling, caching strategy)
+  - **Mobile security without MDM** (app-level security, server-side device management)
 - **Deliverables:**
-  - `docs/architecture/system-architecture.md` with diagrams
-  - `docs/architecture/adrs/` directory with ADR files
+  - `docs/architecture/system-architecture.md` with cloud-agnostic diagrams
+  - `docs/architecture/adrs/` directory with ADR files (cloud-agnostic, IdP, SCADA)
   - Component diagram (draw.io/Mermaid/PlantUML)
   - Data flow diagrams for 3-5 critical flows
+  - **Cloud provider selection criteria document**
 - **Testing:** Architecture review with full team
 
 #### [DCMMS-001B] API Contract Design (OpenAPI Specification)
@@ -3509,3 +3535,349 @@ Each task follows this format:
 **Status:** Ready for Sprint Planning
 **Next Action:** Review with team, refine tasks, begin Sprint 0
 **Owner:** Product Manager + Tech Leads
+
+---
+
+## APPENDIX: Stakeholder Decision Implementation Notes
+
+**Date Added:** November 15, 2025
+**Based on:** STAKEHOLDER_DECISIONS.md
+
+This appendix documents changes required throughout the task list based on stakeholder decisions. Task owners should reference this when planning sprints.
+
+### Sprint 0 (Weeks 1-4) - EXTENDED
+
+**NEW TASKS TO ADD:**
+
+**Week 3: High-Fidelity UI Mockups**
+- [DCMMS-001M] Design System Creation (UI/UX Designer, 8 points)
+  - Create color palette, typography scale, spacing system
+  - Define component specifications (buttons, forms, tables, cards, modals)
+  - Document design tokens
+  - Ensure WCAG 2.1 AA compliance
+
+- [DCMMS-001N] High-Fidelity Mockup Design - Dashboard (UI/UX Designer, 5 points)
+  - Dashboard with KPIs, work order backlog, asset availability
+  - Responsive layouts (desktop 1920px, tablet 768px, mobile 375px)
+  - Interactive Figma/Sketch prototype
+
+- [DCMMS-001O] High-Fidelity Mockup Design - Asset Management (UI/UX Designer, 5 points)
+  - Asset list, details, hierarchy view
+  - Search and filtering UI
+  - Asset creation forms
+
+- [DCMMS-001P] High-Fidelity Mockup Design - Work Order Management (UI/UX Designer, 8 points)
+  - Work order list, creation, details, execution flows
+  - State machine visualization
+  - Task management UI
+
+- [DCMMS-001Q] High-Fidelity Mockup Design - Mobile App (UI/UX Designer, 8 points)
+  - Login, work order list, offline execution
+  - Photo capture, barcode scanning
+  - Sync status indicators
+
+- [DCMMS-001R] High-Fidelity Mockup Design - User Management (UI/UX Designer, 3 points)
+  - User list, roles, permissions
+  - Settings and preferences
+
+**Week 4: Design Review & Token Extraction**
+- [DCMMS-001S] Stakeholder Mockup Review (Product Manager + UI/UX Designer, 3 points)
+  - Present mockups to stakeholders
+  - Collect feedback and prioritize revisions
+  - Obtain final approval and sign-off
+
+- [DCMMS-001T] Design Token Extraction (Frontend Developer, 5 points)
+  - Extract CSS variables from approved mockups
+  - Create Tailwind configuration
+  - Set up shadcn/ui component customization
+  - Create developer handoff documentation
+
+- [DCMMS-001U] Component Library Setup (Frontend Developer, 5 points)
+  - Implement base components based on mockups
+  - Create Storybook for component documentation
+  - Set up Figma developer mode for asset export
+
+### IdP Adapter Pattern Implementation
+
+**Sprint 1-2 (Weeks 5-8) - ADD THESE TASKS:**
+
+- [DCMMS-020] IdP Adapter Interface Design (Backend Developer, 3 points)
+  - Design adapter interface for authentication providers
+  - Support Auth0/Okta, Azure AD, Keycloak
+  - Factory pattern for provider selection
+
+- [DCMMS-021] Auth0/Okta Adapter Implementation (Backend Developer, 5 points)
+  - Implement Auth0/Okta adapter as initial provider
+  - OAuth2/OIDC flow implementation
+  - Token validation and refresh
+  - User info retrieval
+
+- [DCMMS-022] IdP Adapter Testing (Backend Developer + QA, 3 points)
+  - Unit tests for adapter interface
+  - Integration tests with Auth0/Okta
+  - Mock adapters for testing
+
+### ERP Integration - DEFERRED
+
+**Sprint 3 (Weeks 9-10) - REMOVE/DEFER THESE TASKS:**
+- All ERP integration tasks **MOVED TO RELEASE 3+**
+- Inventory and procurement modules will operate **standalone** without ERP
+- Maintain clean integration points for future ERP connectivity
+
+**Note:** If any tasks reference ERP integration in Sprint 3-4, mark them as "ERP integration points designed but not implemented (deferred to Release 3+)"
+
+### CEA/MNRE Compliance Focus
+
+**Sprint 11 (Weeks 25-26) - UPDATE THESE TASKS:**
+
+**REMOVE/DEFER:**
+- NERC compliance report templates
+- AEMO compliance workflows
+- NESO/UK Grid Code compliance
+- All tasks related to FERC, OSHA compliance reporting
+
+**KEEP AND ENHANCE:**
+- CEA (Central Electricity Authority) compliance:
+  - Grid Standards Regulations 2010
+  - Technical Standards for Connectivity 2007
+  - Monthly generation reports
+  - Annual performance reports
+
+- MNRE (Ministry of New and Renewable Energy) compliance:
+  - Solar Park Scheme progress reports
+  - REC (Renewable Energy Certificate) Mechanism compliance
+  - Performance-Based Incentive reporting
+
+**ADD NEW TASKS:**
+- [DCMMS-TBD] CEA Grid Standards Compliance Report Template (Backend Developer, 3 points)
+- [DCMMS-TBD] MNRE REC Mechanism Compliance Workflow (Backend Developer, 5 points)
+- [DCMMS-TBD] CEA Monthly Generation Report Automation (Backend Developer, 3 points)
+
+### Interactive Tutorials
+
+**Sprint 11 (Weeks 25-26) - ADD THESE TASKS:**
+
+- [DCMMS-TBD] In-App Tutorial Framework (Frontend Developer, 5 points)
+  - Implement tooltip system
+  - Create walkthrough component
+  - Contextual help integration
+
+- [DCMMS-TBD] Onboarding Tutorial (Frontend Developer, 3 points)
+  - First-time user 5-step walkthrough
+  - Product tour with key features
+
+- [DCMMS-TBD] Work Order Tutorial (Frontend Developer, 3 points)
+  - How to create a work order (in-app guide)
+  - Work order execution flow tutorial
+
+- [DCMMS-TBD] Mobile Offline Mode Tutorial (Mobile Developer, 3 points)
+  - How to work offline tutorial
+  - Sync status explanation
+  - Conflict resolution guidance
+
+### Hindi i18n (Not 15+ Languages)
+
+**Sprint 17 (Weeks 37-38) - UPDATE SCOPE:**
+
+**REMOVE/DEFER:**
+- Spanish, French, German, Chinese, Arabic (and other languages)
+- RTL (Right-to-Left) support for Arabic
+- Multi-currency beyond INR/USD
+- Complex locale-specific formatting for multiple regions
+
+**KEEP AND UPDATE:**
+- English (primary language)
+- **Hindi only** (secondary language)
+- Basic locale formatting (dates, numbers for India)
+- Timezone support (IST focus)
+
+**UPDATED TASKS:**
+- [DCMMS-TBD] Hindi Translation Files (Frontend/Mobile Developer, 5 points)
+  - Translate all UI strings to Hindi
+  - Create Hindi translation JSON files
+  - Test Hindi language switching
+
+- [DCMMS-TBD] Hindi i18n Testing (QA, 3 points)
+  - Verify Hindi translations
+  - Test language switching
+  - Ensure proper rendering of Devanagari script
+
+**Story Points Saved:** ~20-25 points (can be reallocated to ML model cards or other features)
+
+### ML Model Cards (NEW)
+
+**Sprint 17 (Weeks 37-38) - ADD THESE TASKS:**
+
+- [DCMMS-TBD] Anomaly Detection Model Card (ML/AI Expert, 5 points)
+  - Model description and use case
+  - Performance metrics (precision, recall, F1-score)
+  - Training data characteristics
+  - Limitations and ethical considerations
+  - Monitoring and retraining procedures
+
+- [DCMMS-TBD] Predictive Maintenance Model Card (ML/AI Expert, 5 points)
+  - Model description and use case
+  - Performance metrics (accuracy, RMSE)
+  - Feature importance documentation
+  - Limitations and ethical considerations
+  - Monitoring and retraining procedures
+
+- [DCMMS-TBD] ML Model Card Template System (Frontend Developer, 3 points)
+  - Create UI for displaying model cards
+  - Model card versioning
+  - Model card approval workflow
+
+### Multi-Protocol SCADA Support
+
+**Sprint 6-7 (Weeks 15-18) - ENSURE COVERAGE:**
+
+**Protocols to Support from Beginning:**
+- OPC-UA (industrial automation standard)
+- Modbus TCP/RTU (legacy SCADA)
+- IEC 61850 (electrical substation automation)
+- DNP3 (utilities and SCADA)
+
+**ADD TASKS IF MISSING:**
+- [DCMMS-TBD] OPC-UA Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] Modbus TCP/RTU Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] IEC 61850 Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] DNP3 Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] Multi-Protocol SCADA Testing (QA, 5 points)
+  - Protocol simulators setup
+  - Integration testing for each protocol
+  - Performance validation
+
+### MDM-Optional Mobile Security
+
+**Sprint 3-4 (Weeks 9-12) - REMOVE MDM DEPENDENCIES:**
+
+**REMOVE/DEFER:**
+- Microsoft Intune integration
+- Jamf Pro integration
+- VMware Workspace ONE integration
+- Any hard MDM dependency
+
+**ADD COMPENSATING CONTROLS:**
+- [DCMMS-TBD] Biometric Authentication (Mobile Developer, 3 points)
+  - Face ID / Touch ID / Fingerprint
+  - Fallback to PIN
+
+- [DCMMS-TBD] App-Level Security Controls (Mobile Developer, 5 points)
+  - 6-digit PIN with lockout
+  - Session timeout (15 minutes)
+  - Local database encryption (SQLCipher)
+  - Secure keychain/keystore for tokens
+
+- [DCMMS-TBD] Server-Side Device Management (Backend Developer, 5 points)
+  - Device registry
+  - Remote wipe API
+  - Device blacklist
+  - Jailbreak/root detection
+
+### Sprint 18 (Weeks 39-40) - NEW SPRINT
+
+**ADD ENTIRE SPRINT:**
+
+**Goal:** Final integration, performance validation, production readiness
+
+**Capacity:** 70 points
+
+**Key Tasks:**
+- [DCMMS-TBD] Production Readiness Checklist (All Team, 13 points)
+- [DCMMS-TBD] Performance Validation (QA, 8 points)
+- [DCMMS-TBD] Security Audit (Backend + DevOps, 8 points)
+- [DCMMS-TBD] Disaster Recovery Plan (DevOps, 5 points)
+- [DCMMS-TBD] Incident Response Plan (DevOps, 5 points)
+- [DCMMS-TBD] Cloud Provider Final Selection (DevOps, 3 points)
+- [DCMMS-TBD] Production Deployment Runbook (DevOps, 5 points)
+- [DCMMS-TBD] Release 2 Demo Preparation (Product Manager, 3 points)
+- [DCMMS-TBD] User Documentation Final Review (All Team, 5 points)
+- [DCMMS-TBD] Training Material Finalization (Product Manager, 5 points)
+
+### Cloud-Agnostic Architecture - Throughout All Sprints
+
+**Global Change:** Replace all AWS-specific references with cloud-agnostic alternatives
+
+**Examples:**
+- EKS → Kubernetes (any provider: EKS/AKS/GKE)
+- MSK → Apache Kafka (managed or self-hosted)
+- RDS → PostgreSQL (managed or on K8s)
+- ElastiCache → Redis (managed or on K8s)
+- S3 → S3-compatible storage (S3/Azure Blob/GCS)
+- CloudFront → Multi-CDN (Cloudflare/Fastly)
+- ALB → Kubernetes Ingress (NGINX/Traefik)
+- CloudWatch → Prometheus + Grafana
+- AWS KMS → Cloud KMS (provider-specific) or HashiCorp Vault
+
+**Infrastructure Tasks to Update:**
+- All Terraform tasks: Use multi-cloud modules
+- All deployment tasks: Target Kubernetes, not provider-specific services
+- All monitoring tasks: Use Prometheus/Grafana, not CloudWatch
+
+---
+
+## Change Summary by Sprint
+
+| Sprint | Original Weeks | New Weeks | Key Changes |
+|--------|---------------|-----------|-------------|
+| **0** | 1-2 | 1-4 | +2 weeks for high-fidelity mockups, cloud-agnostic arch, IdP adapter |
+| **1** | 3-4 | 5-6 | +IdP adapter implementation |
+| **2** | 5-6 | 7-8 | No major changes |
+| **3** | 7-8 | 9-10 | **Remove ERP integration**, add MDM-optional security |
+| **4** | 9-10 | 11-12 | No major changes |
+| **5** | 11-12 | 13-14 | No major changes |
+| **6** | 13-14 | 15-16 | +Multi-protocol SCADA adapters |
+| **7** | 15-16 | 17-18 | No major changes |
+| **8** | 17-18 | 19-20 | No major changes |
+| **9** | 19-20 | 21-22 | No major changes |
+| **10** | 21-22 | 23-24 | No major changes |
+| **11** | 23-24 | 25-26 | **CEA/MNRE only** (remove NERC/AEMO/NESO), +Interactive tutorials |
+| **12** | 25-26 | 27-28 | No major changes |
+| **13** | 27-28 | 29-30 | No major changes |
+| **14** | 29-30 | 31-32 | No major changes |
+| **15** | 31-32 | 33-34 | No major changes |
+| **16** | 33-34 | 35-36 | No major changes |
+| **17** | 35-36 | 37-38 | **Hindi only** (not 15+ languages), +ML model cards |
+| **18** | N/A | 39-40 | **NEW SPRINT:** Production readiness, final integration |
+
+---
+
+## Action Items for Sprint Planning
+
+1. **Before Sprint 0:**
+   - Confirm UI/UX designer availability for Weeks 3-4
+   - Review and approve extended Sprint 0 timeline
+   - Update sprint capacity planning (140 points vs 70 points)
+
+2. **During Sprint 0:**
+   - Add new mockup tasks (DCMMS-001M through DCMMS-001U)
+   - Update architecture tasks with cloud-agnostic requirements
+
+3. **Before Sprint 1-2:**
+   - Add IdP adapter tasks (DCMMS-020 through DCMMS-022)
+
+4. **Before Sprint 3:**
+   - Remove/defer all ERP integration tasks
+   - Add MDM-optional security tasks
+
+5. **Before Sprint 6-7:**
+   - Ensure multi-protocol SCADA adapter tasks are included
+
+6. **Before Sprint 11:**
+   - Update compliance tasks to CEA/MNRE only
+   - Add interactive tutorial tasks
+
+7. **Before Sprint 17:**
+   - Reduce i18n scope to Hindi only
+   - Add ML model card tasks
+
+8. **Before Sprint 18:**
+   - Create all Sprint 18 tasks (new sprint)
+   - Prepare production readiness checklist
+
+---
+
+**Last Updated:** November 15, 2025
+**Maintained By:** Product Manager
+**Review Frequency:** Before each sprint planning session
+
