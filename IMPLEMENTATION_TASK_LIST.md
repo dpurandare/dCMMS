@@ -56,13 +56,194 @@ Each task follows this format:
 
 ## Sprint 0: Foundation Setup (Weeks 1-2)
 
-**Goal:** Set up local development environment, CI/CD, and project scaffolding
+**Goal:** Define architecture, design system, and set up development environment
 
-**Specifications:** Spec 05, 07, 13
+**Specifications:** Spec 01, 05, 07, 11, 13, 17, 19
 
-**Sprint Capacity:** 40 points
+**Sprint Capacity:** 70 points
 
-### Infrastructure & DevOps Tasks
+**Timeline:**
+- **Week 1:** Architecture, design, and wireframe creation
+- **Week 2:** Infrastructure setup and implementation scaffolding
+
+### Week 1: Architecture & Design Tasks
+
+#### [DCMMS-001A] Detailed System Architecture Design
+- **Assignee:** Backend Developer + Mobile Developer + Frontend Developer
+- **Specification:** Spec 01, 10, 11, 21 (API, Data Ingestion, Data Models, Edge)
+- **Story Points:** 8
+- **Dependencies:** None
+- **Acceptance Criteria:**
+  - System architecture diagram (component view): Frontend, Backend APIs, Data Pipeline, Storage, ML Platform
+  - Service dependency map showing all interactions
+  - High-level data flow diagrams (telemetry ingestion, work order lifecycle, offline sync)
+  - Technology stack documentation with rationale (reference TECHNOLOGY_STACK_EVALUATION.md)
+  - Infrastructure architecture: local development vs cloud deployment
+  - Security architecture: authentication flow, authorization, data encryption
+  - Edge computing architecture (K3s gateways, MQTT, local buffering)
+  - Architecture Decision Records (ADRs) for major decisions
+  - Deployment architecture (Docker Compose → Kubernetes)
+  - Scalability considerations documented (horizontal scaling, caching strategy)
+- **Deliverables:**
+  - `docs/architecture/system-architecture.md` with diagrams
+  - `docs/architecture/adrs/` directory with ADR files
+  - Component diagram (draw.io/Mermaid/PlantUML)
+  - Data flow diagrams for 3-5 critical flows
+- **Testing:** Architecture review with full team
+
+#### [DCMMS-001B] API Contract Design (OpenAPI Specification)
+- **Assignee:** Backend Developer + Frontend Developer
+- **Specification:** Spec 01 (API Specifications)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-001A
+- **Acceptance Criteria:**
+  - Complete OpenAPI 3.1 specification for MVP endpoints:
+    - Assets API (CRUD, hierarchy, search, tagging)
+    - Work Orders API (CRUD, state transitions, tasks, parts)
+    - Sites API (CRUD)
+    - Authentication API (login, logout, refresh)
+    - Users API (CRUD, roles, permissions)
+    - Sync API (mobile offline sync, conflict resolution)
+  - Request/response schemas defined (Zod/JSON Schema)
+  - Error response schemas (400, 401, 403, 404, 500)
+  - Authentication scheme defined (Bearer JWT)
+  - Pagination, filtering, sorting conventions
+  - API versioning strategy (/api/v1/*)
+  - Rate limiting specifications
+  - Webhook endpoints (if applicable)
+- **Deliverables:**
+  - `docs/api/openapi.yaml` (or JSON)
+  - Published to Swagger UI / Redoc
+- **Testing:** Validate spec with OpenAPI linter, team review
+
+#### [DCMMS-001C] Database Schema Design (Detailed ERD)
+- **Assignee:** Backend Developer
+- **Specification:** Spec 11 (Complete Data Models)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-001A
+- **Acceptance Criteria:**
+  - Complete Entity-Relationship Diagram (ERD) for all entities:
+    - **Core:** sites, assets, components, work_orders, maintenance_tasks
+    - **Parts:** inventory_items, parts_reservations, parts_consumed
+    - **Users:** users, roles, permissions, user_roles, audit_logs
+    - **Telemetry:** telemetry_data (QuestDB), telemetry_aggregates (TimescaleDB)
+    - **Notifications:** alerts, notifications, notification_channels
+    - **Compliance:** compliance_reports, regulatory_logs
+    - **ML:** feature_store_metadata, model_registry, predictions
+    - **Cost:** work_order_costs, budget_allocations
+  - All relationships defined (1:1, 1:N, N:M with junction tables)
+  - Primary keys, foreign keys, indexes specified
+  - Data types, constraints (NOT NULL, UNIQUE, CHECK)
+  - Audit fields (created_at, updated_at, created_by, updated_by)
+  - Soft delete strategy (deleted_at)
+  - Partitioning strategy for large tables (telemetry_data)
+  - Migration strategy documented
+- **Deliverables:**
+  - `docs/database/erd.pdf` or `erd.png` (using dbdiagram.io, draw.io, or Lucidchart)
+  - `docs/database/schema-design.md` with detailed explanations
+  - Table definitions with estimated row counts
+- **Testing:** Peer review, validate against specifications
+
+#### [DCMMS-001D] Critical User Flow Design (Sequence Diagrams)
+- **Assignee:** Backend Developer + Frontend Developer + Mobile Developer
+- **Specification:** Spec 01, 02, 03, 04 (API, State Machines, Auth, Mobile Sync)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-001B, DCMMS-001C
+- **Acceptance Criteria:**
+  - Sequence diagrams for 6-8 critical user flows:
+    1. **User Login Flow** (OAuth2/OIDC with IdP)
+    2. **Create Work Order Flow** (frontend → API → database)
+    3. **Mobile Offline Sync Flow** (conflict resolution, version tokens)
+    4. **Telemetry Ingestion Flow** (MQTT → Kafka → Flink → QuestDB)
+    5. **Alert Generation Flow** (anomaly detection → alert → notification → WO creation)
+    6. **Work Order State Transition Flow** (state machine validation)
+    7. **Asset Hierarchy Traversal** (recursive query)
+    8. **ML Prediction Flow** (feature fetch → model inference → WO creation)
+  - State machine diagrams for:
+    - Work Order lifecycle (7+ states, 10+ transitions)
+    - Asset lifecycle (operational, maintenance, failed, decommissioned)
+  - Error handling paths documented
+  - Alternative flows (edge cases, failures)
+  - Security checkpoints marked (auth, authorization)
+- **Deliverables:**
+  - `docs/flows/sequence-diagrams/` directory with diagrams (PlantUML/Mermaid)
+  - `docs/flows/state-machines.md` with state diagrams
+- **Testing:** Walkthrough with team, validate against specs
+
+#### [DCMMS-001E] Mobile Architecture Design
+- **Assignee:** Mobile Developer
+- **Specification:** Spec 04 (Mobile Offline Sync)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-001A, DCMMS-001C
+- **Acceptance Criteria:**
+  - Flutter app architecture (MVVM, BLoC, Riverpod, or Provider pattern)
+  - Offline-first data flow:
+    - Local database schema (Drift for relational, Isar for documents)
+    - Sync queue design (pending changes tracked locally)
+    - Conflict resolution algorithm (version tokens, last-write-wins, or custom)
+    - Background sync strategy (periodic, on connectivity, manual)
+  - State management approach (BLoC, Riverpod, Provider)
+  - Navigation architecture (GoRouter, Navigator 2.0)
+  - Local storage strategy (Drift, Isar, Hive)
+  - File handling (photos, documents, offline caching)
+  - Push notification integration (FCM)
+  - Camera/barcode scanner integration
+  - Battery optimization strategies
+  - Offline indicators and sync status UI
+- **Deliverables:**
+  - `docs/mobile/architecture.md`
+  - Mobile app component diagram
+  - Offline sync algorithm pseudocode
+  - Database schema for mobile (ERD)
+- **Testing:** Architecture review, validate offline scenarios
+
+#### [DCMMS-001F] Technical Design Review Meeting
+- **Assignee:** All Developers + Product Manager
+- **Specification:** All specs
+- **Story Points:** 2
+- **Dependencies:** DCMMS-001A, DCMMS-001B, DCMMS-001C, DCMMS-001D, DCMMS-001E, DCMMS-008A
+- **Acceptance Criteria:**
+  - Design review meeting conducted (2-3 hours)
+  - All architecture documents reviewed
+  - API contract validated against requirements
+  - Database schema validated against data models spec
+  - User flows validated against product requirements
+  - Mobile architecture approved
+  - Wireframes reviewed and approved
+  - Open questions documented and resolved
+  - Design approval sign-off from Product Manager
+  - Action items tracked (if any design changes needed)
+- **Deliverables:**
+  - Design review meeting notes
+  - Approval sign-off document
+  - Action items list (if any)
+- **Testing:** N/A
+
+#### [DCMMS-008A] UI Wireframe Creation (MVP Screens)
+- **Assignee:** Frontend Developer + Product Manager
+- **Specification:** Spec 17 (UX Design System)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-001A
+- **Acceptance Criteria:**
+  - Low-fidelity wireframes for MVP screens:
+    - **Authentication:** Login page, forgot password
+    - **Dashboard:** KPI cards, recent work orders, alerts summary
+    - **Assets:** Asset list (table), asset detail, asset hierarchy (tree view), create/edit asset form
+    - **Work Orders:** WO list (with filters), WO detail, create WO form, task checklist, parts consumption
+    - **Mobile:** Mobile dashboard, WO list, WO detail, offline sync status, camera capture
+    - **Settings:** User profile, role management, system settings
+  - Navigation flows between screens
+  - Responsive design considerations (desktop, tablet, mobile web)
+  - Accessibility annotations (ARIA labels, keyboard navigation)
+  - Component mapping to shadcn/ui library
+  - User interaction notes (click, hover, drag-drop)
+- **Deliverables:**
+  - Wireframes in Figma/Sketch/Balsamiq/draw.io
+  - `docs/design/wireframes.pdf` export
+  - Screen inventory spreadsheet (screen name, route, components used)
+- **Testing:** Wireframe walkthrough with team, user flow validation
+
+### Week 2: Infrastructure & DevOps Tasks
 
 #### [DCMMS-001] Docker Compose Stack Setup
 - **Assignee:** Backend Developer + DevOps
@@ -251,13 +432,21 @@ Each task follows this format:
   - Architecture overview diagram
 - **Testing:** New developer can set up environment in <30 minutes
 
-**Sprint 0 Total:** 39 points
+**Sprint 0 Total:** 74 points
+- **Week 1 (Architecture & Design):** 35 points
+- **Week 2 (Infrastructure Setup):** 39 points
 
 **Sprint Review Demo:**
-- Show full stack running locally
+- Present system architecture diagrams and ADRs
+- Walk through API contract (OpenAPI spec)
+- Review database ERD and schema design
+- Present user flow sequence diagrams and state machines
+- Review mobile architecture and offline sync strategy
+- Present UI wireframes for MVP screens
+- Show full stack running locally (Docker Compose)
 - Demonstrate CI/CD pipeline
 - Walk through test execution
-- Show basic login flow
+- Show basic login flow (mocked)
 
 ---
 
@@ -939,13 +1128,35 @@ Each task follows this format:
   - Recording setup (screen capture)
 - **Testing:** Dry run of demo
 
-**Sprint 5 Total:** 31 points
+#### [DCMMS-049] User Acceptance Testing (UAT) - MVP
+- **Assignee:** QA Engineer + Product Manager
+- **Specification:** All MVP specs (01-13)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-042, DCMMS-047
+- **Acceptance Criteria:**
+  - UAT test plan created (based on user stories and acceptance criteria)
+  - UAT environment prepared (separate from dev, mirrors production)
+  - Test users identified (internal stakeholders, pilot users if available)
+  - UAT test cases executed:
+    - Asset management workflows (create, edit, hierarchy, search)
+    - Work order workflows (create, assign, execute, close)
+    - Mobile offline workflows (create WO offline, sync when online, conflict resolution)
+    - Role-based access control (test different user roles)
+    - Security scenarios (unauthorized access, token expiry)
+  - Defects logged and prioritized (critical, high, medium, low)
+  - Critical and high-priority defects resolved
+  - UAT sign-off obtained from Product Manager
+  - UAT report generated (test results, defects, sign-off)
+- **Testing:** Formal UAT execution with stakeholders
+
+**Sprint 5 Total:** 36 points
 
 **Sprint Review / MVP Demo:**
 - Full workflow demonstration: Site → Asset → WO → Mobile → Sync
 - Show offline mobile capabilities
 - Present performance metrics
 - Security scan results
+- Present UAT results and sign-off
 - Known issues and roadmap to Release 1
 
 ---
@@ -1818,7 +2029,27 @@ Each task follows this format:
   - Training materials (videos or slides)
 - **Testing:** Documentation review
 
-**Sprint 11 Total:** 35 points
+#### [DCMMS-095A] User Acceptance Testing (UAT) - Release 1
+- **Assignee:** QA Engineer + Product Manager
+- **Specification:** All Release 1 specs (14-21)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-092, DCMMS-093, DCMMS-094
+- **Acceptance Criteria:**
+  - UAT test plan for Release 1 features
+  - UAT test cases executed:
+    - Telemetry ingestion workflows (MQTT → Kafka → Flink → QuestDB → Dashboard)
+    - Alert generation and notification workflows (email, SMS, push, webhooks)
+    - Analytics dashboards (KPI cards, time-series charts, heatmaps)
+    - Compliance report generation (NERC, CEA, MNRE templates)
+    - Edge computing scenarios (local buffering, connectivity loss)
+    - Performance validation (72K events/sec, p95 latency <200ms)
+  - Defects logged and prioritized
+  - Critical and high-priority defects resolved
+  - UAT sign-off obtained from Product Manager
+  - UAT report generated
+- **Testing:** Formal UAT execution with stakeholders
+
+**Sprint 11 Total:** 40 points
 
 **Sprint Review / Release 1 Demo:**
 - Full platform demonstration: asset → WO → telemetry → alarms → notifications → analytics → compliance
@@ -1826,6 +2057,7 @@ Each task follows this format:
 - Show multi-channel notifications
 - Generate compliance report
 - Present performance metrics
+- Present UAT results and sign-off
 - Roadmap to Release 2
 
 ---
@@ -2695,15 +2927,38 @@ Each task follows this format:
   - Load test report with graphs
 - **Testing:** Performance tests passing
 
-**Sprint 17 Total:** 34 points
+#### [DCMMS-139] User Acceptance Testing (UAT) - Release 2
+- **Assignee:** QA Engineer + Product Manager
+- **Specification:** All Release 2 specs (22-24)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-136, DCMMS-137, DCMMS-138
+- **Acceptance Criteria:**
+  - UAT test plan for Release 2 features
+  - UAT test cases executed:
+    - ML predictive maintenance workflows (anomaly detection → WO creation, model explainability)
+    - Cost management workflows (WO costing, budget tracking, cost analytics)
+    - Internationalization workflows (language switching, RTL support, multi-language notifications)
+    - End-to-end platform validation (all 24 specifications)
+    - Performance validation (all targets met: API latency, telemetry throughput, ML inference)
+    - Cross-browser testing (Chrome, Firefox, Safari, Edge)
+    - Mobile app testing (Android, iOS)
+  - Defects logged and prioritized
+  - Critical and high-priority defects resolved
+  - UAT sign-off obtained from Product Manager
+  - Production readiness checklist completed
+  - UAT report generated (final release report)
+- **Testing:** Formal UAT execution with stakeholders, production readiness review
+
+**Sprint 17 Total:** 39 points
 
 **Sprint Review / Release 2 Demo:**
-- Full platform demonstration (all features)
+- Full platform demonstration (all features across all 24 specifications)
 - Switch language (English → Spanish → Arabic RTL)
 - Show ML-driven predictive WOs (10% of corrective actions)
 - Show cost management (budget tracking, cost analytics)
 - Show multi-language notifications
 - Present performance metrics (all targets met)
+- Present UAT results and production readiness sign-off
 - Present Release 2 metrics: 100% specification coverage, 75%+ test coverage, production-ready
 - Roadmap to cloud migration and production deployment
 

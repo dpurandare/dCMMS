@@ -284,29 +284,60 @@ services:
 
 ### 5.1 Sprint 0: Foundation (Weeks 1-2)
 
-**Goal:** Set up development environment, CI/CD, and baseline infrastructure
+**Goal:** Define system architecture, design database and APIs, create UI wireframes, and set up development environment
 
-**Deliverables:**
-- ✅ Local Docker Compose stack running
+**Timeline:**
+- **Week 1:** Architecture design, API contracts, database schema, user flows, wireframes
+- **Week 2:** Infrastructure setup, CI/CD, project scaffolding
+
+**Week 1 Deliverables (Architecture & Design):**
+- ✅ System architecture diagrams (component view, data flow, deployment)
+- ✅ Architecture Decision Records (ADRs) for major technology choices
+- ✅ Complete OpenAPI 3.1 specification for all MVP endpoints
+- ✅ Complete Entity-Relationship Diagram (ERD) with 20+ tables
+- ✅ Database schema design document with migrations strategy
+- ✅ Sequence diagrams for 6-8 critical user flows
+- ✅ State machine diagrams (Work Order, Asset lifecycle)
+- ✅ Mobile architecture design (offline sync algorithm, state management)
+- ✅ UI wireframes for all MVP screens (10+ screens)
+- ✅ Technical design review meeting with sign-off
+
+**Week 2 Deliverables (Infrastructure):**
+- ✅ Local Docker Compose stack running (PostgreSQL, Redis, Kafka, EMQX, QuestDB)
 - ✅ Git repository with branching strategy
 - ✅ CI/CD pipeline (GitHub Actions / GitLab CI)
-- ✅ Test framework configured (Jest, Cypress, Flutter Test)
-- ✅ Database schemas initialized (PostgreSQL)
+- ✅ Test framework configured (Jest, Cypress, Flutter Test, k6)
+- ✅ Database migrations initialized (based on ERD)
 - ✅ API skeleton with health checks
 - ✅ Frontend boilerplate (Next.js + Tailwind + shadcn/ui)
-- ✅ Mobile app skeleton (Flutter + Drift)
+- ✅ Mobile app skeleton (Flutter + Drift + Isar)
 - ✅ Developer onboarding documentation
 
 **Team Focus:**
-- **Backend:** PostgreSQL schema, Fastify API skeleton, Docker Compose setup
+
+*Week 1 (Design & Architecture):*
+- **All Developers:** Collaborative architecture design session
+- **Backend + Frontend:** API contract design (OpenAPI spec)
+- **Backend:** Database ERD design, user flow sequence diagrams
+- **Mobile:** Mobile architecture design, offline sync algorithm
+- **Frontend + PM:** UI wireframe creation for MVP screens
+- **All Team:** Technical design review meeting
+
+*Week 2 (Implementation Foundation):*
+- **Backend:** PostgreSQL schema implementation, Fastify API skeleton, Docker Compose setup
 - **Frontend:** Next.js project, shadcn/ui components, auth scaffolding
 - **Mobile:** Flutter project, offline database (Drift), navigation structure
 - **DevOps:** CI/CD pipeline, test automation setup
 - **QA:** Test strategy finalization, test data preparation
 
 **Success Criteria:**
+- [ ] Architecture documents reviewed and approved by team
+- [ ] OpenAPI specification covers all MVP endpoints
+- [ ] Database ERD validated against data models spec
+- [ ] Wireframes approved for all MVP screens
+- [ ] Technical design review sign-off obtained
 - [ ] All developers can run full stack locally
-- [ ] CI/CD pipeline runs on every PR
+- [ ] CI/CD pipeline runs on every PR with 75% coverage gate
 - [ ] Sample API endpoint with tests deployed
 - [ ] Basic login flow working (mocked auth)
 
@@ -352,6 +383,8 @@ services:
 - [ ] 90% of work orders closeable without network
 - [ ] 75%+ test coverage across all modules
 - [ ] API p95 latency <200ms for CRUD operations
+- [ ] User Acceptance Testing (UAT) completed with sign-off
+- [ ] All critical and high-priority defects resolved
 
 ### 5.3 Phase 2: Release 1 (Weeks 13-24)
 
@@ -390,6 +423,8 @@ services:
 - [ ] Compliance reports generated on-demand
 - [ ] Edge gateways buffer 24 hours locally
 - [ ] p95 API latency maintained <200ms
+- [ ] User Acceptance Testing (UAT) completed with sign-off
+- [ ] All critical and high-priority defects resolved
 
 ### 5.4 Phase 3: Release 2 (Weeks 25-36)
 
@@ -424,6 +459,9 @@ services:
 - [ ] Application available in 5+ languages
 - [ ] RTL support validated for Arabic
 - [ ] Drift detection alerts operational
+- [ ] User Acceptance Testing (UAT) completed with sign-off
+- [ ] Production readiness checklist completed
+- [ ] All critical and high-priority defects resolved
 
 ---
 
