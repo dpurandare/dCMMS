@@ -507,9 +507,60 @@ Each task follows this format:
   - `docs/troubleshooting/local-setup.md`
 - **Testing:** Test on fresh machine, validate solutions
 
-**Sprint 0 Total:** 82 points
+#### [DCMMS-012D] API Documentation Portal Setup
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-005 (API skeleton with OpenAPI)
+- **Acceptance Criteria:**
+  - API documentation portal hosted and accessible
+  - Options evaluated: Redoc, Swagger UI, Stoplight, ReadMe.io
+  - OpenAPI specification auto-published to portal
+  - Portal includes:
+    - Searchable API endpoint documentation
+    - Try-it-out functionality (interactive requests)
+    - Code examples in multiple languages (curl, JavaScript, Python)
+    - Authentication documentation
+    - Response schema documentation
+  - Portal accessible at /api/docs or docs.dcmms.local
+  - Auto-update on OpenAPI spec changes
+  - Responsive design (works on mobile)
+  - Version support (v1, v2, etc.)
+- **Deliverables:**
+  - Hosted API documentation portal
+  - `docs/api/portal-setup.md` (setup instructions)
+- **Testing:** API docs accessible, interactive features working
+
+#### [DCMMS-012E] Error Tracking Dashboard Setup
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 18 (Performance), Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-002 (CI/CD pipeline)
+- **Acceptance Criteria:**
+  - Error tracking solution selected and configured
+  - Options evaluated: Sentry, Rollbar, Bugsnag, or self-hosted (GlitchTip)
+  - Error tracking integrated in:
+    - Backend API (Fastify error handler)
+    - Frontend (Next.js error boundary)
+    - Mobile app (Flutter error handler)
+  - Error tracking dashboard configured with:
+    - Error grouping and deduplication
+    - Stack traces with source maps
+    - User context (user ID, session ID)
+    - Environment tagging (local, dev, staging, prod)
+    - Release tracking
+    - Alert notifications (Slack/email for critical errors)
+  - Error tracking SDK installed in all codebases
+  - Sample errors sent and verified in dashboard
+  - Team invited to error tracking dashboard
+- **Deliverables:**
+  - Error tracking dashboard (Sentry/Rollbar/GlitchTip)
+  - `docs/monitoring/error-tracking.md` (configuration guide)
+- **Testing:** Trigger test errors, verify in dashboard
+
+**Sprint 0 Total:** 88 points
 - **Week 1 (Architecture & Design):** 35 points
-- **Week 2 (Infrastructure & Documentation):** 47 points
+- **Week 2 (Infrastructure & Documentation):** 53 points (includes API portal + error tracking)
 
 **Sprint Review Demo:**
 - Present system architecture diagrams and ADRs
@@ -1357,8 +1408,45 @@ Each task follows this format:
   - UAT report generated (test results, defects, sign-off)
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 5 Total:** 50 points
-- Integration & Testing: 26 points
+#### [DCMMS-049A] Performance Baseline Metrics Documentation
+- **Assignee:** QA Engineer + Backend Developer
+- **Specification:** Spec 18 (Performance)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-042 (Integration testing)
+- **Acceptance Criteria:**
+  - Performance baseline metrics documented for MVP:
+    - **API Performance:**
+      - p50, p95, p99 latency for all CRUD endpoints
+      - Throughput (requests/second)
+      - Error rate
+    - **Database Performance:**
+      - Query execution times (top 10 slowest queries)
+      - Connection pool usage
+      - Index hit ratios
+    - **Mobile Sync Performance:**
+      - Sync duration for different data volumes (10, 100, 1000 WOs)
+      - Offline database size
+      - Conflict resolution time
+    - **Frontend Performance:**
+      - Page load times (dashboard, asset list, WO list)
+      - Time to Interactive (TTI)
+      - Lighthouse scores (performance, accessibility, SEO)
+    - **System Resource Usage:**
+      - CPU utilization under load
+      - Memory consumption
+      - Disk I/O
+  - Performance test results collected using k6 and other tools
+  - Baseline metrics stored for future comparison
+  - Performance graphs generated
+  - Performance improvement recommendations documented
+- **Deliverables:**
+  - `docs/performance/mvp-baseline-metrics.md`
+  - Performance test scripts (k6)
+  - Performance graphs (PNG/SVG)
+- **Testing:** Baseline metrics validated and reproducible
+
+**Sprint 5 Total:** 53 points
+- Integration & Testing: 29 points (includes performance baseline metrics)
 - Documentation: 24 points (User docs, API portal, Admin guide, Deployment runbook, Release notes)
 
 **Sprint Review / MVP Demo:**
@@ -2172,6 +2260,47 @@ Each task follows this format:
   - Export audit logs: CSV (for external audit)
 - **Testing:** Audit log tests, tamper-proof tests
 
+#### [DCMMS-090A] Data Retention Policy Documentation
+- **Assignee:** Backend Developer + Product Manager
+- **Specification:** Spec 15 (Compliance), Spec 13 (Security)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-090 (Audit Trail)
+- **Acceptance Criteria:**
+  - Formal data retention policy document created:
+    - **Retention Schedules by Data Type:**
+      - Work orders: 7 years (compliance requirement)
+      - Assets: Permanent (active), 10 years (decommissioned)
+      - Telemetry data: 5 years (raw), 10 years (aggregated)
+      - Audit logs: 7 years (compliance requirement)
+      - User data: Active accounts (permanent), Deleted accounts (anonymized after 30 days)
+      - Compliance reports: 7 years
+      - System logs: 90 days (debug), 1 year (audit)
+      - Backups: 7 daily, 4 weekly, 12 monthly
+    - **Data Deletion Procedures:**
+      - Automated purge jobs for expired data
+      - Soft delete vs hard delete policies
+      - Anonymization procedures for GDPR/privacy compliance
+      - Manual deletion approval workflow for critical data
+    - **CEA/MNRE Compliance Alignment:**
+      - CEA requirements for maintenance records (5-7 years)
+      - MNRE requirements for generation data (5 years minimum)
+      - India regulations alignment
+    - **Legal and Regulatory Basis:**
+      - CEA (Central Electricity Authority) regulations
+      - MNRE (Ministry of New and Renewable Energy) requirements
+      - Data Protection Act (if applicable)
+      - Company data retention policies
+  - Data retention policy reviewed by legal/compliance team (if available)
+  - Database schema updated with retention metadata (retention_period, expires_at columns)
+  - Automated purge jobs scheduled (weekly cron job)
+  - Data retention policy published and accessible to team
+- **Deliverables:**
+  - `docs/compliance/data-retention-policy.md` (15-20 pages)
+  - `docs/compliance/data-deletion-procedures.md`
+  - Database migration script (add retention metadata columns)
+  - Automated purge job script
+- **Testing:** Review with compliance stakeholders, validate purge jobs in test environment
+
 ### Frontend Tasks
 
 #### [DCMMS-091] Compliance Report UI
@@ -2443,8 +2572,8 @@ Each task follows this format:
   - UAT report generated
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 11 Total:** 64 points
-- Compliance: 13 points (DCMMS-088, 089)
+**Sprint 11 Total:** 67 points
+- Compliance: 16 points (DCMMS-088, 089, 090A - data retention policy)
 - Audit & Hardening: 13 points (DCMMS-090, 092)
 - Bug Fixes: 8 points (DCMMS-093)
 - Documentation & Operational Readiness: 25 points (DCMMS-094, 094A-E1)
@@ -4098,6 +4227,64 @@ This appendix documents changes required throughout the task list based on stake
   - Post-incident review template
 - **Testing:** Incident response drill (simulated P0 incident)
 
+#### [DCMMS-144A] Security Operations Guide
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 13 (Security), Operational best practices
+- **Story Points:** 5
+- **Dependencies:** DCMMS-142 (Security Audit)
+- **Acceptance Criteria:**
+  - Comprehensive security operations guide created:
+    - **Security Patching Procedures:**
+      - Vulnerability assessment workflow
+      - Patching schedule (critical: 24 hours, high: 1 week, medium: 1 month)
+      - Emergency patching procedures
+      - Patch testing and validation process
+      - Rollback procedures if patch causes issues
+      - Communication plan during patching
+    - **Vulnerability Scanning:**
+      - Automated scanning schedule (Snyk: weekly, OWASP ZAP: monthly)
+      - Manual penetration testing schedule (quarterly)
+      - Vulnerability triage and prioritization (CVSS scoring)
+      - Remediation tracking and SLA
+      - Third-party security audit schedule (annual)
+    - **Security Incident Response:**
+      - Security incident detection (SIEM alerts, error tracking, manual reports)
+      - Incident classification (data breach, unauthorized access, DDoS, malware)
+      - Response procedures for each incident type
+      - Evidence preservation and forensics
+      - Notification requirements (regulatory, customers, stakeholders)
+      - Post-incident security hardening
+    - **Access Management:**
+      - User access review schedule (quarterly)
+      - Privileged access management (PAM)
+      - SSH key rotation policy (annual)
+      - API key rotation policy (quarterly)
+      - Service account management
+      - Offboarding procedures (immediate access revocation)
+    - **Security Monitoring:**
+      - Security metrics and KPIs
+      - Security dashboard setup (Grafana/Prometheus)
+      - Log aggregation and analysis (ELK stack or equivalent)
+      - Anomaly detection and alerting
+      - Security event correlation
+    - **Compliance and Audit:**
+      - Security compliance checklist (CEA requirements)
+      - Internal security audit schedule (quarterly)
+      - External audit preparation procedures
+      - Security documentation requirements
+      - Security training and awareness program
+  - Security operations guide reviewed by security team (if available)
+  - Security procedures documented with step-by-step instructions
+  - Security runbooks created for common scenarios
+  - Security automation scripts prepared (where applicable)
+- **Deliverables:**
+  - `docs/security/security-operations-guide.md` (40+ pages)
+  - `docs/security/patching-procedures.md`
+  - `docs/security/vulnerability-management.md`
+  - `docs/security/security-incident-response.md`
+  - Security runbook templates
+- **Testing:** Security procedures validated, security audit review
+
 ### Cloud & Deployment
 
 #### [DCMMS-145] Cloud Provider Final Selection
@@ -4327,9 +4514,10 @@ This appendix documents changes required throughout the task list based on stake
   - Training schedule
 - **Testing:** Training material review with sample users
 
-**Sprint 18 Total:** 70 points
+**Sprint 18 Total:** 75 points
 - Production Readiness: 29 points (DCMMS-140, 141, 142)
 - Disaster Recovery & Incident Response: 10 points (DCMMS-143, 144)
+- Security Operations: 5 points (DCMMS-144A)
 - Cloud & Deployment: 8 points (DCMMS-145, 146)
 - Final Integration & Demo: 11 points (DCMMS-147, 148)
 - Documentation & Training: 10 points (DCMMS-149, 150)
