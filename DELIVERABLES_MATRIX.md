@@ -1,23 +1,88 @@
 # dCMMS Project Deliverables Matrix
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** November 15, 2025
 **Purpose:** Complete checklist of all project deliverables across all phases
+**Based on:** STAKEHOLDER_DECISIONS.md, IMPLEMENTATION_PLAN.md v2.0
+
+---
+
+## ⚠️ IMPORTANT: Stakeholder Decision Updates
+
+**This matrix reflects the original plan. See updates below based on stakeholder decisions (November 15, 2025):**
+
+### Sprint 0 Extended to 4 Weeks
+- **Original:** Weeks 1-2
+- **Updated:** Weeks 1-4
+- **Added Deliverables (Weeks 3-4):**
+  - Design system documentation (colors, typography, spacing, components)
+  - High-fidelity mockups for 20+ MVP screens
+  - Interactive Figma/Sketch prototype with clickable flows
+  - Responsive layouts (desktop, tablet, mobile)
+  - Component library specification
+  - Accessibility annotations (WCAG 2.1 AA)
+  - Design token extraction (CSS variables, Tailwind config)
+  - Component library setup (shadcn/ui customization)
+  - Handoff documentation for developers
+
+### Cloud-Agnostic Architecture
+- All AWS-specific deliverables updated to be cloud-agnostic
+- Added: Cloud provider comparison matrix (AWS, Azure, GCP)
+- Added: Cloud provider selection criteria document
+- Updated: ADR for cloud-agnostic architecture strategy
+
+### IdP Adapter Pattern
+- Added: ADR for IdP adapter pattern
+- Added: IdP adapter interface design documentation
+- Added: Auth0/Okta adapter implementation (Sprint 1-2)
+- Added: IdP integration guide for future adapters
+
+### ERP Integration Deferred
+- **Deferred to Release 3+:** All ERP integration deliverables
+- Inventory/procurement documentation updated to reflect standalone operation
+
+### CEA/MNRE Compliance Only
+- **Removed:** NERC, AEMO, NESO compliance deliverables from Release 1
+- **Focus:** CEA/MNRE (India) compliance reports and workflows only
+
+### Interactive Tutorials Added
+- Added: In-app tutorial framework documentation
+- Added: Tutorial content for onboarding, work orders, offline mode
+
+### Hindi i18n Only
+- **Updated:** Translation files for Hindi only (not 15+ languages)
+- **Removed:** RTL support documentation (no Arabic support)
+- **Removed:** Complex multi-currency documentation
+
+### ML Model Cards Added
+- Added: ML model cards for anomaly detection and predictive maintenance
+- Added: Model card template system documentation
+
+### Sprint 18 Added (Weeks 39-40)
+- Added: Production readiness checklist
+- Added: Disaster recovery plan
+- Added: Incident response plan
+- Added: Final performance validation reports
+
+**For detailed changes, see:**
+- STAKEHOLDER_DECISIONS.md
+- IMPLEMENTATION_PLAN.md v2.0
+- IMPLEMENTATION_TASK_LIST.md v2.0 Appendix
 
 ---
 
 ## Table of Contents
 
-1. [Sprint 0: Foundation](#sprint-0-foundation-weeks-1-2)
-2. [MVP / Release 0](#mvp--release-0-sprints-1-5-weeks-3-12)
-3. [Release 1](#release-1-sprints-6-11-weeks-13-24)
-4. [Release 2](#release-2-sprints-12-17-weeks-25-36)
+1. [Sprint 0: Foundation](#sprint-0-foundation-weeks-1-2) ⚠️ **NOW WEEKS 1-4**
+2. [MVP / Release 0](#mvp--release-0-sprints-1-5-weeks-3-12) ⚠️ **NOW WEEKS 5-14**
+3. [Release 1](#release-1-sprints-6-11-weeks-13-24) ⚠️ **NOW WEEKS 15-26**
+4. [Release 2](#release-2-sprints-12-17-weeks-25-36) ⚠️ **NOW WEEKS 27-40 (+ Sprint 18)**
 5. [Post-Release / Production](#post-release--production)
 6. [Continuous Deliverables](#continuous-deliverables)
 
 ---
 
-## Sprint 0: Foundation (Weeks 1-2)
+## Sprint 0: Foundation (Weeks 1-2) ⚠️ **EXTENDED TO WEEKS 1-4**
 
 ### Week 1: Architecture & Design Deliverables
 
