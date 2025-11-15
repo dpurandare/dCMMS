@@ -432,9 +432,58 @@ Each task follows this format:
   - Architecture overview diagram
 - **Testing:** New developer can set up environment in <30 minutes
 
-**Sprint 0 Total:** 74 points
+#### [DCMMS-012A] Database Data Dictionary
+- **Assignee:** Backend Developer
+- **Specification:** Spec 11 (Data Models)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-001C (ERD)
+- **Acceptance Criteria:**
+  - Complete data dictionary for all tables (20+ tables)
+  - For each table: purpose, primary/foreign keys, indexes
+  - For each field: name, data type, constraints, description, sample values
+  - Relationships documented (1:1, 1:N, N:M)
+  - Business rules documented (e.g., status transitions, validation rules)
+  - Format: Markdown or Spreadsheet
+- **Deliverables:**
+  - `docs/database/data-dictionary.md` or `.xlsx`
+- **Testing:** Dictionary reviewed and approved by team
+
+#### [DCMMS-012B] Environment Configuration Template
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 05 (Deployment)
+- **Story Points:** 1
+- **Dependencies:** DCMMS-001
+- **Acceptance Criteria:**
+  - .env.example file with all required environment variables
+  - Comments explaining each variable
+  - Separate sections: Database, API, Frontend, Mobile, External Services
+  - Secure defaults (no actual secrets)
+  - Documentation in README referencing .env.example
+- **Deliverables:**
+  - `.env.example` in repository root
+  - Environment variables documented in README
+- **Testing:** New developer can copy .env.example to .env and start services
+
+#### [DCMMS-012C] Local Setup Troubleshooting Guide
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 2
+- **Dependencies:** DCMMS-001, DCMMS-012
+- **Acceptance Criteria:**
+  - Common setup issues documented (10+ scenarios)
+  - Docker issues: port conflicts, volume permissions, container fails to start
+  - Database issues: connection refused, migration failures
+  - Node.js issues: dependency conflicts, version mismatches
+  - Mobile issues: Flutter SDK, emulator setup
+  - Solutions with step-by-step instructions
+  - Links to external resources
+- **Deliverables:**
+  - `docs/troubleshooting/local-setup.md`
+- **Testing:** Test on fresh machine, validate solutions
+
+**Sprint 0 Total:** 82 points
 - **Week 1 (Architecture & Design):** 35 points
-- **Week 2 (Infrastructure Setup):** 39 points
+- **Week 2 (Infrastructure & Documentation):** 47 points
 
 **Sprint Review Demo:**
 - Present system architecture diagrams and ADRs
@@ -729,7 +778,34 @@ Each task follows this format:
 
 **Specifications:** Spec 17 (UX Design)
 
-**Sprint Capacity:** 40 points
+**Sprint Capacity:** 45 points
+
+### Design Tasks
+
+#### [DCMMS-026A] High-Fidelity UI Mockups (MVP Screens)
+- **Assignee:** Frontend Developer + Product Manager
+- **Specification:** Spec 17 (UX Design System)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-008A (Wireframes)
+- **Acceptance Criteria:**
+  - High-fidelity mockups for all MVP screens (10+ screens):
+    - Authentication: Login page
+    - Dashboard: KPI cards, charts, recent activity
+    - Assets: List, detail, create/edit forms, hierarchy tree view
+    - Work Orders: List, detail, create/edit forms, task checklist
+    - Settings: User profile, role management
+  - Consistent design system application (colors, typography, spacing)
+  - shadcn/ui components selected and customized
+  - Responsive designs (desktop, tablet, mobile)
+  - Interactive states: hover, active, disabled, loading, error
+  - Accessibility annotations: ARIA labels, contrast ratios, keyboard navigation
+  - Design tokens documented (colors, spacing, typography)
+  - Mockups approved by stakeholders
+- **Deliverables:**
+  - Figma/Sketch mockups (high-fidelity)
+  - `docs/design/mockups.pdf` export
+  - `docs/design/design-tokens.md` (color palette, typography scale, spacing)
+- **Testing:** Design review with team, accessibility validation
 
 ### Frontend Tasks
 
@@ -1114,6 +1190,112 @@ Each task follows this format:
   - Published to documentation site (or README)
 - **Testing:** User walkthrough (internal team)
 
+#### [DCMMS-047A] API Documentation Portal
+- **Assignee:** Backend Developer
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-005, DCMMS-001B (OpenAPI spec)
+- **Acceptance Criteria:**
+  - Publish OpenAPI specification to documentation portal
+  - Swagger UI or Redoc hosted and accessible
+  - API usage examples for key endpoints (code snippets)
+  - Authentication guide (how to get and use tokens)
+  - Pagination, filtering, sorting conventions documented
+  - Error response format documented
+  - Rate limiting information
+  - Versioning strategy documented
+  - Search functionality for API endpoints
+- **Deliverables:**
+  - Public URL for API docs (e.g., https://api.dcmms.com/docs)
+  - `docs/api/usage-guide.md` with examples
+- **Testing:** Validate all endpoints documented, examples work
+
+#### [DCMMS-047B] Administrator Guide (MVP)
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-042
+- **Acceptance Criteria:**
+  - Admin Guide: User and role management
+    - How to create users, assign roles
+    - Role permissions matrix
+    - How to deactivate users
+  - Admin Guide: System configuration
+    - Environment variables explained
+    - Feature flags (if any)
+    - System settings and defaults
+  - Admin Guide: Backup and restore procedures
+    - Database backup commands
+    - Restore procedures
+    - Backup schedule recommendations
+  - Admin Guide: Monitoring and health checks
+    - How to check system health
+    - Key metrics to monitor
+    - Log locations and access
+- **Deliverables:**
+  - `docs/admin/user-management.md`
+  - `docs/admin/system-configuration.md`
+  - `docs/admin/backup-restore.md`
+  - `docs/admin/monitoring.md`
+- **Testing:** Admin walkthrough, validate procedures
+
+#### [DCMMS-047C] Deployment Runbook (MVP)
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 05 (Deployment)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-042
+- **Acceptance Criteria:**
+  - Step-by-step deployment procedure (local environment)
+  - Pre-deployment checklist:
+    - Code merged to main
+    - All tests passing
+    - Database migrations ready
+    - Environment variables configured
+  - Deployment steps:
+    - Database migration commands
+    - Service startup order
+    - Health check validation
+    - Smoke test procedures
+  - Rollback procedure:
+    - When to rollback
+    - Rollback steps
+    - Database migration rollback
+  - Post-deployment validation:
+    - Health checks to perform
+    - Key functionality to test
+    - Monitoring to watch
+  - Troubleshooting common deployment issues
+- **Deliverables:**
+  - `docs/deployment/runbook-mvp.md`
+  - Pre-deployment checklist template
+  - Post-deployment validation checklist
+- **Testing:** Dry-run deployment, validate all steps
+
+#### [DCMMS-047D] Release Notes (MVP)
+- **Assignee:** Product Manager
+- **Specification:** N/A
+- **Story Points:** 2
+- **Dependencies:** DCMMS-042
+- **Acceptance Criteria:**
+  - Release notes document for MVP/Release 0
+  - Version: v0.1.0 (or v1.0.0)
+  - Release date
+  - Summary: High-level overview of MVP features
+  - Features implemented:
+    - Asset management (list of features)
+    - Work order management (list of features)
+    - Mobile offline sync (list of features)
+    - Security and authentication (list of features)
+  - Specifications covered: List all 13 P0 specs
+  - Known issues and limitations
+  - Breaking changes (if any)
+  - Migration guide (if upgrading from prototype)
+  - Contributors and acknowledgments
+- **Deliverables:**
+  - `RELEASE_NOTES_v0.1.0.md` or in `CHANGELOG.md`
+  - Published to documentation site
+- **Testing:** Review with stakeholders
+
 #### [DCMMS-048] MVP Demo Preparation
 - **Assignee:** Product Manager
 - **Specification:** N/A
@@ -1149,7 +1331,9 @@ Each task follows this format:
   - UAT report generated (test results, defects, sign-off)
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 5 Total:** 36 points
+**Sprint 5 Total:** 50 points
+- Integration & Testing: 26 points
+- Documentation: 24 points (User docs, API portal, Admin guide, Deployment runbook, Release notes)
 
 **Sprint Review / MVP Demo:**
 - Full workflow demonstration: Site → Asset → WO → Mobile → Sync
@@ -2029,6 +2213,148 @@ Each task follows this format:
   - Training materials (videos or slides)
 - **Testing:** Documentation review
 
+#### [DCMMS-094A] Monitoring Dashboards Configuration
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 18 (Performance), Spec 10 (Data Ingestion)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-050 (Kafka), DCMMS-053 (Flink), DCMMS-054 (QuestDB)
+- **Acceptance Criteria:**
+  - Grafana dashboards configured and version-controlled (JSON files)
+  - Dashboard 1: Telemetry Pipeline Health
+    - MQTT broker metrics (messages/sec, connections)
+    - Kafka metrics (throughput, lag, partition count)
+    - Flink job metrics (records processed, latency, checkpoints)
+    - QuestDB metrics (ingestion rate, query latency, storage)
+  - Dashboard 2: System Health
+    - CPU, memory, disk usage per service
+    - API request rate, latency (p50, p95, p99)
+    - Database connection pool, query performance
+    - Cache hit rate (Redis)
+  - Dashboard 3: Application Performance
+    - Work order creation rate
+    - Mobile sync success rate
+    - Alert generation rate
+    - User activity metrics
+  - All dashboards support time range selection
+  - Alerts configured in dashboards
+- **Deliverables:**
+  - `monitoring/grafana/dashboards/telemetry-pipeline.json`
+  - `monitoring/grafana/dashboards/system-health.json`
+  - `monitoring/grafana/dashboards/application-performance.json`
+  - `docs/monitoring/dashboard-guide.md`
+- **Testing:** Validate dashboards display correct data
+
+#### [DCMMS-094B] Alert Runbooks
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 18 (Performance), Spec 14 (Notifications)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-094A
+- **Acceptance Criteria:**
+  - Runbooks for common alerts (10+ scenarios):
+    - **HighCPUUsage**: When CPU >80% for 5 minutes
+    - **HighMemoryUsage**: When memory >85% for 5 minutes
+    - **DiskSpaceLow**: When disk <15% free
+    - **APIHighLatency**: When p95 latency >500ms for 5 minutes
+    - **TelemetryPipelineFailure**: When Kafka/Flink/QuestDB down
+    - **DatabaseConnectionPoolExhausted**: When DB connections maxed
+    - **CacheDown**: When Redis is unreachable
+    - **HighErrorRate**: When error rate >5% for 5 minutes
+    - **MobileSyncFailureRate**: When sync failure rate >10%
+    - **MLModelInferenceFailure**: When model serving fails
+  - Each runbook includes:
+    - Alert description and severity
+    - Impact on users/system
+    - Investigation steps
+    - Resolution steps
+    - Escalation path
+    - Related dashboards/logs
+- **Deliverables:**
+  - `docs/runbooks/alert-runbooks.md` or individual files per alert
+- **Testing:** Review with team, validate procedures
+
+#### [DCMMS-094C] Telemetry Pipeline Documentation
+- **Assignee:** Backend Developer
+- **Specification:** Spec 10 (Data Ingestion)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-050-062
+- **Acceptance Criteria:**
+  - Telemetry pipeline architecture document:
+    - Component diagram (MQTT → Kafka → Flink → QuestDB)
+    - Data flow diagram
+    - Message schemas (Avro/Protobuf)
+  - MQTT configuration guide:
+    - Broker setup (EMQX)
+    - Topic structure
+    - QoS levels
+    - Client authentication
+  - Kafka configuration guide:
+    - Topic naming conventions
+    - Partitioning strategy
+    - Retention policies
+    - Consumer group management
+  - Flink job documentation:
+    - Job DAG (directed acyclic graph)
+    - Processing logic
+    - State management
+    - Checkpoint configuration
+    - How to deploy/restart jobs
+  - QuestDB configuration:
+    - Table schema
+    - Partitioning strategy
+    - Retention policies
+    - Query optimization tips
+  - Troubleshooting guide:
+    - Common pipeline issues
+    - How to check backlog
+    - How to replay messages
+- **Deliverables:**
+  - `docs/telemetry/architecture.md`
+  - `docs/telemetry/mqtt-configuration.md`
+  - `docs/telemetry/kafka-configuration.md`
+  - `docs/telemetry/flink-jobs.md`
+  - `docs/telemetry/questdb-configuration.md`
+  - `docs/telemetry/troubleshooting.md`
+- **Testing:** Documentation review, validate procedures
+
+#### [DCMMS-094D] Deployment Runbook (Release 1)
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 05 (Deployment)
+- **Story Points:** 3
+- **Dependencies:** All Release 1 tasks
+- **Acceptance Criteria:**
+  - Updated deployment runbook for Release 1
+  - Include new services: Kafka, Flink, QuestDB, EMQX
+  - Service startup order and dependencies
+  - Health check validation for each service
+  - Data migration procedures (if any)
+  - Rollback procedures
+  - Post-deployment smoke tests
+- **Deliverables:**
+  - `docs/deployment/runbook-release-1.md`
+- **Testing:** Dry-run deployment
+
+#### [DCMMS-094E] Release Notes (Release 1)
+- **Assignee:** Product Manager
+- **Specification:** N/A
+- **Story Points:** 2
+- **Dependencies:** All Release 1 tasks
+- **Acceptance Criteria:**
+  - Release notes for Release 1 (v0.2.0 or v2.0.0)
+  - Summary of new features
+  - Telemetry pipeline (72K events/sec capability)
+  - Multi-channel alerting and notifications
+  - Advanced analytics dashboards
+  - Compliance reporting (NERC, CEA, MNRE)
+  - Edge computing capabilities
+  - Specifications covered: List all 8 P1 specs
+  - Performance improvements
+  - Breaking changes (if any)
+  - Migration guide
+  - Known issues
+- **Deliverables:**
+  - `RELEASE_NOTES_v0.2.0.md`
+- **Testing:** Review with stakeholders
+
 #### [DCMMS-095A] User Acceptance Testing (UAT) - Release 1
 - **Assignee:** QA Engineer + Product Manager
 - **Specification:** All Release 1 specs (14-21)
@@ -2049,7 +2375,10 @@ Each task follows this format:
   - UAT report generated
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 11 Total:** 40 points
+**Sprint 11 Total:** 59 points
+- Performance & Hardening: 16 points
+- Documentation & Operational Readiness: 24 points
+- UAT: 5 points
 
 **Sprint Review / Release 1 Demo:**
 - Full platform demonstration: asset → WO → telemetry → alarms → notifications → analytics → compliance
@@ -2896,6 +3225,129 @@ Each task follows this format:
   - Release notes prepared
 - **Testing:** All tests passing, regression suite green
 
+### ML Documentation
+
+#### [DCMMS-136A] ML Model Cards
+- **Assignee:** ML/AI Expert
+- **Specification:** Spec 22 (AI/ML)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-104 (Model training), DCMMS-108 (Model serving)
+- **Acceptance Criteria:**
+  - Model card for Anomaly Detection Model:
+    - Model purpose and use cases
+    - Training data description (features, size, time period)
+    - Model architecture (algorithm, hyperparameters)
+    - Performance metrics (precision, recall, F1, AUC-ROC, confusion matrix)
+    - Feature importance (top 10 features with SHAP values)
+    - Limitations and known issues
+    - Ethical considerations and bias analysis
+    - Intended use and misuse scenarios
+    - Model versioning and update history
+  - Model card for Predictive Maintenance Model:
+    - Same structure as above for predictive model
+  - Each model card follows standard template (e.g., Google Model Cards format)
+  - Model cards published and accessible to stakeholders
+- **Deliverables:**
+  - `docs/ml/model-cards/anomaly-detection.md`
+  - `docs/ml/model-cards/predictive-maintenance.md`
+  - Model cards published to ML dashboard (optional)
+- **Testing:** Review with data science team and stakeholders
+
+#### [DCMMS-136B] ML Pipeline Documentation
+- **Assignee:** ML/AI Expert
+- **Specification:** Spec 22 (AI/ML)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-095-107 (ML infrastructure and training)
+- **Acceptance Criteria:**
+  - Feature Engineering Documentation:
+    - Feature definitions (20+ features documented)
+    - Feature importance analysis with graphs
+    - Feature selection rationale
+    - Feature transformation logic
+    - Feature quality metrics (null rate, drift)
+  - ML Training Pipeline Documentation:
+    - Metaflow pipeline code documentation
+    - Training data preparation steps
+    - Hyperparameter tuning process (Optuna configuration)
+    - Model evaluation methodology
+    - Cross-validation strategy
+    - Model selection criteria
+    - Experiment tracking guide (MLflow)
+  - ML Model Serving Documentation:
+    - KServe deployment guide (step-by-step)
+    - Model inference API documentation
+    - Input/output schema
+    - Model versioning strategy
+    - A/B testing strategy (if applicable)
+    - Model rollback procedures
+  - ML Monitoring & Drift Detection:
+    - Drift detection configuration
+    - Model performance monitoring dashboards
+    - Retraining triggers and workflow
+    - Alert thresholds
+    - Production feedback loop
+- **Deliverables:**
+  - `docs/ml/feature-engineering.md`
+  - `docs/ml/training-pipeline.md`
+  - `docs/ml/model-serving.md`
+  - `docs/ml/monitoring-drift-detection.md`
+- **Testing:** Documentation review, validate procedures
+
+#### [DCMMS-136C] Deployment Runbook (Release 2)
+- **Assignee:** DevOps + ML Engineer
+- **Specification:** Spec 05 (Deployment)
+- **Story Points:** 3
+- **Dependencies:** All Release 2 tasks
+- **Acceptance Criteria:**
+  - Updated deployment runbook for Release 2
+  - Include ML services: Feast, MLflow, KServe
+  - ML model deployment procedures:
+    - How to deploy new model version
+    - Model validation before production
+    - A/B testing deployment (if applicable)
+    - Model rollback procedures
+  - Feast feature store deployment
+  - Service dependencies and startup order
+  - Health checks for all services
+  - Data migration procedures (if any)
+  - Rollback procedures
+  - Post-deployment smoke tests
+- **Deliverables:**
+  - `docs/deployment/runbook-release-2.md`
+  - ML deployment checklist
+- **Testing:** Dry-run deployment with ML components
+
+#### [DCMMS-136D] Release Notes (Release 2)
+- **Assignee:** Product Manager
+- **Specification:** N/A
+- **Story Points:** 2
+- **Dependencies:** All Release 2 tasks
+- **Acceptance Criteria:**
+  - Release notes for Release 2 (v0.3.0 or v3.0.0)
+  - Summary: AI/ML, cost management, internationalization
+  - Features implemented:
+    - ML predictive maintenance (10% of WOs ML-driven)
+    - Anomaly detection and automated WO creation
+    - Model explainability (SHAP)
+    - Work order costing and budget management
+    - Cost analytics and forecasting
+    - Multi-language support (5+ languages)
+    - RTL support for Arabic
+    - Multi-language notifications
+  - Specifications covered: List all 3 P2 specs (22-24)
+  - Performance achievements (all targets met)
+  - ML model performance metrics
+  - Breaking changes (if any)
+  - Migration guide
+  - Known issues and future roadmap
+  - Contributors and acknowledgments
+- **Deliverables:**
+  - `RELEASE_NOTES_v0.3.0.md`
+  - Published to documentation site
+- **Testing:** Review with stakeholders
+
+### User & Admin Documentation
+
 #### [DCMMS-137] Release 2 Documentation
 - **Assignee:** Product Manager + QA Engineer
 - **Specification:** Spec 19 (Documentation)
@@ -2949,7 +3401,13 @@ Each task follows this format:
   - UAT report generated (final release report)
 - **Testing:** Formal UAT execution with stakeholders, production readiness review
 
-**Sprint 17 Total:** 39 points
+**Sprint 17 Total:** 54 points
+- Backend & Frontend: 21 points
+- Bug Fixes & Stabilization: 8 points
+- ML Documentation: 15 points (Model cards, ML pipeline docs, deployment runbook, release notes)
+- User & Admin Documentation: 3 points
+- Performance Testing: 5 points
+- UAT: 5 points
 
 **Sprint Review / Release 2 Demo:**
 - Full platform demonstration (all features across all 24 specifications)
