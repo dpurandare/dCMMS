@@ -263,6 +263,29 @@ Each release produces a deployable increment with automated regression coverage.
 
 The platform follows a cloud-native, edge-to-cloud architecture supporting on-prem or hybrid deployments.
 
+**📊 Comprehensive Architecture Diagrams (v2.0):**
+
+For complete system architecture with 100% specification coverage, see **[`media/ARCHITECTURE_DIAGRAMS_V2.md`](media/ARCHITECTURE_DIAGRAMS_V2.md)** which contains 5 detailed Mermaid diagrams:
+
+1. **Complete System Architecture** - All layers from users to storage, 10+ microservices, complete integration layer
+2. **Layered Architecture with Technology Stack** - Detailed technology choices, performance configs, caching strategies
+3. **Data Flow Architecture** - End-to-end flow from devices to actions, hot/cold paths, stream processing
+4. **Mobile Offline Sync Architecture** - Sequence diagram showing offline operations and conflict resolution
+5. **Notification & Alerting Flow** - Multi-channel routing with 4-level escalation
+
+These diagrams represent the complete dCMMS system based on all 24 detailed specifications, including:
+- Frontend layer (Web/Mobile/PWA)
+- API Gateway & CDN
+- All business microservices (Work Orders, Notifications, Compliance, Vendor, Cost, i18n, etc.)
+- Mobile offline sync with conflict resolution
+- Multi-channel notification system
+- Security infrastructure (Vault, KMS, Cert Manager)
+- Complete observability stack
+
+**Legacy Diagrams (Data Pipeline Focus):**
+
+The diagrams below focus primarily on the data/telemetry pipeline but don't represent the complete application architecture:
+
 ![Architecture Diagram](media/Arch1.png)
 
 ![Detailed Architecture Flow](media/Arch2.png)
