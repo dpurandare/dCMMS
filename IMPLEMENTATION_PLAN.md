@@ -1,9 +1,9 @@
 # dCMMS Implementation Plan
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** November 15, 2025
-**Status:** Ready for Execution
-**Based on:** PRD_FINAL.md, TECHNOLOGY_STACK_EVALUATION.md, 24 Technical Specifications
+**Status:** Ready for Execution (Updated with Stakeholder Decisions)
+**Based on:** PRD_FINAL.md, TECHNOLOGY_STACK_EVALUATION.md, 24 Technical Specifications, STAKEHOLDER_DECISIONS.md
 
 ---
 
@@ -29,10 +29,12 @@
 
 dCMMS is a comprehensive computerized maintenance management system for non-conventional energy assets (solar, wind, hybrid microgrids, BESS). The implementation follows a phased approach with three major releases over 12 months:
 
-- **Sprint 0** (Weeks 1-2): Foundation setup, local development environment
-- **MVP / Release 0** (Weeks 3-12): Core CMMS features (Month 3 target)
-- **Release 1** (Weeks 13-24): Telemetry, alerting, compliance (Month 6 target)
-- **Release 2** (Weeks 25-36): AI/ML predictive maintenance (Month 9 target)
+- **Sprint 0** (Weeks 1-4): Foundation setup, architecture, high-fidelity UI mockups, local development environment
+- **MVP / Release 0** (Weeks 5-14): Core CMMS features (Month 3.5 target)
+- **Release 1** (Weeks 15-26): Telemetry, alerting, compliance (Month 6.5 target)
+- **Release 2** (Weeks 27-40): AI/ML predictive maintenance (Month 10 target)
+
+**Note:** Sprint 0 extended from 2 to 4 weeks to accommodate high-fidelity UI mockup creation per stakeholder decision. Timeline can be maintained at original targets (Month 3, 6, 9) through parallel work and scope optimizations (ERP integration postponed).
 
 ### 1.2 Key Objectives
 
@@ -228,46 +230,59 @@ services:
 
 **Trigger:** MVP completion + decision to move to production
 
-**Target Cloud Provider:** AWS / Azure / GCP (to be decided)
+**Target Cloud Provider:** Cloud-Agnostic (AWS / Azure / GCP)
+- **Decision Date:** Month 2-3 after cost comparison
+- **Architecture:** Cloud-agnostic design using Kubernetes and open-source technologies
+- **Deployment:** Multi-cloud support via Terraform modules
 
 **Migration Approach:**
-1. **Week 1:** Provision cloud infrastructure (VPC, subnets, security groups)
-2. **Week 2:** Deploy managed services (RDS, MSK, ElastiCache)
-3. **Week 3:** Migrate application services (EKS/ECS)
+1. **Week 1:** Cloud provider selection, provision infrastructure (VPC, subnets, security groups)
+2. **Week 2:** Deploy managed services (PostgreSQL, Kafka, Redis) or self-hosted alternatives
+3. **Week 3:** Migrate application services to Kubernetes cluster
 4. **Week 4:** Data migration and cutover
 5. **Week 5:** Validation and performance testing
 
-**Cloud Architecture (AWS Example):**
+**Cloud-Agnostic Architecture:**
 ```
 ┌─────────────────────────────────────────┐
-│  Route 53 (DNS)                         │
+│  DNS (Cloud DNS / Route 53 / Azure DNS)│
 └────────────┬────────────────────────────┘
              │
 ┌────────────▼────────────────────────────┐
-│  CloudFront (CDN)                       │
+│  CDN (Cloudflare / CloudFront / Akamai)│
 └────────────┬────────────────────────────┘
              │
 ┌────────────▼────────────────────────────┐
-│  Application Load Balancer              │
+│  Kubernetes Ingress (NGINX / Traefik)  │
 └────────────┬────────────────────────────┘
              │
 ┌────────────▼────────────────────────────┐
-│  EKS Cluster (Kubernetes)               │
+│  Kubernetes Cluster (Any Provider)      │
 │  ├── Frontend (Next.js)                 │
 │  ├── API Services (Fastify, FastAPI)   │
-│  ├── Kafka (MSK)                        │
-│  ├── Flink (on EKS)                     │
+│  ├── Kafka (self-hosted or managed)    │
+│  ├── Flink (on Kubernetes)              │
 │  └── ML Services (KServe)               │
 └────────────┬────────────────────────────┘
              │
 ┌────────────▼────────────────────────────┐
-│  Data Layer                             │
-│  ├── RDS PostgreSQL (Multi-AZ)         │
-│  ├── ElastiCache Redis                  │
-│  ├── QuestDB (self-hosted on EKS)      │
-│  └── S3 (object storage, Iceberg)      │
+│  Data Layer (Cloud-Agnostic)            │
+│  ├── PostgreSQL (managed or on K8s)    │
+│  ├── Redis (managed or on K8s)         │
+│  ├── QuestDB (self-hosted on K8s)      │
+│  └── S3-compatible storage (S3/Blob/GCS)│
 └─────────────────────────────────────────┘
 ```
+
+**Cloud Provider Comparison (To be completed in Month 2):**
+| Service | AWS | Azure | GCP | Cloud-Agnostic |
+|---------|-----|-------|-----|----------------|
+| **Kubernetes** | EKS | AKS | GKE | ✅ All supported |
+| **PostgreSQL** | RDS | Azure Database | Cloud SQL | ✅ Or self-hosted |
+| **Object Storage** | S3 | Blob Storage | GCS | ✅ S3-compatible API |
+| **Kafka** | MSK | Event Hubs | Pub/Sub | ✅ Or self-hosted |
+| **Redis** | ElastiCache | Azure Cache | Memorystore | ✅ Or self-hosted |
+| **CDN** | CloudFront | Azure CDN | Cloud CDN | ✅ Cloudflare/Akamai |
 
 ### 4.3 Development Environments
 
@@ -282,24 +297,29 @@ services:
 
 ## 5. Phase Overview
 
-### 5.1 Sprint 0: Foundation (Weeks 1-2)
+### 5.1 Sprint 0: Foundation (Weeks 1-4) **[EXTENDED PER STAKEHOLDER DECISION]**
 
-**Goal:** Define system architecture, design database and APIs, create UI wireframes, and set up development environment
+**Goal:** Define cloud-agnostic architecture, design database and APIs, create high-fidelity UI mockups, and set up development environment
 
 **Timeline:**
-- **Week 1:** Architecture design, API contracts, database schema, user flows, wireframes
+- **Week 1:** Cloud-agnostic architecture design, API contracts, database schema, user flows, IdP adapter design
 - **Week 2:** Infrastructure setup, CI/CD, project scaffolding
+- **Week 3:** High-fidelity UI mockup creation (design system, 20+ screens)
+- **Week 4:** Mockup review, approval, design token extraction
 
 **Week 1 Deliverables (Architecture & Design):**
-- ✅ System architecture diagrams (component view, data flow, deployment)
+- ✅ Cloud-agnostic system architecture diagrams (component view, data flow, deployment)
 - ✅ Architecture Decision Records (ADRs) for major technology choices
+  - ADR: Cloud-agnostic architecture strategy
+  - ADR: IdP adapter pattern for flexible authentication
+  - ADR: Multi-protocol SCADA support
 - ✅ Complete OpenAPI 3.1 specification for all MVP endpoints
 - ✅ Complete Entity-Relationship Diagram (ERD) with 20+ tables
 - ✅ Database schema design document with migrations strategy
 - ✅ Sequence diagrams for 6-8 critical user flows
 - ✅ State machine diagrams (Work Order, Asset lifecycle)
-- ✅ Mobile architecture design (offline sync algorithm, state management)
-- ✅ UI wireframes for all MVP screens (10+ screens)
+- ✅ Mobile architecture design (offline sync algorithm, state management, MDM-optional security)
+- ✅ IdP adapter interface design (Auth0/Okta, Azure AD, Keycloak support)
 - ✅ Technical design review meeting with sign-off
 
 **Week 2 Deliverables (Infrastructure):**
@@ -308,73 +328,121 @@ services:
 - ✅ CI/CD pipeline (GitHub Actions / GitLab CI)
 - ✅ Test framework configured (Jest, Cypress, Flutter Test, k6)
 - ✅ Database migrations initialized (based on ERD)
-- ✅ API skeleton with health checks
+- ✅ API skeleton with health checks and IdP adapter stub
 - ✅ Frontend boilerplate (Next.js + Tailwind + shadcn/ui)
 - ✅ Mobile app skeleton (Flutter + Drift + Isar)
 - ✅ Developer onboarding documentation
+- ✅ Cloud provider selection criteria documented
+
+**Week 3 Deliverables (High-Fidelity UI Mockups) **[NEW]****
+- ✅ Design system creation (colors, typography, spacing, component specs)
+- ✅ High-fidelity mockups for 20+ MVP screens:
+  - Dashboard (KPIs, work order backlog, asset availability)
+  - Asset management (list, details, hierarchy view)
+  - Work order management (list, create, details, execution)
+  - Mobile app screens (login, work order list, offline execution, photo capture)
+  - User management and settings
+- ✅ Interactive prototype in Figma/Sketch with clickable user flows
+- ✅ Responsive layouts (desktop 1920px, tablet 768px, mobile 375px)
+- ✅ Component library specification (buttons, forms, tables, cards, modals)
+- ✅ Accessibility annotations (WCAG 2.1 AA compliance)
+
+**Week 4 Deliverables (Design Review & Approval) **[NEW]****
+- ✅ Stakeholder review of high-fidelity mockups
+- ✅ Incorporate design feedback and revisions
+- ✅ Final mockup approval and sign-off
+- ✅ Design token extraction (CSS variables, Tailwind config)
+- ✅ Component library setup based on approved mockups (shadcn/ui customization)
+- ✅ Handoff documentation for frontend developers
+- ✅ Figma/Sketch developer mode setup for easy asset export
 
 **Team Focus:**
 
-*Week 1 (Design & Architecture):*
-- **All Developers:** Collaborative architecture design session
-- **Backend + Frontend:** API contract design (OpenAPI spec)
-- **Backend:** Database ERD design, user flow sequence diagrams
-- **Mobile:** Mobile architecture design, offline sync algorithm
-- **Frontend + PM:** UI wireframe creation for MVP screens
+*Week 1 (Cloud-Agnostic Architecture & Design):*
+- **All Developers:** Collaborative cloud-agnostic architecture design session
+- **Backend + Frontend:** API contract design (OpenAPI spec), IdP adapter interface
+- **Backend:** Database ERD design, user flow sequence diagrams, multi-protocol SCADA planning
+- **Mobile:** Mobile architecture design, offline sync algorithm, MDM-optional security design
+- **Frontend + PM:** Initial wireframe sketches for mockup guidance
 - **All Team:** Technical design review meeting
 
 *Week 2 (Implementation Foundation):*
 - **Backend:** PostgreSQL schema implementation, Fastify API skeleton, Docker Compose setup
-- **Frontend:** Next.js project, shadcn/ui components, auth scaffolding
+- **Frontend:** Next.js project, shadcn/ui base components, auth scaffolding
 - **Mobile:** Flutter project, offline database (Drift), navigation structure
-- **DevOps:** CI/CD pipeline, test automation setup
+- **DevOps:** CI/CD pipeline, test automation setup, cloud provider research
 - **QA:** Test strategy finalization, test data preparation
 
+*Week 3 (High-Fidelity UI Mockups - NEW):*
+- **UI/UX Designer:** Design system creation, high-fidelity mockup design for all MVP screens
+- **Frontend Developer:** Design system review, technical feasibility feedback
+- **Product Manager:** User flow validation, business requirements alignment
+- **All Team:** Mid-week design checkpoint review
+
+*Week 4 (Design Approval & Token Extraction - NEW):*
+- **UI/UX Designer:** Incorporate feedback, finalize mockups, export assets
+- **Frontend Developer:** Extract design tokens, set up component library, create Tailwind config
+- **Product Manager:** Final mockup approval and sign-off
+- **Backend Developer:** Prepare for Sprint 1 development (API implementation planning)
+- **All Team:** Sprint 0 retrospective, Sprint 1 planning preparation
+
 **Success Criteria:**
-- [ ] Architecture documents reviewed and approved by team
+- [ ] Cloud-agnostic architecture documents reviewed and approved by team
 - [ ] OpenAPI specification covers all MVP endpoints
 - [ ] Database ERD validated against data models spec
-- [ ] Wireframes approved for all MVP screens
+- [ ] **High-fidelity mockups approved for all MVP screens (20+ screens)**
+- [ ] **Design system documented and design tokens extracted**
+- [ ] IdP adapter interface designed and documented
 - [ ] Technical design review sign-off obtained
 - [ ] All developers can run full stack locally
 - [ ] CI/CD pipeline runs on every PR with 75% coverage gate
 - [ ] Sample API endpoint with tests deployed
-- [ ] Basic login flow working (mocked auth)
+- [ ] Basic login flow working (mocked auth with IdP adapter pattern)
+- [ ] **Component library set up based on approved mockups**
 
-### 5.2 Phase 1: MVP / Release 0 (Weeks 3-12)
+### 5.2 Phase 1: MVP / Release 0 (Weeks 5-14) **[UPDATED TIMELINE]**
 
 **Goal:** Deliver core CMMS functionality for field operations
 
-**Target Date:** Month 3 (Week 12)
+**Target Date:** Month 3.5 (Week 14)
+**Note:** Original Month 3 target can be maintained through parallel work and ERP integration postponement
 
 **Specifications Implemented:** P0 (13 specs)
 1. `01_API_SPECIFICATIONS.md` - REST API design
 2. `02_STATE_MACHINES.md` - Work order, asset state machines
-3. `03_AUTH_AUTHORIZATION.md` - OAuth2/OIDC, RBAC/ABAC
-4. `04_MOBILE_OFFLINE_SYNC.md` - Offline-first architecture
+3. `03_AUTH_AUTHORIZATION.md` - OAuth2/OIDC with IdP adapter pattern (Auth0/Okta initial implementation)
+4. `04_MOBILE_OFFLINE_SYNC.md` - Offline-first architecture (MDM-optional security)
 5. `05_DEPLOYMENT_RUNBOOKS.md` - Deployment automation
 6. `06_MIGRATION_ONBOARDING.md` - Data migration utilities
 7. `07_TESTING_STRATEGY.md` - Comprehensive testing
 8. `08_ORGANIZATIONAL_STRUCTURE.md` - User roles
-9. `09_ROLE_FEATURE_ACCESS_MATRIX.md` - RBAC matrix
-10. `10_DATA_INGESTION_ARCHITECTURE.md` - Basic telemetry
+9. `09_ROLE_FEATURE_ACCESS_MATRIX.md` - RBAC matrix (17 roles × 73 features)
+10. `10_DATA_INGESTION_ARCHITECTURE.md` - Basic telemetry ingestion foundation
 11. `11_COMPLETE_DATA_MODELS.md` - Database schemas
-12. `12_INTEGRATION_ARCHITECTURE.md` - ERP integration hooks
+12. `12_INTEGRATION_ARCHITECTURE.md` - ~~ERP integration hooks~~ **[DEFERRED TO RELEASE 3+]**
 13. `13_SECURITY_IMPLEMENTATION.md` - Security baseline
 
 **Key Features:**
 - Asset registry and hierarchy (site → asset → component)
 - Work order lifecycle (create → schedule → assign → execute → close)
-- Mobile PWA with offline sync
-- Inventory/parts reservation and consumption
+- Mobile app with offline sync (Flutter, MDM-optional security)
+- **IdP adapter pattern** (start with Auth0/Okta, support Azure AD/Keycloak future)
+- Inventory/parts reservation and consumption (standalone, no ERP integration)
 - Basic dashboards (KPIs, backlog, asset availability)
-- Security baseline (RBAC, MFA, audit logs)
+- Security baseline (RBAC/ABAC with 17 roles, MFA, audit logs)
 - Basic telemetry ingestion (foundation for Release 1)
+- **High-fidelity UI based on approved mockups**
 
 **Sprint Breakdown:**
-- **Sprint 1-2 (Weeks 3-6):** Asset management + work order backend
-- **Sprint 3-4 (Weeks 7-10):** Work order frontend + mobile app
-- **Sprint 5 (Weeks 11-12):** Integration, testing, MVP demo
+- **Sprint 1-2 (Weeks 5-8):** Asset management + work order backend + IdP adapter (Auth0/Okta)
+- **Sprint 3-4 (Weeks 9-12):** Work order frontend + mobile app (based on high-fidelity mockups)
+- **Sprint 5 (Weeks 13-14):** Integration, testing, MVP demo
+
+**Scope Changes from Original Plan:**
+- ✅ **Added:** IdP adapter pattern for flexible authentication
+- ✅ **Added:** High-fidelity UI mockups driving frontend development
+- ❌ **Removed:** ERP integration (postponed to Release 3+)
+- ❌ **Removed:** MDM requirement (MDM-optional mobile security instead)
 
 **Success Criteria:**
 - [ ] Field technician can create/execute work orders offline
@@ -386,80 +454,103 @@ services:
 - [ ] User Acceptance Testing (UAT) completed with sign-off
 - [ ] All critical and high-priority defects resolved
 
-### 5.3 Phase 2: Release 1 (Weeks 13-24)
+### 5.3 Phase 2: Release 1 (Weeks 15-26) **[UPDATED TIMELINE]**
 
-**Goal:** Add telemetry, alerting, analytics, and compliance
+**Goal:** Add telemetry, alerting, analytics, and compliance (CEA/MNRE India focus)
 
-**Target Date:** Month 6 (Week 24)
+**Target Date:** Month 6.5 (Week 26)
+**Note:** Original Month 6 target can be maintained through scope optimization (CEA/MNRE only)
 
 **Specifications Implemented:** P1 (8 specs)
-14. `14_NOTIFICATION_ALERTING_SYSTEM.md` - Multi-channel notifications
-15. `15_COMPLIANCE_REGULATORY_REPORTING.md` - Compliance reports
-16. `16_ANALYTICS_REPORTING.md` - Advanced analytics
-17. `17_UX_DESIGN_SYSTEM_TRAINING.md` - Design system
-18. `18_PERFORMANCE_SCALABILITY.md` - Performance optimization
-19. `19_DOCUMENTATION_SYSTEM.md` - API documentation
+14. `14_NOTIFICATION_ALERTING_SYSTEM.md` - Multi-channel notifications (email, SMS, push, webhooks)
+15. `15_COMPLIANCE_REGULATORY_REPORTING.md` - **CEA/MNRE (India) compliance only** (NERC/AEMO/NESO deferred)
+16. `16_ANALYTICS_REPORTING.md` - Advanced analytics and custom reports
+17. `17_UX_DESIGN_SYSTEM_TRAINING.md` - Design system + **interactive tutorials**
+18. `18_PERFORMANCE_SCALABILITY.md` - Performance optimization (72K events/sec validation)
+19. `19_DOCUMENTATION_SYSTEM.md` - API documentation portal
 20. `20_VENDOR_PROCUREMENT.md` - Vendor management
-21. `21_EDGE_COMPUTING.md` - Edge analytics
+21. `21_EDGE_COMPUTING.md` - Edge analytics with multi-protocol SCADA support
 
 **Key Features:**
-- High-speed telemetry ingestion (72K events/sec)
-- Real-time alerting with escalation
-- Advanced analytics dashboards
-- Compliance reporting (NERC/CEA/MNRE)
-- Edge computing capabilities
-- SLA tracking and contractor performance
+- High-speed telemetry ingestion (72K events/sec with QuestDB)
+- **Multi-protocol SCADA support** (OPC-UA, Modbus TCP/RTU, IEC 61850, DNP3)
+- Real-time alerting with 4-level escalation
+- Advanced analytics dashboards with custom report builder
+- **CEA/MNRE (India) compliance reporting** (Grid Standards, REC Mechanism, Performance Reports)
+- Edge computing capabilities (K3s, 24-hour local buffering)
+- SLA tracking and contractor performance monitoring
 - Multi-channel notifications (email/SMS/push/webhooks)
+- **Interactive in-app tutorials** for user onboarding
 
 **Sprint Breakdown:**
-- **Sprint 6-7 (Weeks 13-16):** Kafka + Flink pipeline, QuestDB integration
-- **Sprint 8-9 (Weeks 17-20):** Alerting system, notifications
-- **Sprint 10-11 (Weeks 21-24):** Analytics dashboards, compliance reports
+- **Sprint 6-7 (Weeks 15-18):** Kafka + Flink pipeline, QuestDB integration, multi-protocol SCADA adapters
+- **Sprint 8-9 (Weeks 19-22):** Alerting system, multi-channel notifications, notification providers integration
+- **Sprint 10-11 (Weeks 23-26):** Analytics dashboards, CEA/MNRE compliance reports, interactive tutorials
+
+**Scope Changes from Original Plan:**
+- ✅ **Focused:** CEA/MNRE (India) compliance only (NERC/AEMO/NESO postponed to future)
+- ✅ **Added:** Interactive in-app tutorials for better user onboarding
+- ✅ **Enhanced:** Multi-protocol SCADA support from beginning (OPC-UA, Modbus, IEC 61850, DNP3)
+- ✅ **Added:** Notification provider integration (SendGrid, Twilio) with sandbox/trial accounts
 
 **Success Criteria:**
-- [ ] Telemetry pipeline handles 72K events/sec
+- [ ] Telemetry pipeline handles 72K events/sec with QuestDB
+- [ ] **Multi-protocol SCADA support validated** (OPC-UA, Modbus, IEC 61850, DNP3 with simulators)
 - [ ] End-to-end latency <5 seconds (device → dashboard)
 - [ ] Alerts trigger work orders automatically
-- [ ] Compliance reports generated on-demand
+- [ ] **CEA/MNRE compliance reports generated on-demand** (Grid Standards, REC, Performance)
 - [ ] Edge gateways buffer 24 hours locally
+- [ ] Multi-channel notifications operational (email via SendGrid, SMS via Twilio, push via FCM)
+- [ ] **Interactive tutorials implemented** for key workflows (onboarding, work order creation, offline mode)
 - [ ] p95 API latency maintained <200ms
-- [ ] User Acceptance Testing (UAT) completed with sign-off
+- [ ] User Acceptance Testing (UAT) completed with sign-off (1-week advance notice for field staff)
 - [ ] All critical and high-priority defects resolved
 
-### 5.4 Phase 3: Release 2 (Weeks 25-36)
+### 5.4 Phase 3: Release 2 (Weeks 27-40) **[UPDATED TIMELINE]**
 
-**Goal:** AI/ML predictive maintenance, cost management, i18n
+**Goal:** AI/ML predictive maintenance, cost management, Hindi i18n
 
-**Target Date:** Month 9 (Week 36)
+**Target Date:** Month 10 (Week 40)
+**Note:** Original Month 9 target can be maintained through optimized i18n scope (Hindi only)
 
 **Specifications Implemented:** P2 (3 specs)
-22. `22_AI_ML_IMPLEMENTATION.md` - ML pipelines, model serving
-23. `23_COST_MANAGEMENT.md` - Work order costing, budgets
-24. `24_INTERNATIONALIZATION.md` - Multi-language support
+22. `22_AI_ML_IMPLEMENTATION.md` - ML pipelines, model serving, feature store
+23. `23_COST_MANAGEMENT.md` - Work order costing, budget management
+24. `24_INTERNATIONALIZATION.md` - **Hindi support only** (15+ languages deferred)
 
 **Key Features:**
-- ML-based anomaly detection
-- Predictive work order creation
+- ML-based anomaly detection with explainability (SHAP)
+- Predictive work order creation (10% of corrective WOs)
 - Feature store (Feast) + model registry (MLflow)
-- Model serving (KServe)
+- Model serving (KServe with auto-scaling)
 - Work order costing and budget management
-- Multi-language support (15+ languages)
-- RTL support for Arabic
-- Cost analytics and forecasting
+- Cost analytics and forecasting dashboards
+- **Hindi language support** (English + Hindi, other languages deferred)
+- ML model cards for governance and transparency
+- Drift detection and model retraining triggers
 
 **Sprint Breakdown:**
-- **Sprint 12-13 (Weeks 25-28):** Feast setup, feature engineering, Metaflow pipelines
-- **Sprint 14-15 (Weeks 29-32):** Model training, KServe deployment, explainability
-- **Sprint 16-17 (Weeks 33-36):** Cost management, i18n, final integration
+- **Sprint 12-13 (Weeks 27-30):** Feast setup, feature engineering (20+ features), Metaflow pipelines
+- **Sprint 14-15 (Weeks 31-34):** Model training (anomaly detection, predictive maintenance), KServe deployment, explainability
+- **Sprint 16-17 (Weeks 35-38):** Cost management, Hindi i18n, ML model cards
+- **Sprint 18 (Weeks 39-40):** Final integration, performance validation, production readiness
+
+**Scope Changes from Original Plan:**
+- ✅ **Focused:** Hindi language support only (not 15+ languages)
+- ❌ **Removed:** RTL support for Arabic (no Arabic support in Release 2)
+- ✅ **Added:** ML model cards for AI governance
+- ✅ **Added:** Extended timeline for comprehensive ML documentation
 
 **Success Criteria:**
 - [ ] ML models generate 10% of corrective work orders
-- [ ] Model explainability (SHAP) integrated in UI
-- [ ] Cost tracking for all work orders
-- [ ] Application available in 5+ languages
-- [ ] RTL support validated for Arabic
-- [ ] Drift detection alerts operational
-- [ ] User Acceptance Testing (UAT) completed with sign-off
+- [ ] Model explainability (SHAP) integrated in UI for transparency
+- [ ] **ML model cards created** for anomaly detection and predictive maintenance models
+- [ ] Cost tracking implemented for all work orders
+- [ ] Budget management with commitment tracking operational
+- [ ] **Application available in Hindi** (in addition to English)
+- [ ] **No RTL support** (deferred with Arabic language support)
+- [ ] Drift detection alerts operational with retraining triggers
+- [ ] User Acceptance Testing (UAT) completed with sign-off (1-week advance notice)
 - [ ] Production readiness checklist completed
 - [ ] All critical and high-priority defects resolved
 
@@ -506,21 +597,22 @@ services:
 - KServe (model serving)
 - Optuna (hyperparameter tuning)
 
-**Infrastructure & Operations:**
-- Kubernetes (EKS/GKE/AKS) - post-MVP
+**Infrastructure & Operations (Cloud-Agnostic):**
+- Kubernetes (cloud-agnostic: EKS/AKS/GKE) - post-MVP
 - K3s (edge gateways)
-- Terraform (IaC)
+- Terraform (IaC with multi-cloud modules)
 - Apache Airflow (workflow orchestration)
 - Docker, Docker Compose
+- Kubernetes Ingress (NGINX/Traefik) - cloud-agnostic load balancing
 
 **Security & Observability:**
-- HashiCorp Vault (secrets)
-- AWS KMS (encryption keys)
-- Cert Manager (TLS certificates)
-- Prometheus (metrics)
-- Grafana (dashboards)
-- Loki (logs)
-- Jaeger (distributed tracing)
+- HashiCorp Vault (secrets management) - cloud-agnostic
+- Cloud KMS (AWS KMS / Azure Key Vault / GCP KMS) - provider-specific
+- Cert Manager (TLS certificates) - cloud-agnostic
+- Prometheus (metrics) - cloud-agnostic
+- Grafana (dashboards) - cloud-agnostic
+- Loki (logs) - cloud-agnostic
+- Jaeger (distributed tracing) - cloud-agnostic
 
 ### 6.2 Technology Decision Rationale
 
@@ -761,7 +853,8 @@ Sprint 16-17 (Cost + i18n)
 - [ ] ML models generate 10% of corrective WOs
 - [ ] Model drift detection operational
 - [ ] Cost tracking for all WOs
-- [ ] Application in 5+ languages
+- [ ] **Application in Hindi** (in addition to English, not 5+ languages)
+- [ ] **ML model cards created** for AI governance
 - [ ] Production-ready AI governance
 
 ### 10.3 Business Metrics (Post-Deployment)
@@ -785,35 +878,44 @@ Sprint 16-17 (Cost + i18n)
 
 ## 11. Timeline Summary
 
-### 11.1 Gantt Chart (High-Level)
+### 11.1 Gantt Chart (High-Level) **[UPDATED WITH STAKEHOLDER DECISIONS]**
 
 ```
-Month 1: ██████████ Sprint 0 + Sprint 1-2 (Foundation + Asset/WO Backend)
-Month 2: ██████████ Sprint 3-4 (WO Frontend + Mobile App)
-Month 3: █████      Sprint 5 (MVP Integration + Demo) ← MVP RELEASE
-Month 4: ██████████ Sprint 6-7 (Telemetry Pipeline)
-Month 5: ██████████ Sprint 8-9 (Alerting + Notifications)
-Month 6: █████      Sprint 10-11 (Analytics + Compliance) ← RELEASE 1
-Month 7: ██████████ Sprint 12-13 (ML Feature Store + Pipelines)
-Month 8: ██████████ Sprint 14-15 (Model Training + Serving)
-Month 9: █████      Sprint 16-17 (Cost + i18n) ← RELEASE 2
+Month 1:   ██████████ Sprint 0 (Weeks 1-4: Foundation + High-Fidelity Mockups)
+Month 2:   ██████████ Sprint 1-2 (Weeks 5-8: Asset/WO Backend + IdP Adapter)
+Month 3:   ██████████ Sprint 3-4 (Weeks 9-12: WO Frontend + Mobile)
+Month 3.5: █████      Sprint 5 (Weeks 13-14: MVP Integration + Demo) ← MVP RELEASE
+Month 4:   ██████████ Sprint 6-7 (Weeks 15-18: Telemetry + Multi-Protocol SCADA)
+Month 5:   ██████████ Sprint 8-9 (Weeks 19-22: Alerting + Notifications)
+Month 6:   ██████████ Sprint 10-11 (Weeks 23-26: Analytics + CEA/MNRE Compliance + Interactive Tutorials)
+Month 6.5: ─────      ← RELEASE 1
+Month 7:   ██████████ Sprint 12-13 (Weeks 27-30: ML Feature Store + Pipelines)
+Month 8:   ██████████ Sprint 14-15 (Weeks 31-34: Model Training + Serving)
+Month 9:   ██████████ Sprint 16-17 (Weeks 35-38: Cost Management + Hindi i18n + ML Model Cards)
+Month 10:  █████      Sprint 18 (Weeks 39-40: Final Integration + Production Readiness) ← RELEASE 2
 ```
 
-### 11.2 Key Milestones
+**Note:** Original targets (Month 3, 6, 9) can be maintained through:
+- ERP integration postponement (saves 2-3 weeks)
+- CEA/MNRE-only compliance (saves ~1 week)
+- Hindi-only i18n (saves ~2 weeks)
+- Parallel work during Sprint 0 mockup creation
 
-| Milestone | Target Date | Deliverable |
-|-----------|-------------|-------------|
-| **Sprint 0 Complete** | Week 2 | Local dev environment, CI/CD, API skeleton |
-| **Asset Management Live** | Week 6 | Asset CRUD, hierarchy, tagging |
-| **Work Orders Live** | Week 10 | WO lifecycle, mobile offline sync |
-| **MVP Demo** | Week 12 | ✅ Month 3 Target |
-| **Telemetry Pipeline** | Week 16 | 72K events/sec ingestion |
-| **Alerting System** | Week 20 | Multi-channel notifications |
-| **Release 1 Demo** | Week 24 | ✅ Month 6 Target |
-| **ML Models Training** | Week 28 | First predictive models |
-| **ML in Production** | Week 32 | KServe serving models |
-| **Release 2 Demo** | Week 36 | ✅ Month 9 Target |
-| **Cloud Migration** | Week 40+ | Production deployment (post-R2) |
+### 11.2 Key Milestones **[UPDATED TIMELINE]**
+
+| Milestone | Target Date | Deliverable | Changes from Original |
+|-----------|-------------|-------------|----------------------|
+| **Sprint 0 Complete** | Week 4 | High-fidelity mockups, cloud-agnostic architecture, local dev environment, CI/CD, API skeleton, IdP adapter design | +2 weeks for mockups |
+| **Asset Management Live** | Week 8 | Asset CRUD, hierarchy, tagging | +2 weeks |
+| **Work Orders Live** | Week 12 | WO lifecycle, mobile offline sync | +2 weeks |
+| **MVP Demo** | Week 14 | ✅ Month 3.5 Target (or Month 3 with parallel work) | +2 weeks |
+| **Telemetry Pipeline** | Week 18 | 72K events/sec ingestion, multi-protocol SCADA | +2 weeks |
+| **Alerting System** | Week 22 | Multi-channel notifications (SendGrid, Twilio, FCM) | +2 weeks |
+| **Release 1 Demo** | Week 26 | CEA/MNRE compliance, interactive tutorials | +2 weeks |
+| **ML Models Training** | Week 30 | First predictive models, Metaflow pipelines | +2 weeks |
+| **ML in Production** | Week 34 | KServe serving models, ML model cards | +2 weeks |
+| **Release 2 Demo** | Week 40 | Hindi i18n, cost management | +4 weeks |
+| **Cloud Migration** | Week 41+ | Cloud provider selected, production deployment (post-R2) | +1 week |
 
 ### 11.3 Buffer & Flexibility
 
@@ -871,26 +973,46 @@ Month 9: █████      Sprint 16-17 (Cost + i18n) ← RELEASE 2
 
 The project will produce **242 deliverables** across all phases. Critical deliverables are tracked as acceptance criteria in IMPLEMENTATION_TASK_LIST.md. For complete audit, see DELIVERABLES_MATRIX.md.
 
-### 12.2 Sprint 0 Deliverables (50 artifacts)
+### 12.2 Sprint 0 Deliverables (60+ artifacts) **[EXTENDED TO 4 WEEKS]**
 
-**Week 1: Architecture & Design (10 major deliverables)**
-- System architecture diagrams and ADRs
+**Week 1: Cloud-Agnostic Architecture & Design (12 major deliverables)**
+- Cloud-agnostic system architecture diagrams and ADRs
+- ADR: Cloud-agnostic architecture strategy
+- ADR: IdP adapter pattern
+- ADR: Multi-protocol SCADA support
 - OpenAPI 3.1 specification for all MVP endpoints
 - Complete database ERD (20+ tables) and data dictionary
 - Sequence diagrams for 6-8 critical user flows
 - State machine diagrams (Work Order, Asset)
-- Mobile architecture design and offline sync algorithm
-- UI wireframes for all MVP screens
+- Mobile architecture design (offline sync algorithm, state management, MDM-optional security)
+- IdP adapter interface design
 
-**Week 2: Infrastructure & Foundation (8 major deliverables)**
+**Week 2: Infrastructure & Foundation (10 major deliverables)**
 - Docker Compose stack with all services
 - CI/CD pipeline with 75% coverage gate
-- Test framework configuration (Jest, Cypress, k6)
-- API skeleton with health checks and Swagger UI
+- Test framework configuration (Jest, Cypress, Flutter Test, k6)
+- API skeleton with health checks, Swagger UI, and IdP adapter stub
 - Frontend boilerplate (Next.js + shadcn/ui)
 - Mobile app skeleton (Flutter + Drift)
 - Environment configuration templates
 - Developer onboarding and troubleshooting guides
+- Cloud provider selection criteria document
+
+**Week 3: High-Fidelity UI Mockups (NEW - 8 major deliverables)**
+- Design system creation (colors, typography, spacing, components)
+- High-fidelity mockups for 20+ MVP screens
+- Interactive Figma/Sketch prototype with clickable flows
+- Responsive layouts (desktop, tablet, mobile)
+- Component library specification
+- Accessibility annotations (WCAG 2.1 AA)
+
+**Week 4: Design Review & Token Extraction (NEW - 6 major deliverables)**
+- Stakeholder mockup review and feedback incorporation
+- Final mockup approval and sign-off
+- Design token extraction (CSS variables, Tailwind config)
+- Component library setup (shadcn/ui customization)
+- Handoff documentation for developers
+- Figma/Sketch developer mode setup
 
 ### 12.3 MVP / Release 0 Deliverables (45 artifacts)
 
@@ -929,13 +1051,19 @@ The project will produce **242 deliverables** across all phases. Critical delive
 - Alert Runbooks (10+ alert scenarios with resolution procedures)
 - Prometheus alert configurations (YAML)
 
-**Documentation Deliverables (15+ artifacts):**
+**Documentation Deliverables (20+ artifacts):**
 - Telemetry Pipeline Documentation (architecture, MQTT, Kafka, Flink, QuestDB)
 - Alerting Configuration Guide
 - Analytics Dashboard User Guide
-- Compliance Reporting Guide
+- Compliance Reporting Guide (CEA/MNRE)
+- **Administrator Guide Update (Release 1):**
+  - Telemetry Configuration (30+ pages)
+  - SCADA Integration (35+ pages)
+  - Alerting and Notifications (25+ pages)
+  - Compliance Configuration (40+ pages)
+  - Edge Computing Management (20+ pages)
 - Updated API Documentation
-- Updated User and Admin Guides
+- Updated User Guides
 - Deployment Runbook (Release 1)
 - Release Notes (v0.2.0)
 - Performance test report (72K events/sec validation)
@@ -963,15 +1091,23 @@ The project will produce **242 deliverables** across all phases. Critical delive
 - i18n Developer Guide
 - RTL support documentation
 
-**Documentation Deliverables (20+ artifacts):**
-- ML Model Cards (anomaly detection, predictive maintenance)
-- Feature engineering docs (20+ features documented)
-- ML training pipeline docs (Metaflow, hyperparameter tuning)
-- ML model serving docs (KServe deployment guide)
-- ML monitoring docs (drift detection, retraining triggers)
+**Documentation Deliverables (30+ artifacts):**
+- **ML Model Cards (2 models):**
+  - Anomaly Detection Model Card
+  - Predictive Maintenance Model Card
+- ML Feature Engineering Documentation (20+ features)
+- ML Training Pipeline Documentation (Metaflow, hyperparameter tuning)
+- ML Model Serving Documentation (KServe deployment guide)
+- ML Monitoring & Drift Detection Documentation
+- **Administrator Guide Update (Release 2):**
+  - ML Model Management (45+ pages)
+  - Cost Management Setup (30+ pages)
+  - i18n Configuration (15+ pages)
+  - Release 2 Performance Tuning (20+ pages)
 - Cost Management User Guide
+- i18n Developer Guide (how to add languages)
 - Updated API Documentation
-- Updated User and Admin Guides
+- Updated User Guides
 - Deployment Runbook (Release 2)
 - Release Notes (v0.3.0)
 - Performance test report
@@ -985,15 +1121,43 @@ The project will produce **242 deliverables** across all phases. Critical delive
 - Code review feedback (every PR)
 - Dependency security scan results (weekly)
 
-### 12.7 Post-Release / Production Deliverables
+### 12.7 Sprint 18: Production Readiness Deliverables (Weeks 39-40) **[NEW]**
 
-**To be created during cloud migration (Week 37+):**
-- Disaster Recovery Plan (backup/restore procedures, RTO/RPO)
-- Incident Response Plan (severity levels, escalation, post-incident review)
-- SLA Documentation (99.9% uptime commitment)
-- Capacity Planning Guide (scaling triggers, procedures)
-- Security Operations Guide (patching, vulnerability scanning)
-- Integration Guides (ERP, SCADA, third-party APIs)
+**Production Readiness & Operations:**
+- **Production Readiness Checklist** (comprehensive pre-production validation)
+- **Disaster Recovery Plan** (30+ pages):
+  - Backup and restore procedures (PostgreSQL, QuestDB, Redis)
+  - RTO: <4 hours, RPO: <24 hours
+  - DR drill procedures and test reports
+  - Backup automation scripts
+- **Incident Response Plan** (25+ pages):
+  - Incident severity levels (P0-P3)
+  - Escalation matrix and on-call rotation
+  - Communication templates
+  - Post-incident review process
+- **Production Deployment Runbook** (50+ pages):
+  - Cloud infrastructure provisioning (Terraform)
+  - Service deployment procedures
+  - Data migration procedures
+  - Validation and rollback procedures
+- **Security Audit Report**:
+  - OWASP ZAP scan results
+  - Vulnerability remediation tracking
+  - Security hardening validation
+- **Final Performance Test Report**:
+  - Load testing results (100 concurrent users)
+  - Telemetry pipeline validation (72K events/sec)
+  - ML inference performance validation
+- **Cloud Provider Selection Document**:
+  - Cost comparison analysis
+  - Selection rationale and sign-off
+- **Training Materials**:
+  - Training videos (4-5 videos, 2-3 hours total)
+  - Quick start guides (per role)
+  - Interactive in-app tutorials
+  - FAQ document
+- **Final Documentation Review Report**
+- **UAT Report and Production Sign-off**
 
 ### 12.8 Deliverables Quality Gates
 
@@ -1005,17 +1169,23 @@ The project will produce **242 deliverables** across all phases. Critical delive
 **Release-Level Gates:**
 - [ ] All code deliverables completed and tested
 - [ ] All documentation deliverables published
+- [ ] Administrator guides updated for release
 - [ ] UAT report with sign-off obtained
 - [ ] Release notes published
 - [ ] Deployment runbook validated
 - [ ] Performance targets met
 
-**Production-Level Gates (Post-Release 2):**
-- [ ] Disaster recovery plan tested
-- [ ] Incident response plan validated
-- [ ] SLA commitments documented
-- [ ] Security audit completed
-- [ ] All runbooks validated
+**Production-Level Gates (Sprint 18):**
+- [ ] Production readiness checklist completed
+- [ ] Disaster recovery plan created and tested
+- [ ] Incident response plan validated with drills
+- [ ] Security audit completed (no critical issues)
+- [ ] Final performance validation passed
+- [ ] All deployment runbooks validated
+- [ ] Training materials completed and reviewed
+- [ ] Cloud provider selected and documented
+- [ ] Production deployment runbook tested
+- [ ] Final stakeholder sign-off obtained
 
 ---
 

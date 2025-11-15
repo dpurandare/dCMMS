@@ -1,33 +1,44 @@
 # dCMMS Implementation Task List
 
-**Version:** 1.0
+**Version:** 2.0
 **Date:** November 15, 2025
-**Status:** Ready for Execution
+**Status:** Ready for Execution (Updated with Stakeholder Decisions)
 **Sprint Duration:** 2 weeks (flexible)
 **Test Coverage Requirement:** ≥75%
+**Based on:** STAKEHOLDER_DECISIONS.md
+
+**Major Changes from v1.0:**
+- Sprint 0 extended to 4 weeks (high-fidelity UI mockups added)
+- Cloud-agnostic architecture approach
+- IdP adapter pattern implementation
+- ERP integration deferred to Release 3+
+- CEA/MNRE (India) compliance focus only
+- Hindi-only i18n (not 15+ languages)
+- MDM-optional mobile security
 
 ---
 
 ## Table of Contents
 
-1. [Sprint 0: Foundation Setup (Weeks 1-2)](#sprint-0-foundation-setup-weeks-1-2)
-2. [Sprint 1: Asset Management Backend (Weeks 3-4)](#sprint-1-asset-management-backend-weeks-3-4)
-3. [Sprint 2: Work Order Backend (Weeks 5-6)](#sprint-2-work-order-backend-weeks-5-6)
-4. [Sprint 3: Frontend Foundation & Asset UI (Weeks 7-8)](#sprint-3-frontend-foundation--asset-ui-weeks-7-8)
-5. [Sprint 4: Work Order Frontend & Mobile App (Weeks 9-10)](#sprint-4-work-order-frontend--mobile-app-weeks-9-10)
-6. [Sprint 5: MVP Integration & Testing (Weeks 11-12)](#sprint-5-mvp-integration--testing-weeks-11-12)
-7. [Sprint 6: Telemetry Pipeline Foundation (Weeks 13-14)](#sprint-6-telemetry-pipeline-foundation-weeks-13-14)
-8. [Sprint 7: Telemetry Optimization & QuestDB (Weeks 15-16)](#sprint-7-telemetry-optimization--questdb-weeks-15-16)
-9. [Sprint 8: Alerting & Notification System (Weeks 17-18)](#sprint-8-alerting--notification-system-weeks-17-18)
-10. [Sprint 9: Multi-Channel Notifications (Weeks 19-20)](#sprint-9-multi-channel-notifications-weeks-19-20)
-11. [Sprint 10: Analytics & Reporting (Weeks 21-22)](#sprint-10-analytics--reporting-weeks-21-22)
-12. [Sprint 11: Compliance & Release 1 Hardening (Weeks 23-24)](#sprint-11-compliance--release-1-hardening-weeks-23-24)
-13. [Sprint 12: ML Infrastructure & Feature Store (Weeks 25-26)](#sprint-12-ml-infrastructure--feature-store-weeks-25-26)
-14. [Sprint 13: Feature Engineering & Model Training (Weeks 27-28)](#sprint-13-feature-engineering--model-training-weeks-27-28)
-15. [Sprint 14: Model Serving & Explainability (Weeks 29-30)](#sprint-14-model-serving--explainability-weeks-29-30)
-16. [Sprint 15: Predictive Maintenance Integration (Weeks 31-32)](#sprint-15-predictive-maintenance-integration-weeks-31-32)
-17. [Sprint 16: Cost Management (Weeks 33-34)](#sprint-16-cost-management-weeks-33-34)
-18. [Sprint 17: Internationalization & Release 2 (Weeks 35-36)](#sprint-17-internationalization--release-2-weeks-35-36)
+1. [Sprint 0: Foundation Setup (Weeks 1-4) **[EXTENDED]**](#sprint-0-foundation-setup-weeks-1-4)
+2. [Sprint 1: Asset Management Backend (Weeks 5-6)](#sprint-1-asset-management-backend-weeks-5-6)
+3. [Sprint 2: Work Order Backend (Weeks 7-8)](#sprint-2-work-order-backend-weeks-7-8)
+4. [Sprint 3: Frontend Foundation & Asset UI (Weeks 9-10)](#sprint-3-frontend-foundation--asset-ui-weeks-9-10)
+5. [Sprint 4: Work Order Frontend & Mobile App (Weeks 11-12)](#sprint-4-work-order-frontend--mobile-app-weeks-11-12)
+6. [Sprint 5: MVP Integration & Testing (Weeks 13-14)](#sprint-5-mvp-integration--testing-weeks-13-14)
+7. [Sprint 6: Telemetry Pipeline Foundation (Weeks 15-16)](#sprint-6-telemetry-pipeline-foundation-weeks-15-16)
+8. [Sprint 7: Telemetry Optimization & QuestDB (Weeks 17-18)](#sprint-7-telemetry-optimization--questdb-weeks-17-18)
+9. [Sprint 8: Alerting & Notification System (Weeks 19-20)](#sprint-8-alerting--notification-system-weeks-19-20)
+10. [Sprint 9: Multi-Channel Notifications (Weeks 21-22)](#sprint-9-multi-channel-notifications-weeks-21-22)
+11. [Sprint 10: Analytics & Reporting (Weeks 23-24)](#sprint-10-analytics--reporting-weeks-23-24)
+12. [Sprint 11: CEA/MNRE Compliance & Release 1 Hardening (Weeks 25-26) **[UPDATED]**](#sprint-11-ceamnre-compliance--release-1-hardening-weeks-25-26)
+13. [Sprint 12: ML Infrastructure & Feature Store (Weeks 27-28)](#sprint-12-ml-infrastructure--feature-store-weeks-27-28)
+14. [Sprint 13: Feature Engineering & Model Training (Weeks 29-30)](#sprint-13-feature-engineering--model-training-weeks-29-30)
+15. [Sprint 14: Model Serving & Explainability (Weeks 31-32)](#sprint-14-model-serving--explainability-weeks-31-32)
+16. [Sprint 15: Predictive Maintenance Integration (Weeks 33-34)](#sprint-15-predictive-maintenance-integration-weeks-33-34)
+17. [Sprint 16: Cost Management (Weeks 35-36)](#sprint-16-cost-management-weeks-35-36)
+18. [Sprint 17: Hindi i18n & ML Model Cards (Weeks 37-38) **[UPDATED]**](#sprint-17-hindi-i18n--ml-model-cards-weeks-37-38)
+19. [Sprint 18: Release 2 Integration & Production Readiness (Weeks 39-40) **[NEW]**](#sprint-18-release-2-integration--production-readiness-weeks-39-40)
 
 ---
 
@@ -54,41 +65,56 @@ Each task follows this format:
 
 ---
 
-## Sprint 0: Foundation Setup (Weeks 1-2)
+## Sprint 0: Foundation Setup (Weeks 1-4) **[EXTENDED PER STAKEHOLDER DECISION]**
 
-**Goal:** Define architecture, design system, and set up development environment
+**Goal:** Define cloud-agnostic architecture, design system, create high-fidelity UI mockups, and set up development environment
 
-**Specifications:** Spec 01, 05, 07, 11, 13, 17, 19
+**Specifications:** Spec 01, 03, 05, 07, 11, 13, 17, 19, 21
 
-**Sprint Capacity:** 70 points
+**Sprint Capacity:** 140 points (4 weeks × 35 points/week)
 
 **Timeline:**
-- **Week 1:** Architecture, design, and wireframe creation
+- **Week 1:** Cloud-agnostic architecture, design, and API contracts
 - **Week 2:** Infrastructure setup and implementation scaffolding
+- **Week 3:** High-fidelity UI mockup creation (design system, 20+ screens)
+- **Week 4:** Mockup review, approval, and design token extraction
 
-### Week 1: Architecture & Design Tasks
+**Scope Changes:**
+- ✅ **Added:** High-fidelity UI mockups (Weeks 3-4)
+- ✅ **Added:** Cloud-agnostic architecture design
+- ✅ **Added:** IdP adapter pattern design
+- ✅ **Added:** Multi-protocol SCADA architecture
+- ✅ **Added:** MDM-optional mobile security design
 
-#### [DCMMS-001A] Detailed System Architecture Design
+### Week 1: Cloud-Agnostic Architecture & Design Tasks
+
+#### [DCMMS-001A] Cloud-Agnostic System Architecture Design **[UPDATED]**
 - **Assignee:** Backend Developer + Mobile Developer + Frontend Developer
 - **Specification:** Spec 01, 10, 11, 21 (API, Data Ingestion, Data Models, Edge)
 - **Story Points:** 8
 - **Dependencies:** None
 - **Acceptance Criteria:**
-  - System architecture diagram (component view): Frontend, Backend APIs, Data Pipeline, Storage, ML Platform
+  - **Cloud-agnostic system architecture diagram** (component view): Frontend, Backend APIs, Data Pipeline, Storage, ML Platform
+  - Cloud provider comparison matrix (AWS, Azure, GCP) with service mappings
   - Service dependency map showing all interactions
   - High-level data flow diagrams (telemetry ingestion, work order lifecycle, offline sync)
   - Technology stack documentation with rationale (reference TECHNOLOGY_STACK_EVALUATION.md)
-  - Infrastructure architecture: local development vs cloud deployment
-  - Security architecture: authentication flow, authorization, data encryption
-  - Edge computing architecture (K3s gateways, MQTT, local buffering)
-  - Architecture Decision Records (ADRs) for major decisions
-  - Deployment architecture (Docker Compose → Kubernetes)
+  - Infrastructure architecture: local development vs **cloud-agnostic deployment (Kubernetes, not provider-specific)**
+  - Security architecture: **IdP adapter pattern**, authentication flow, authorization, data encryption
+  - Edge computing architecture (K3s gateways, MQTT, local buffering, **multi-protocol SCADA**)
+  - Architecture Decision Records (ADRs) for major decisions:
+    - **ADR: Cloud-agnostic architecture strategy**
+    - **ADR: IdP adapter pattern for flexible authentication**
+    - **ADR: Multi-protocol SCADA support (OPC-UA, Modbus, IEC 61850, DNP3)**
+  - Deployment architecture (Docker Compose → **cloud-agnostic Kubernetes**)
   - Scalability considerations documented (horizontal scaling, caching strategy)
+  - **Mobile security without MDM** (app-level security, server-side device management)
 - **Deliverables:**
-  - `docs/architecture/system-architecture.md` with diagrams
-  - `docs/architecture/adrs/` directory with ADR files
+  - `docs/architecture/system-architecture.md` with cloud-agnostic diagrams
+  - `docs/architecture/adrs/` directory with ADR files (cloud-agnostic, IdP, SCADA)
   - Component diagram (draw.io/Mermaid/PlantUML)
   - Data flow diagrams for 3-5 critical flows
+  - **Cloud provider selection criteria document**
 - **Testing:** Architecture review with full team
 
 #### [DCMMS-001B] API Contract Design (OpenAPI Specification)
@@ -481,9 +507,60 @@ Each task follows this format:
   - `docs/troubleshooting/local-setup.md`
 - **Testing:** Test on fresh machine, validate solutions
 
-**Sprint 0 Total:** 82 points
+#### [DCMMS-012D] API Documentation Portal Setup
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-005 (API skeleton with OpenAPI)
+- **Acceptance Criteria:**
+  - API documentation portal hosted and accessible
+  - Options evaluated: Redoc, Swagger UI, Stoplight, ReadMe.io
+  - OpenAPI specification auto-published to portal
+  - Portal includes:
+    - Searchable API endpoint documentation
+    - Try-it-out functionality (interactive requests)
+    - Code examples in multiple languages (curl, JavaScript, Python)
+    - Authentication documentation
+    - Response schema documentation
+  - Portal accessible at /api/docs or docs.dcmms.local
+  - Auto-update on OpenAPI spec changes
+  - Responsive design (works on mobile)
+  - Version support (v1, v2, etc.)
+- **Deliverables:**
+  - Hosted API documentation portal
+  - `docs/api/portal-setup.md` (setup instructions)
+- **Testing:** API docs accessible, interactive features working
+
+#### [DCMMS-012E] Error Tracking Dashboard Setup
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 18 (Performance), Spec 19 (Documentation)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-002 (CI/CD pipeline)
+- **Acceptance Criteria:**
+  - Error tracking solution selected and configured
+  - Options evaluated: Sentry, Rollbar, Bugsnag, or self-hosted (GlitchTip)
+  - Error tracking integrated in:
+    - Backend API (Fastify error handler)
+    - Frontend (Next.js error boundary)
+    - Mobile app (Flutter error handler)
+  - Error tracking dashboard configured with:
+    - Error grouping and deduplication
+    - Stack traces with source maps
+    - User context (user ID, session ID)
+    - Environment tagging (local, dev, staging, prod)
+    - Release tracking
+    - Alert notifications (Slack/email for critical errors)
+  - Error tracking SDK installed in all codebases
+  - Sample errors sent and verified in dashboard
+  - Team invited to error tracking dashboard
+- **Deliverables:**
+  - Error tracking dashboard (Sentry/Rollbar/GlitchTip)
+  - `docs/monitoring/error-tracking.md` (configuration guide)
+- **Testing:** Trigger test errors, verify in dashboard
+
+**Sprint 0 Total:** 88 points
 - **Week 1 (Architecture & Design):** 35 points
-- **Week 2 (Infrastructure & Documentation):** 47 points
+- **Week 2 (Infrastructure & Documentation):** 53 points (includes API portal + error tracking)
 
 **Sprint Review Demo:**
 - Present system architecture diagrams and ADRs
@@ -1331,8 +1408,45 @@ Each task follows this format:
   - UAT report generated (test results, defects, sign-off)
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 5 Total:** 50 points
-- Integration & Testing: 26 points
+#### [DCMMS-049A] Performance Baseline Metrics Documentation
+- **Assignee:** QA Engineer + Backend Developer
+- **Specification:** Spec 18 (Performance)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-042 (Integration testing)
+- **Acceptance Criteria:**
+  - Performance baseline metrics documented for MVP:
+    - **API Performance:**
+      - p50, p95, p99 latency for all CRUD endpoints
+      - Throughput (requests/second)
+      - Error rate
+    - **Database Performance:**
+      - Query execution times (top 10 slowest queries)
+      - Connection pool usage
+      - Index hit ratios
+    - **Mobile Sync Performance:**
+      - Sync duration for different data volumes (10, 100, 1000 WOs)
+      - Offline database size
+      - Conflict resolution time
+    - **Frontend Performance:**
+      - Page load times (dashboard, asset list, WO list)
+      - Time to Interactive (TTI)
+      - Lighthouse scores (performance, accessibility, SEO)
+    - **System Resource Usage:**
+      - CPU utilization under load
+      - Memory consumption
+      - Disk I/O
+  - Performance test results collected using k6 and other tools
+  - Baseline metrics stored for future comparison
+  - Performance graphs generated
+  - Performance improvement recommendations documented
+- **Deliverables:**
+  - `docs/performance/mvp-baseline-metrics.md`
+  - Performance test scripts (k6)
+  - Performance graphs (PNG/SVG)
+- **Testing:** Baseline metrics validated and reproducible
+
+**Sprint 5 Total:** 53 points
+- Integration & Testing: 29 points (includes performance baseline metrics)
 - Documentation: 24 points (User docs, API portal, Admin guide, Deployment runbook, Release notes)
 
 **Sprint Review / MVP Demo:**
@@ -2146,6 +2260,47 @@ Each task follows this format:
   - Export audit logs: CSV (for external audit)
 - **Testing:** Audit log tests, tamper-proof tests
 
+#### [DCMMS-090A] Data Retention Policy Documentation
+- **Assignee:** Backend Developer + Product Manager
+- **Specification:** Spec 15 (Compliance), Spec 13 (Security)
+- **Story Points:** 3
+- **Dependencies:** DCMMS-090 (Audit Trail)
+- **Acceptance Criteria:**
+  - Formal data retention policy document created:
+    - **Retention Schedules by Data Type:**
+      - Work orders: 7 years (compliance requirement)
+      - Assets: Permanent (active), 10 years (decommissioned)
+      - Telemetry data: 5 years (raw), 10 years (aggregated)
+      - Audit logs: 7 years (compliance requirement)
+      - User data: Active accounts (permanent), Deleted accounts (anonymized after 30 days)
+      - Compliance reports: 7 years
+      - System logs: 90 days (debug), 1 year (audit)
+      - Backups: 7 daily, 4 weekly, 12 monthly
+    - **Data Deletion Procedures:**
+      - Automated purge jobs for expired data
+      - Soft delete vs hard delete policies
+      - Anonymization procedures for GDPR/privacy compliance
+      - Manual deletion approval workflow for critical data
+    - **CEA/MNRE Compliance Alignment:**
+      - CEA requirements for maintenance records (5-7 years)
+      - MNRE requirements for generation data (5 years minimum)
+      - India regulations alignment
+    - **Legal and Regulatory Basis:**
+      - CEA (Central Electricity Authority) regulations
+      - MNRE (Ministry of New and Renewable Energy) requirements
+      - Data Protection Act (if applicable)
+      - Company data retention policies
+  - Data retention policy reviewed by legal/compliance team (if available)
+  - Database schema updated with retention metadata (retention_period, expires_at columns)
+  - Automated purge jobs scheduled (weekly cron job)
+  - Data retention policy published and accessible to team
+- **Deliverables:**
+  - `docs/compliance/data-retention-policy.md` (15-20 pages)
+  - `docs/compliance/data-deletion-procedures.md`
+  - Database migration script (add retention metadata columns)
+  - Automated purge job script
+- **Testing:** Review with compliance stakeholders, validate purge jobs in test environment
+
 ### Frontend Tasks
 
 #### [DCMMS-091] Compliance Report UI
@@ -2333,6 +2488,48 @@ Each task follows this format:
   - `docs/deployment/runbook-release-1.md`
 - **Testing:** Dry-run deployment
 
+#### [DCMMS-094E1] Administrator Guide Update (Release 1)
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-047B (MVP Admin Guide)
+- **Acceptance Criteria:**
+  - Update Administrator Guide for Release 1 features:
+    - **Telemetry Configuration:**
+      - MQTT broker setup and client management
+      - Kafka topic configuration and monitoring
+      - Flink job deployment and management
+      - QuestDB table management and retention policies
+    - **SCADA Integration:**
+      - Multi-protocol configuration (OPC-UA, Modbus TCP/RTU, IEC 61850, DNP3)
+      - Protocol adapter setup and troubleshooting
+      - Device connection management
+      - Data mapping and tag configuration
+    - **Alerting and Notifications:**
+      - Alert rule configuration
+      - Notification channel setup (email, SMS, push, webhooks)
+      - SendGrid API key configuration
+      - Twilio account setup
+      - Escalation policy management
+    - **Compliance Configuration:**
+      - CEA/MNRE report template customization
+      - Compliance schedule configuration
+      - Audit log access and export
+    - **Edge Computing Management:**
+      - K3s gateway deployment
+      - Edge buffer configuration
+      - Connectivity monitoring
+  - Include screenshots and examples
+  - Troubleshooting sections for common issues
+  - Security best practices for production deployment
+- **Deliverables:**
+  - `docs/admin/telemetry-configuration.md` (30+ pages)
+  - `docs/admin/scada-integration.md` (35+ pages)
+  - `docs/admin/alerting-notifications.md` (25+ pages)
+  - `docs/admin/compliance-configuration.md` (40+ pages)
+  - `docs/admin/edge-computing.md` (20+ pages)
+- **Testing:** Documentation review, validate procedures with actual system
+
 #### [DCMMS-094E] Release Notes (Release 1)
 - **Assignee:** Product Manager
 - **Specification:** N/A
@@ -2375,10 +2572,12 @@ Each task follows this format:
   - UAT report generated
 - **Testing:** Formal UAT execution with stakeholders
 
-**Sprint 11 Total:** 59 points
-- Performance & Hardening: 16 points
-- Documentation & Operational Readiness: 24 points
-- UAT: 5 points
+**Sprint 11 Total:** 67 points
+- Compliance: 16 points (DCMMS-088, 089, 090A - data retention policy)
+- Audit & Hardening: 13 points (DCMMS-090, 092)
+- Bug Fixes: 8 points (DCMMS-093)
+- Documentation & Operational Readiness: 25 points (DCMMS-094, 094A-E1)
+- UAT: 5 points (DCMMS-095A)
 
 **Sprint Review / Release 1 Demo:**
 - Full platform demonstration: asset → WO → telemetry → alarms → notifications → analytics → compliance
@@ -3348,20 +3547,62 @@ Each task follows this format:
 
 ### User & Admin Documentation
 
-#### [DCMMS-137] Release 2 Documentation
+#### [DCMMS-137] Release 2 User Documentation
 - **Assignee:** Product Manager + QA Engineer
 - **Specification:** Spec 19 (Documentation)
 - **Story Points:** 3
 - **Dependencies:** All Release 2 tasks
 - **Acceptance Criteria:**
   - User guide updates: ML predictions, cost management, multi-language
-  - Admin guide: ML model management, budget setup
   - API documentation: updated OpenAPI spec
   - Changelog: Release 2 features
   - Training materials (videos or slides)
   - Migration guide (if schema changes)
   - i18n guide: how to add new language
 - **Testing:** Documentation review
+
+#### [DCMMS-137A] Administrator Guide Update (Release 2)
+- **Assignee:** ML/AI Expert + Backend Developer
+- **Specification:** Spec 19 (Documentation), Spec 22 (AI/ML), Spec 23 (Cost Management)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-094E1 (Release 1 Admin Guide)
+- **Acceptance Criteria:**
+  - Update Administrator Guide for Release 2 features:
+    - **ML Model Management:**
+      - Model deployment procedures (KServe)
+      - Model versioning and rollback
+      - Feature store management (Feast)
+      - ML pipeline monitoring and troubleshooting
+      - Model retraining triggers and workflow
+      - Drift detection configuration
+      - Model performance monitoring dashboards
+      - A/B testing setup (if applicable)
+    - **Cost Management Configuration:**
+      - Budget setup and allocation
+      - Cost center configuration
+      - Labor rate configuration
+      - Parts pricing management
+      - Budget alert thresholds
+      - Cost report customization
+      - Cost forecasting parameters
+    - **Hindi Internationalization:**
+      - Language configuration
+      - Translation file management
+      - Adding new languages (developer guide)
+      - Locale-specific formatting
+    - **Performance Tuning:**
+      - ML inference optimization
+      - Cost calculation optimization
+      - Database indexing for ML/cost queries
+  - Include screenshots and examples
+  - Troubleshooting sections for ML and cost management issues
+  - Security considerations for ML model access
+- **Deliverables:**
+  - `docs/admin/ml-model-management.md` (45+ pages)
+  - `docs/admin/cost-management-setup.md` (30+ pages)
+  - `docs/admin/i18n-configuration.md` (15+ pages)
+  - `docs/admin/release-2-performance-tuning.md` (20+ pages)
+- **Testing:** Documentation review, validate procedures with actual system
 
 #### [DCMMS-138] Release 2 Performance Testing
 - **Assignee:** QA Engineer + Backend Developer
@@ -3401,12 +3642,14 @@ Each task follows this format:
   - UAT report generated (final release report)
 - **Testing:** Formal UAT execution with stakeholders, production readiness review
 
-**Sprint 17 Total:** 54 points
-- Backend & Frontend: 21 points
-- Bug Fixes & Stabilization: 8 points
-- ML Documentation: 15 points (Model cards, ML pipeline docs, deployment runbook, release notes)
-- User & Admin Documentation: 3 points
-- Performance Testing: 5 points
+**Sprint 17 Total:** 59 points
+- i18n Implementation: 18 points (DCMMS-132, 133, 134)
+- Backend i18n: 5 points (DCMMS-135)
+- Bug Fixes & Stabilization: 8 points (DCMMS-136)
+- ML Documentation: 10 points (DCMMS-136A, 136B - Model cards, ML pipeline docs)
+- Deployment & Release: 5 points (DCMMS-136C, 136D - Deployment runbook, release notes)
+- User & Admin Documentation: 8 points (DCMMS-137, 137A)
+- Performance Testing: 5 points (DCMMS-138)
 - UAT: 5 points
 
 **Sprint Review / Release 2 Demo:**
@@ -3509,3 +3752,869 @@ Each task follows this format:
 **Status:** Ready for Sprint Planning
 **Next Action:** Review with team, refine tasks, begin Sprint 0
 **Owner:** Product Manager + Tech Leads
+
+---
+
+## APPENDIX: Stakeholder Decision Implementation Notes
+
+**Date Added:** November 15, 2025
+**Based on:** STAKEHOLDER_DECISIONS.md
+
+This appendix documents changes required throughout the task list based on stakeholder decisions. Task owners should reference this when planning sprints.
+
+### Sprint 0 (Weeks 1-4) - EXTENDED
+
+**NEW TASKS TO ADD:**
+
+**Week 3: High-Fidelity UI Mockups**
+- [DCMMS-001M] Design System Creation (UI/UX Designer, 8 points)
+  - Create color palette, typography scale, spacing system
+  - Define component specifications (buttons, forms, tables, cards, modals)
+  - Document design tokens
+  - Ensure WCAG 2.1 AA compliance
+
+- [DCMMS-001N] High-Fidelity Mockup Design - Dashboard (UI/UX Designer, 5 points)
+  - Dashboard with KPIs, work order backlog, asset availability
+  - Responsive layouts (desktop 1920px, tablet 768px, mobile 375px)
+  - Interactive Figma/Sketch prototype
+
+- [DCMMS-001O] High-Fidelity Mockup Design - Asset Management (UI/UX Designer, 5 points)
+  - Asset list, details, hierarchy view
+  - Search and filtering UI
+  - Asset creation forms
+
+- [DCMMS-001P] High-Fidelity Mockup Design - Work Order Management (UI/UX Designer, 8 points)
+  - Work order list, creation, details, execution flows
+  - State machine visualization
+  - Task management UI
+
+- [DCMMS-001Q] High-Fidelity Mockup Design - Mobile App (UI/UX Designer, 8 points)
+  - Login, work order list, offline execution
+  - Photo capture, barcode scanning
+  - Sync status indicators
+
+- [DCMMS-001R] High-Fidelity Mockup Design - User Management (UI/UX Designer, 3 points)
+  - User list, roles, permissions
+  - Settings and preferences
+
+**Week 4: Design Review & Token Extraction**
+- [DCMMS-001S] Stakeholder Mockup Review (Product Manager + UI/UX Designer, 3 points)
+  - Present mockups to stakeholders
+  - Collect feedback and prioritize revisions
+  - Obtain final approval and sign-off
+
+- [DCMMS-001T] Design Token Extraction (Frontend Developer, 5 points)
+  - Extract CSS variables from approved mockups
+  - Create Tailwind configuration
+  - Set up shadcn/ui component customization
+  - Create developer handoff documentation
+
+- [DCMMS-001U] Component Library Setup (Frontend Developer, 5 points)
+  - Implement base components based on mockups
+  - Create Storybook for component documentation
+  - Set up Figma developer mode for asset export
+
+### IdP Adapter Pattern Implementation
+
+**Sprint 1-2 (Weeks 5-8) - ADD THESE TASKS:**
+
+- [DCMMS-020] IdP Adapter Interface Design (Backend Developer, 3 points)
+  - Design adapter interface for authentication providers
+  - Support Auth0/Okta, Azure AD, Keycloak
+  - Factory pattern for provider selection
+
+- [DCMMS-021] Auth0/Okta Adapter Implementation (Backend Developer, 5 points)
+  - Implement Auth0/Okta adapter as initial provider
+  - OAuth2/OIDC flow implementation
+  - Token validation and refresh
+  - User info retrieval
+
+- [DCMMS-022] IdP Adapter Testing (Backend Developer + QA, 3 points)
+  - Unit tests for adapter interface
+  - Integration tests with Auth0/Okta
+  - Mock adapters for testing
+
+### ERP Integration - DEFERRED
+
+**Sprint 3 (Weeks 9-10) - REMOVE/DEFER THESE TASKS:**
+- All ERP integration tasks **MOVED TO RELEASE 3+**
+- Inventory and procurement modules will operate **standalone** without ERP
+- Maintain clean integration points for future ERP connectivity
+
+**Note:** If any tasks reference ERP integration in Sprint 3-4, mark them as "ERP integration points designed but not implemented (deferred to Release 3+)"
+
+### CEA/MNRE Compliance Focus
+
+**Sprint 11 (Weeks 25-26) - UPDATE THESE TASKS:**
+
+**REMOVE/DEFER:**
+- NERC compliance report templates
+- AEMO compliance workflows
+- NESO/UK Grid Code compliance
+- All tasks related to FERC, OSHA compliance reporting
+
+**KEEP AND ENHANCE:**
+- CEA (Central Electricity Authority) compliance:
+  - Grid Standards Regulations 2010
+  - Technical Standards for Connectivity 2007
+  - Monthly generation reports
+  - Annual performance reports
+
+- MNRE (Ministry of New and Renewable Energy) compliance:
+  - Solar Park Scheme progress reports
+  - REC (Renewable Energy Certificate) Mechanism compliance
+  - Performance-Based Incentive reporting
+
+**ADD NEW TASKS:**
+- [DCMMS-TBD] CEA Grid Standards Compliance Report Template (Backend Developer, 3 points)
+- [DCMMS-TBD] MNRE REC Mechanism Compliance Workflow (Backend Developer, 5 points)
+- [DCMMS-TBD] CEA Monthly Generation Report Automation (Backend Developer, 3 points)
+
+### Interactive Tutorials
+
+**Sprint 11 (Weeks 25-26) - ADD THESE TASKS:**
+
+- [DCMMS-TBD] In-App Tutorial Framework (Frontend Developer, 5 points)
+  - Implement tooltip system
+  - Create walkthrough component
+  - Contextual help integration
+
+- [DCMMS-TBD] Onboarding Tutorial (Frontend Developer, 3 points)
+  - First-time user 5-step walkthrough
+  - Product tour with key features
+
+- [DCMMS-TBD] Work Order Tutorial (Frontend Developer, 3 points)
+  - How to create a work order (in-app guide)
+  - Work order execution flow tutorial
+
+- [DCMMS-TBD] Mobile Offline Mode Tutorial (Mobile Developer, 3 points)
+  - How to work offline tutorial
+  - Sync status explanation
+  - Conflict resolution guidance
+
+### Hindi i18n (Not 15+ Languages)
+
+**Sprint 17 (Weeks 37-38) - UPDATE SCOPE:**
+
+**REMOVE/DEFER:**
+- Spanish, French, German, Chinese, Arabic (and other languages)
+- RTL (Right-to-Left) support for Arabic
+- Multi-currency beyond INR/USD
+- Complex locale-specific formatting for multiple regions
+
+**KEEP AND UPDATE:**
+- English (primary language)
+- **Hindi only** (secondary language)
+- Basic locale formatting (dates, numbers for India)
+- Timezone support (IST focus)
+
+**UPDATED TASKS:**
+- [DCMMS-TBD] Hindi Translation Files (Frontend/Mobile Developer, 5 points)
+  - Translate all UI strings to Hindi
+  - Create Hindi translation JSON files
+  - Test Hindi language switching
+
+- [DCMMS-TBD] Hindi i18n Testing (QA, 3 points)
+  - Verify Hindi translations
+  - Test language switching
+  - Ensure proper rendering of Devanagari script
+
+**Story Points Saved:** ~20-25 points (can be reallocated to ML model cards or other features)
+
+### ML Model Cards (NEW)
+
+**Sprint 17 (Weeks 37-38) - ADD THESE TASKS:**
+
+- [DCMMS-TBD] Anomaly Detection Model Card (ML/AI Expert, 5 points)
+  - Model description and use case
+  - Performance metrics (precision, recall, F1-score)
+  - Training data characteristics
+  - Limitations and ethical considerations
+  - Monitoring and retraining procedures
+
+- [DCMMS-TBD] Predictive Maintenance Model Card (ML/AI Expert, 5 points)
+  - Model description and use case
+  - Performance metrics (accuracy, RMSE)
+  - Feature importance documentation
+  - Limitations and ethical considerations
+  - Monitoring and retraining procedures
+
+- [DCMMS-TBD] ML Model Card Template System (Frontend Developer, 3 points)
+  - Create UI for displaying model cards
+  - Model card versioning
+  - Model card approval workflow
+
+### Multi-Protocol SCADA Support
+
+**Sprint 6-7 (Weeks 15-18) - ENSURE COVERAGE:**
+
+**Protocols to Support from Beginning:**
+- OPC-UA (industrial automation standard)
+- Modbus TCP/RTU (legacy SCADA)
+- IEC 61850 (electrical substation automation)
+- DNP3 (utilities and SCADA)
+
+**ADD TASKS IF MISSING:**
+- [DCMMS-TBD] OPC-UA Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] Modbus TCP/RTU Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] IEC 61850 Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] DNP3 Protocol Adapter (Backend Developer, 5 points)
+- [DCMMS-TBD] Multi-Protocol SCADA Testing (QA, 5 points)
+  - Protocol simulators setup
+  - Integration testing for each protocol
+  - Performance validation
+
+### MDM-Optional Mobile Security
+
+**Sprint 3-4 (Weeks 9-12) - REMOVE MDM DEPENDENCIES:**
+
+**REMOVE/DEFER:**
+- Microsoft Intune integration
+- Jamf Pro integration
+- VMware Workspace ONE integration
+- Any hard MDM dependency
+
+**ADD COMPENSATING CONTROLS:**
+- [DCMMS-TBD] Biometric Authentication (Mobile Developer, 3 points)
+  - Face ID / Touch ID / Fingerprint
+  - Fallback to PIN
+
+- [DCMMS-TBD] App-Level Security Controls (Mobile Developer, 5 points)
+  - 6-digit PIN with lockout
+  - Session timeout (15 minutes)
+  - Local database encryption (SQLCipher)
+  - Secure keychain/keystore for tokens
+
+- [DCMMS-TBD] Server-Side Device Management (Backend Developer, 5 points)
+  - Device registry
+  - Remote wipe API
+  - Device blacklist
+  - Jailbreak/root detection
+
+---
+
+## Sprint 18: Release 2 Integration & Production Readiness (Weeks 39-40) **[NEW]**
+
+**Goal:** Final integration, performance validation, production readiness
+
+**Specifications:** All specs (final validation)
+
+**Sprint Capacity:** 70 points
+
+### Production Readiness Tasks
+
+#### [DCMMS-140] Production Readiness Checklist
+- **Assignee:** All Team
+- **Specification:** All specs
+- **Story Points:** 13
+- **Dependencies:** All Release 2 tasks
+- **Acceptance Criteria:**
+  - Complete production readiness checklist covering:
+    - **Code Quality:**
+      - All tests passing (unit, integration, E2E)
+      - Test coverage ≥75% across all modules
+      - No critical or high-priority bugs
+      - Code review completed for all changes
+      - Security scan passed (no critical vulnerabilities)
+    - **Performance:**
+      - API p95 latency <200ms validated
+      - Telemetry pipeline 72K events/sec capability verified
+      - ML inference <500ms p95 validated
+      - Load test with 100 concurrent users passed
+      - Database query optimization completed
+    - **Security:**
+      - Security audit passed
+      - Penetration testing completed (if applicable)
+      - Secrets management validated (Vault/KMS)
+      - SSL/TLS certificates configured
+      - Authentication and authorization tested
+      - Audit logging operational
+    - **Monitoring & Alerting:**
+      - All Grafana dashboards configured and tested
+      - Prometheus alerts configured and tested
+      - Log aggregation operational (Loki)
+      - Distributed tracing operational (Jaeger)
+      - On-call rotation defined
+    - **Documentation:**
+      - All user guides completed and reviewed
+      - All admin guides completed and reviewed
+      - API documentation up-to-date
+      - Deployment runbooks validated
+      - Disaster recovery plan tested
+      - Incident response plan validated
+    - **Compliance:**
+      - CEA/MNRE compliance reports validated
+      - Audit trail completeness verified
+      - Data retention policies documented
+      - GDPR/privacy considerations addressed
+    - **Operational Readiness:**
+      - Backup and restore procedures tested
+      - Monitoring dashboards operational
+      - Alert runbooks reviewed
+      - On-call procedures defined
+      - Escalation paths documented
+  - Production readiness sign-off from all stakeholders
+- **Deliverables:**
+  - `docs/operations/production-readiness-checklist.md`
+  - Sign-off document
+- **Testing:** Checklist validation, stakeholder review
+
+#### [DCMMS-141] Final Performance Validation
+- **Assignee:** QA Engineer + Backend Developer
+- **Specification:** Spec 18 (Performance)
+- **Story Points:** 8
+- **Dependencies:** All Release 2 tasks
+- **Acceptance Criteria:**
+  - Comprehensive load testing across all modules:
+    - API endpoints: 100 concurrent users, 1000 req/min
+    - Telemetry pipeline: 72K events/sec sustained for 1 hour
+    - ML inference: 100 predictions/sec
+    - Mobile sync: 50 devices syncing simultaneously
+    - Analytics queries: Complex reports complete <10s
+  - Performance metrics collected and analyzed:
+    - API latency (p50, p95, p99)
+    - Database query performance
+    - Cache hit rates
+    - Memory usage patterns
+    - CPU utilization
+  - Performance targets met:
+    - API p95 <200ms ✓
+    - Telemetry end-to-end latency <5s ✓
+    - ML inference p95 <500ms ✓
+    - Mobile sync success rate >95% ✓
+  - Bottlenecks identified and resolved
+  - Performance test report with graphs and recommendations
+- **Deliverables:**
+  - `docs/testing/final-performance-test-report.md`
+  - Performance graphs and metrics
+  - k6 test scripts
+- **Testing:** Performance tests executed and validated
+
+#### [DCMMS-142] Security Audit & Hardening
+- **Assignee:** Backend Developer + DevOps
+- **Specification:** Spec 13 (Security)
+- **Story Points:** 8
+- **Dependencies:** All Release 2 tasks
+- **Acceptance Criteria:**
+  - Security audit completed covering:
+    - **Authentication & Authorization:**
+      - IdP integration security validated
+      - JWT token security (expiration, refresh)
+      - Role-based access control (RBAC) tested
+      - MFA enforcement verified
+    - **API Security:**
+      - Input validation and sanitization
+      - SQL injection prevention (parameterized queries)
+      - XSS prevention
+      - CSRF protection
+      - Rate limiting configured
+      - API authentication on all endpoints
+    - **Data Security:**
+      - Data encryption at rest validated
+      - Data encryption in transit (TLS 1.3)
+      - Database access controls
+      - Sensitive data masking in logs
+      - Secrets management (Vault/KMS)
+    - **Infrastructure Security:**
+      - Network segmentation
+      - Firewall rules configured
+      - Container security (image scanning)
+      - Dependency vulnerability scanning (Snyk)
+      - Security headers configured
+    - **Mobile Security:**
+      - Biometric authentication tested
+      - Local database encryption (SQLCipher)
+      - Secure token storage (Keychain/Keystore)
+      - Certificate pinning (if applicable)
+  - OWASP ZAP security scan passed (no critical/high issues)
+  - Dependency vulnerabilities addressed (Snyk scan clean)
+  - Security findings documented and remediated
+  - Security audit report generated
+- **Deliverables:**
+  - `docs/security/security-audit-report.md`
+  - OWASP ZAP scan results
+  - Snyk scan results
+  - Remediation tracking spreadsheet
+- **Testing:** Security scans, penetration testing (if applicable)
+
+#### [DCMMS-143] Disaster Recovery Plan
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 05 (Deployment), PRD Section 12
+- **Story Points:** 5
+- **Dependencies:** DCMMS-140
+- **Acceptance Criteria:**
+  - Comprehensive disaster recovery plan:
+    - **Backup Strategy:**
+      - Database backup procedures (PostgreSQL, QuestDB, Redis)
+      - Automated daily backups configured
+      - Backup retention policy (7 daily, 4 weekly, 12 monthly)
+      - Backup storage location (S3-compatible, encrypted)
+      - Backup validation procedures
+    - **Recovery Procedures:**
+      - Database restore procedures (step-by-step)
+      - Application restore procedures
+      - Configuration restore procedures
+      - Full system recovery from backups
+      - Recovery Time Objective (RTO): <4 hours
+      - Recovery Point Objective (RPO): <24 hours
+    - **Disaster Scenarios:**
+      - Database corruption recovery
+      - Data center failure (if cloud)
+      - Ransomware attack response
+      - Accidental data deletion recovery
+      - Complete system failure recovery
+    - **Testing:**
+      - DR drill procedures
+      - Backup restore testing schedule (quarterly)
+      - DR test results documented
+  - Backup and restore procedures tested successfully
+  - DR plan validated with simulated disaster
+  - RTO and RPO documented and achievable
+- **Deliverables:**
+  - `docs/operations/disaster-recovery-plan.md` (30+ pages)
+  - Backup automation scripts
+  - Restore procedure checklist
+  - DR test report
+- **Testing:** DR drill execution, backup/restore validation
+
+#### [DCMMS-144] Incident Response Plan
+- **Assignee:** DevOps + Product Manager
+- **Specification:** Operational best practices
+- **Story Points:** 5
+- **Dependencies:** DCMMS-140
+- **Acceptance Criteria:**
+  - Comprehensive incident response plan:
+    - **Incident Severity Levels:**
+      - **P0 (Critical):** System down, data loss, security breach (respond <15 min)
+      - **P1 (High):** Major functionality broken, significant performance degradation (respond <1 hour)
+      - **P2 (Medium):** Minor functionality broken, some users affected (respond <4 hours)
+      - **P3 (Low):** Cosmetic issues, workarounds available (respond <1 business day)
+    - **Incident Response Workflow:**
+      - Detection and alerting
+      - Triage and severity assessment
+      - Escalation procedures
+      - Investigation and diagnosis
+      - Resolution and mitigation
+      - Communication plan (internal and external)
+      - Post-incident review (PIR)
+    - **Escalation Matrix:**
+      - On-call rotation schedule
+      - Primary and secondary contacts
+      - Escalation paths by severity
+      - Stakeholder notification procedures
+    - **Communication Templates:**
+      - Incident notification email
+      - Status update templates
+      - Resolution notification
+      - Post-incident report template
+    - **Incident Tracking:**
+      - Incident logging procedures
+      - Incident ticketing system
+      - Incident history and trends
+    - **Post-Incident Review:**
+      - PIR template and process
+      - Root cause analysis (5 Whys, Fishbone)
+      - Action items and follow-up
+      - Incident learnings documentation
+  - On-call rotation defined and communicated
+  - Incident response team trained
+  - Communication templates ready
+- **Deliverables:**
+  - `docs/operations/incident-response-plan.md` (25+ pages)
+  - On-call rotation schedule
+  - Escalation matrix
+  - Communication templates
+  - Post-incident review template
+- **Testing:** Incident response drill (simulated P0 incident)
+
+#### [DCMMS-144A] Security Operations Guide
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 13 (Security), Operational best practices
+- **Story Points:** 5
+- **Dependencies:** DCMMS-142 (Security Audit)
+- **Acceptance Criteria:**
+  - Comprehensive security operations guide created:
+    - **Security Patching Procedures:**
+      - Vulnerability assessment workflow
+      - Patching schedule (critical: 24 hours, high: 1 week, medium: 1 month)
+      - Emergency patching procedures
+      - Patch testing and validation process
+      - Rollback procedures if patch causes issues
+      - Communication plan during patching
+    - **Vulnerability Scanning:**
+      - Automated scanning schedule (Snyk: weekly, OWASP ZAP: monthly)
+      - Manual penetration testing schedule (quarterly)
+      - Vulnerability triage and prioritization (CVSS scoring)
+      - Remediation tracking and SLA
+      - Third-party security audit schedule (annual)
+    - **Security Incident Response:**
+      - Security incident detection (SIEM alerts, error tracking, manual reports)
+      - Incident classification (data breach, unauthorized access, DDoS, malware)
+      - Response procedures for each incident type
+      - Evidence preservation and forensics
+      - Notification requirements (regulatory, customers, stakeholders)
+      - Post-incident security hardening
+    - **Access Management:**
+      - User access review schedule (quarterly)
+      - Privileged access management (PAM)
+      - SSH key rotation policy (annual)
+      - API key rotation policy (quarterly)
+      - Service account management
+      - Offboarding procedures (immediate access revocation)
+    - **Security Monitoring:**
+      - Security metrics and KPIs
+      - Security dashboard setup (Grafana/Prometheus)
+      - Log aggregation and analysis (ELK stack or equivalent)
+      - Anomaly detection and alerting
+      - Security event correlation
+    - **Compliance and Audit:**
+      - Security compliance checklist (CEA requirements)
+      - Internal security audit schedule (quarterly)
+      - External audit preparation procedures
+      - Security documentation requirements
+      - Security training and awareness program
+  - Security operations guide reviewed by security team (if available)
+  - Security procedures documented with step-by-step instructions
+  - Security runbooks created for common scenarios
+  - Security automation scripts prepared (where applicable)
+- **Deliverables:**
+  - `docs/security/security-operations-guide.md` (40+ pages)
+  - `docs/security/patching-procedures.md`
+  - `docs/security/vulnerability-management.md`
+  - `docs/security/security-incident-response.md`
+  - Security runbook templates
+- **Testing:** Security procedures validated, security audit review
+
+### Cloud & Deployment
+
+#### [DCMMS-145] Cloud Provider Final Selection
+- **Assignee:** DevOps + Backend Developer
+- **Specification:** Spec 05 (Deployment), IMPLEMENTATION_PLAN Section 4.2
+- **Story Points:** 3
+- **Dependencies:** DCMMS-001A (Cloud-agnostic architecture)
+- **Acceptance Criteria:**
+  - Cloud provider comparison completed:
+    - Cost analysis (compute, storage, data transfer, managed services)
+    - Service availability comparison (PostgreSQL, Kafka, Redis, Kubernetes)
+    - Regional availability (India data centers)
+    - Support and SLA comparison
+    - Migration complexity assessment
+    - Vendor lock-in risk analysis
+  - Cloud provider selected based on criteria:
+    - Cost-effectiveness
+    - Service compatibility
+    - Regional presence
+    - Support quality
+    - Future scalability
+  - Selection decision documented with rationale
+  - Stakeholder approval obtained
+- **Deliverables:**
+  - `docs/architecture/cloud-provider-selection.md`
+  - Cost comparison spreadsheet
+  - Selection decision document with sign-off
+- **Testing:** N/A (decision-making task)
+
+#### [DCMMS-146] Production Deployment Runbook
+- **Assignee:** DevOps + Backend Developer + ML Engineer
+- **Specification:** Spec 05 (Deployment)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-143, DCMMS-145
+- **Acceptance Criteria:**
+  - Comprehensive production deployment runbook:
+    - **Pre-Deployment:**
+      - Cloud infrastructure provisioning (Terraform)
+      - Kubernetes cluster setup
+      - Network configuration (VPC, subnets, security groups)
+      - Secrets management setup (Vault/KMS)
+      - SSL/TLS certificate configuration
+    - **Application Deployment:**
+      - Database migration procedures
+      - Service deployment order
+      - Configuration management
+      - Environment variable setup
+      - Feature flag configuration
+    - **Data Migration:**
+      - Data export from local environment
+      - Data validation procedures
+      - Data import to production
+      - Data integrity verification
+    - **Service Startup:**
+      - Database services (PostgreSQL, Redis, QuestDB)
+      - Message streaming (Kafka, EMQX)
+      - Processing (Flink)
+      - ML services (Feast, MLflow, KServe)
+      - API services (Fastify, FastAPI)
+      - Frontend (Next.js)
+      - Mobile backend services
+    - **Validation:**
+      - Health check validation for all services
+      - Smoke tests execution
+      - End-to-end test scenarios
+      - Performance baseline validation
+      - Monitoring and alerting verification
+    - **Post-Deployment:**
+      - DNS cutover procedures
+      - User communication plan
+      - Go-live checklist
+      - Monitoring and on-call activation
+    - **Rollback Procedures:**
+      - Rollback triggers and decision criteria
+      - Service rollback procedures
+      - Database rollback procedures
+      - Communication during rollback
+  - Deployment runbook validated with dry-run
+  - All deployment scripts tested
+  - Rollback procedures tested
+- **Deliverables:**
+  - `docs/deployment/production-deployment-runbook.md` (50+ pages)
+  - Terraform scripts (cloud infrastructure)
+  - Deployment automation scripts
+  - Health check scripts
+  - Smoke test scripts
+- **Testing:** Dry-run deployment to staging environment
+
+### Final Integration & Demo
+
+#### [DCMMS-147] Release 2 Final Integration
+- **Assignee:** All Developers
+- **Specification:** All specs
+- **Story Points:** 8
+- **Dependencies:** All Release 2 development tasks
+- **Acceptance Criteria:**
+  - All Release 2 features integrated and tested end-to-end:
+    - ML predictive maintenance generating work orders
+    - Cost tracking and budget management operational
+    - Hindi language support fully functional
+    - All new features tested with existing MVP and Release 1 features
+  - Integration testing completed:
+    - Cross-module testing (Assets → WO → ML → Cost)
+    - Data flow validation across all components
+    - Performance testing with full feature set
+  - Regression testing passed:
+    - All MVP features still working
+    - All Release 1 features still working
+    - No breaking changes introduced
+  - Bug fixes and stabilization:
+    - All critical bugs fixed
+    - All high-priority bugs fixed
+    - Known issues documented
+  - Final code freeze and release candidate created
+- **Deliverables:**
+  - Release candidate build (v0.3.0-rc.1)
+  - Integration test report
+  - Regression test report
+- **Testing:** Full integration and regression testing
+
+#### [DCMMS-148] Release 2 Demo Preparation
+- **Assignee:** Product Manager + All Team
+- **Specification:** N/A
+- **Story Points:** 3
+- **Dependencies:** DCMMS-147
+- **Acceptance Criteria:**
+  - Demo environment prepared with representative data:
+    - 50+ assets across solar/wind/hybrid sites
+    - 200+ work orders (historical and active)
+    - Telemetry data flowing from simulated devices
+    - ML models trained and serving predictions
+    - Cost data and budgets configured
+  - Demo script prepared covering:
+    - All 24 specifications showcased
+    - End-to-end workflows (asset → telemetry → alert → WO → ML prediction → cost tracking)
+    - Key features highlighted (offline mobile, ML predictions, multi-protocol SCADA, CEA/MNRE compliance, Hindi i18n)
+    - Performance metrics demonstrated (72K events/sec capability, API latency, ML inference speed)
+  - Demo rehearsal completed with team
+  - Presentation slides prepared
+  - Demo contingency plan (backup environment, offline mode)
+  - Stakeholder invitations sent
+- **Deliverables:**
+  - Demo script and presentation
+  - Demo environment
+  - Demo video recording (for reference)
+- **Testing:** Demo rehearsal
+
+### Documentation & Training
+
+#### [DCMMS-149] User Documentation Final Review
+- **Assignee:** Product Manager + QA Engineer + All Team
+- **Specification:** Spec 19 (Documentation)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-047B, DCMMS-094E1, DCMMS-137A
+- **Acceptance Criteria:**
+  - Comprehensive review of all user-facing documentation:
+    - User guides (MVP, Release 1, Release 2)
+    - Admin guides (MVP, Release 1, Release 2)
+    - API documentation (OpenAPI spec)
+    - Release notes (all releases)
+  - Documentation quality checklist:
+    - Accuracy: all information correct and up-to-date
+    - Completeness: all features documented
+    - Clarity: easy to understand for target audience
+    - Screenshots: current and relevant
+    - Examples: helpful and realistic
+    - Navigation: easy to find information
+    - Formatting: consistent and professional
+  - Documentation gaps identified and filled
+  - Broken links fixed
+  - Outdated screenshots updated
+  - Technical review completed by developers
+  - User review completed (sample users)
+  - Final approval and sign-off
+- **Deliverables:**
+  - Documentation review report
+  - Updated documentation (all gaps filled)
+  - Documentation quality checklist (completed)
+- **Testing:** Documentation walkthrough with users
+
+#### [DCMMS-150] Training Material Finalization
+- **Assignee:** Product Manager + QA Engineer
+- **Specification:** Spec 17 (UX Design & Training)
+- **Story Points:** 5
+- **Dependencies:** DCMMS-149
+- **Acceptance Criteria:**
+  - Training materials created for all user roles:
+    - **Field Technician Training:**
+      - Mobile app usage (30-minute video)
+      - Work order execution workflows
+      - Offline mode and sync
+      - Photo and barcode capture
+      - Interactive tutorial walkthrough
+    - **Supervisor Training:**
+      - Work order management (45-minute video)
+      - Asset management
+      - Scheduling and assignment
+      - Dashboards and KPIs
+    - **Maintenance Manager Training:**
+      - Advanced analytics (30-minute video)
+      - Compliance reporting
+      - Cost management
+      - Budget tracking
+    - **Administrator Training:**
+      - System configuration (60-minute video)
+      - User and role management
+      - SCADA integration
+      - ML model management
+      - Telemetry configuration
+  - Interactive tutorials implemented in application:
+    - First-time user onboarding flow
+    - Feature discovery tooltips
+    - Contextual help
+  - Training documentation:
+    - Quick start guides (PDF, 5-10 pages per role)
+    - FAQ document (20+ common questions)
+    - Troubleshooting guide
+  - Training schedule prepared:
+    - Training sessions planned
+    - Trainer resources prepared
+    - Training feedback mechanism
+- **Deliverables:**
+  - Training videos (4-5 videos, 2-3 hours total)
+  - Quick start guides (PDF)
+  - FAQ document
+  - Interactive tutorials (in-app)
+  - Training schedule
+- **Testing:** Training material review with sample users
+
+**Sprint 18 Total:** 75 points
+- Production Readiness: 29 points (DCMMS-140, 141, 142)
+- Disaster Recovery & Incident Response: 10 points (DCMMS-143, 144)
+- Security Operations: 5 points (DCMMS-144A)
+- Cloud & Deployment: 8 points (DCMMS-145, 146)
+- Final Integration & Demo: 11 points (DCMMS-147, 148)
+- Documentation & Training: 10 points (DCMMS-149, 150)
+- UAT: 5 points (included in DCMMS-147)
+
+**Sprint Review / Release 2 Final Demo:**
+- Comprehensive platform demonstration to all stakeholders
+- Showcase all 24 specifications implemented
+- Present production readiness status
+- Review performance metrics and achievements
+- Discuss cloud migration plan and timeline
+- Obtain final sign-off for production deployment
+
+### Cloud-Agnostic Architecture - Throughout All Sprints
+
+**Global Change:** Replace all AWS-specific references with cloud-agnostic alternatives
+
+**Examples:**
+- EKS → Kubernetes (any provider: EKS/AKS/GKE)
+- MSK → Apache Kafka (managed or self-hosted)
+- RDS → PostgreSQL (managed or on K8s)
+- ElastiCache → Redis (managed or on K8s)
+- S3 → S3-compatible storage (S3/Azure Blob/GCS)
+- CloudFront → Multi-CDN (Cloudflare/Fastly)
+- ALB → Kubernetes Ingress (NGINX/Traefik)
+- CloudWatch → Prometheus + Grafana
+- AWS KMS → Cloud KMS (provider-specific) or HashiCorp Vault
+
+**Infrastructure Tasks to Update:**
+- All Terraform tasks: Use multi-cloud modules
+- All deployment tasks: Target Kubernetes, not provider-specific services
+- All monitoring tasks: Use Prometheus/Grafana, not CloudWatch
+
+---
+
+## Change Summary by Sprint
+
+| Sprint | Original Weeks | New Weeks | Key Changes |
+|--------|---------------|-----------|-------------|
+| **0** | 1-2 | 1-4 | +2 weeks for high-fidelity mockups, cloud-agnostic arch, IdP adapter |
+| **1** | 3-4 | 5-6 | +IdP adapter implementation |
+| **2** | 5-6 | 7-8 | No major changes |
+| **3** | 7-8 | 9-10 | **Remove ERP integration**, add MDM-optional security |
+| **4** | 9-10 | 11-12 | No major changes |
+| **5** | 11-12 | 13-14 | No major changes |
+| **6** | 13-14 | 15-16 | +Multi-protocol SCADA adapters |
+| **7** | 15-16 | 17-18 | No major changes |
+| **8** | 17-18 | 19-20 | No major changes |
+| **9** | 19-20 | 21-22 | No major changes |
+| **10** | 21-22 | 23-24 | No major changes |
+| **11** | 23-24 | 25-26 | **CEA/MNRE only** (remove NERC/AEMO/NESO), +Interactive tutorials |
+| **12** | 25-26 | 27-28 | No major changes |
+| **13** | 27-28 | 29-30 | No major changes |
+| **14** | 29-30 | 31-32 | No major changes |
+| **15** | 31-32 | 33-34 | No major changes |
+| **16** | 33-34 | 35-36 | No major changes |
+| **17** | 35-36 | 37-38 | **Hindi only** (not 15+ languages), +ML model cards |
+| **18** | N/A | 39-40 | **NEW SPRINT:** Production readiness, final integration |
+
+---
+
+## Action Items for Sprint Planning
+
+1. **Before Sprint 0:**
+   - Confirm UI/UX designer availability for Weeks 3-4
+   - Review and approve extended Sprint 0 timeline
+   - Update sprint capacity planning (140 points vs 70 points)
+
+2. **During Sprint 0:**
+   - Add new mockup tasks (DCMMS-001M through DCMMS-001U)
+   - Update architecture tasks with cloud-agnostic requirements
+
+3. **Before Sprint 1-2:**
+   - Add IdP adapter tasks (DCMMS-020 through DCMMS-022)
+
+4. **Before Sprint 3:**
+   - Remove/defer all ERP integration tasks
+   - Add MDM-optional security tasks
+
+5. **Before Sprint 6-7:**
+   - Ensure multi-protocol SCADA adapter tasks are included
+
+6. **Before Sprint 11:**
+   - Update compliance tasks to CEA/MNRE only
+   - Add interactive tutorial tasks
+
+7. **Before Sprint 17:**
+   - Reduce i18n scope to Hindi only
+   - Add ML model card tasks
+
+8. **Before Sprint 18:**
+   - Create all Sprint 18 tasks (new sprint)
+   - Prepare production readiness checklist
+
+---
+
+**Last Updated:** November 15, 2025
+**Maintained By:** Product Manager
+**Review Frequency:** Before each sprint planning session
+

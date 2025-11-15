@@ -30,7 +30,7 @@ The system enables proactive maintenance through predictive analytics, AI-driven
 
   ### Priority 1 (Release 1) - 8 Specifications
   - `14_NOTIFICATION_ALERTING_SYSTEM.md`: Multi-channel notifications (email, SMS, push, voice)
-  - `15_COMPLIANCE_REGULATORY_REPORTING.md`: NERC/CEA/MNRE compliance workflows and reporting
+  - `15_COMPLIANCE_REGULATORY_REPORTING.md`: CEA/MNRE compliance workflows (India focus initially, NERC/AEMO/NESO in future releases)
   - `16_ANALYTICS_REPORTING.md`: Advanced analytics, report builder, scheduled reports
   - `17_UX_DESIGN_SYSTEM_TRAINING.md`: Design system, component library, training modules
   - `18_PERFORMANCE_SCALABILITY.md`: Load balancing, caching, auto-scaling strategies
@@ -41,7 +41,7 @@ The system enables proactive maintenance through predictive analytics, AI-driven
   ### Priority 2 (Release 2) - 3 Specifications
   - `22_AI_ML_IMPLEMENTATION.md`: Feature store, model training, inference serving, predictive maintenance
   - `23_COST_MANAGEMENT.md`: Work order costing, budget management, billing integration
-  - `24_INTERNATIONALIZATION.md`: Multi-language support (15+ languages), RTL, locale formatting
+  - `24_INTERNATIONALIZATION.md`: Hindi as second language initially (15+ languages in future releases), RTL, locale formatting
 
 - **`archive/`**: Historical documents and superseded files for reference.
   - `PRD_INPUT.md`: Original input document, archived with a notice.
@@ -59,14 +59,14 @@ The system enables proactive maintenance through predictive analytics, AI-driven
 - **Work Order Lifecycle**: Complete management from creation to closure with state machines
 - **Mobile Offline-First**: SQLite-based offline sync with conflict resolution
 - **Authentication & Authorization**: OAuth2/OIDC with RBAC/ABAC (17 industry roles)
-- **High-Speed Data Ingestion**: 72,000 events/second with Kafka/Flink/TimescaleDB
-- **Integration Architecture**: SCADA, ERP, weather API, IdP integration patterns
+- **High-Speed Data Ingestion**: 72,000 events/second with Kafka/Flink/QuestDB
+- **Integration Architecture**: SCADA, weather API, IdP integration patterns (ERP deferred to post-Release 2)
 - **Security**: Audit logs, encryption (TLS 1.3, AES-256), certificate management
-- **Deployment**: Kubernetes-based with automated rollback and incident response
+- **Deployment**: Cloud-agnostic Kubernetes-based with automated rollback and incident response
 
 ### Production Enhancements (Release 1 - P1)
 - **Multi-Channel Notifications**: Email, SMS, push notifications, voice calls with escalation
-- **Compliance & Regulatory**: NERC, CEA, MNRE automated reporting workflows
+- **Compliance & Regulatory**: CEA/MNRE automated reporting workflows (India focus initially, NERC/AEMO/NESO in future releases)
 - **Advanced Analytics**: Report builder, custom dashboards, scheduled exports
 - **Design System**: 50+ reusable components with training modules
 - **Performance & Scalability**: Load balancing, caching, auto-scaling (5,000 concurrent users)
@@ -77,27 +77,28 @@ The system enables proactive maintenance through predictive analytics, AI-driven
 ### Advanced Capabilities (Release 2 - P2)
 - **AI/ML Implementation**: Predictive maintenance, generation forecasting, anomaly detection
 - **Cost Management**: Work order costing, budget tracking, billing integration
-- **Internationalization**: 15+ languages, RTL support, locale-specific formatting
+- **Internationalization**: Hindi as second language initially (15+ languages in future releases), RTL support, locale-specific formatting
 
 ## Releases
 
 The dCMMS platform follows a three-phase release plan with 100% specification coverage:
 
-### Priority 0 (MVP) - 6 Months
+### Priority 0 (MVP) - 3 Months (Weeks 1-14)
 **Target:** Production-ready core platform
 - Core asset and work order management with state machines
 - Mobile offline-first capabilities
 - OAuth2/OIDC authentication with 17 industry roles
 - High-speed data ingestion (72,000 events/sec)
-- SCADA, ERP, and weather API integrations
+- SCADA and weather API integrations (ERP deferred to post-Release 2)
 - Security implementation (audit logs, encryption)
 - Deployment automation and testing framework
+- Cloud-agnostic architecture with IdP adapter pattern
 - **Status:** ✅ 13 specifications complete (~10,480 lines)
 
-### Priority 1 (Release 1) - 12 Months Total
+### Priority 1 (Release 1) - 6 Months Total (Weeks 15-26)
 **Target:** Production-ready with enterprise features
 - Multi-channel notification system with escalation
-- Compliance automation (NERC, CEA, MNRE)
+- Compliance automation (CEA/MNRE initially, NERC/AEMO/NESO in future releases)
 - Advanced analytics and custom report builder
 - Design system with 50+ components
 - Performance optimization and auto-scaling
@@ -106,13 +107,14 @@ The dCMMS platform follows a three-phase release plan with 100% specification co
 - Comprehensive documentation system
 - **Status:** ✅ 8 specifications complete (~10,000 lines)
 
-### Priority 2 (Release 2) - 18 Months Total
-**Target:** AI-powered global platform
+### Priority 2 (Release 2) - 9 Months Total (Weeks 27-40, includes Sprint 18)
+**Target:** AI-powered intelligent platform
 - AI/ML for predictive maintenance and forecasting
 - Work order costing and budget management
-- Multi-language support (15+ languages)
+- Hindi as second language initially (15+ languages in future releases)
 - Multi-currency and timezone handling
 - Advanced cost analytics
+- Production readiness (DR, incident response, security operations)
 - **Status:** ✅ 3 specifications complete (~3,420 lines)
 
 ## Getting Started
@@ -152,30 +154,33 @@ All specifications follow a TDD-friendly approach with clear acceptance criteria
 - Progressive Web App (PWA)
 
 ### Backend
-- Node.js with Express
-- PostgreSQL with TimescaleDB extension
+- Node.js with Fastify
+- PostgreSQL with QuestDB for time-series data
 - Redis for caching and rate limiting
 - Apache Kafka for event streaming
 - Apache Flink for stream processing
 
 ### Mobile
-- React Native (iOS/Android)
-- SQLite for offline storage
+- Flutter (iOS/Android)
+- SQLite for offline storage (SQLCipher encryption)
 - Background sync with delta replication
 
-### AI/ML
+### AI/ML (Release 2)
 - Feast (feature store)
-- Kubeflow (training pipelines)
+- Metaflow (training pipelines)
 - MLflow (model registry)
-- FastAPI + Seldon Core (inference serving)
+- FastAPI + KServe (inference serving)
 - TensorFlow, PyTorch, Scikit-learn
 
-### Infrastructure
-- Kubernetes (EKS) for orchestration
-- AWS S3, RDS, ElastiCache, MSK
-- CloudFront CDN
+### Infrastructure (Cloud-Agnostic)
+- Kubernetes for orchestration (AWS EKS, Azure AKS, or GCP GKE)
+- Object storage (S3-compatible)
+- Managed PostgreSQL, Redis, Kafka services
+- Multi-CDN support (Cloudflare, Fastly, or cloud provider)
 - Terraform for Infrastructure as Code
 - Prometheus + Grafana for monitoring
+- Loki for log aggregation
+- Jaeger for distributed tracing
 
 ## Performance Targets
 
@@ -209,6 +214,21 @@ All gaps identified in GAP_ANALYSIS.md have been fully addressed. The platform i
 
 ---
 
-**Date**: November 11, 2025
-**Version**: 2.0
+## Implementation Notes
+
+**Phased Approach Based on Stakeholder Decisions:**
+- **Compliance:** CEA/MNRE (India) in Release 1, NERC/AEMO/NESO in future releases
+- **Internationalization:** English + Hindi in Release 2, 15+ languages in future releases
+- **Infrastructure:** Cloud-agnostic design (AWS, Azure, or GCP)
+- **ERP Integration:** Deferred to post-Release 2
+- **IdP Strategy:** Flexible adapter pattern (Auth0, Azure AD, Keycloak)
+
+**Sprint 0 Extended:** 4 weeks (includes high-fidelity UI mockups in Weeks 3-4)
+
+**Production Readiness:** Sprint 18 (Weeks 39-40) includes DR plan, incident response, security operations
+
+---
+
+**Date**: November 15, 2025
+**Version**: 2.1
 **Author**: Deepak Purandare
