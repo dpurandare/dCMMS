@@ -1,0 +1,72 @@
+# Auto-assign configuration for automatic reviewer assignment
+# https://github.com/kentaro-m/auto-assign-action
+
+# Set to true to add reviewers to pull requests
+addReviewers: true
+
+# Set to true to add assignees to pull requests
+addAssignees: false
+
+# Number of reviewers to add
+numberOfReviewers: 2
+
+# Reviewers to be added (GitHub usernames)
+reviewers:
+  - tech-lead
+  - senior-dev-1
+  - senior-dev-2
+
+# Reviewers that will be added based on changed files
+filePathAssignments:
+  - pattern: 'backend/**/*'
+    reviewers:
+      - backend-team-lead
+      - backend-senior-dev
+
+  - pattern: 'frontend/**/*'
+    reviewers:
+      - frontend-team-lead
+      - frontend-senior-dev
+
+  - pattern: 'mobile/**/*'
+    reviewers:
+      - mobile-team-lead
+      - mobile-senior-dev
+
+  - pattern: 'docs/**/*'
+    reviewers:
+      - tech-writer
+      - product-manager
+
+  - pattern: '**/migrations/**/*'
+    reviewers:
+      - database-admin
+      - backend-team-lead
+
+  - pattern: '.github/workflows/**/*'
+    reviewers:
+      - devops-lead
+      - platform-engineer
+
+  - pattern: 'k8s/**/*'
+    reviewers:
+      - devops-lead
+      - sre-engineer
+
+  - pattern: 'terraform/**/*'
+    reviewers:
+      - infrastructure-lead
+      - cloud-architect
+
+# Skip keyword list
+# If pull requests include these keywords in their title, reviewers are not added
+skipKeywords:
+  - wip
+  - WIP
+  - draft
+
+# Enable auto-assignment only for specific branches
+# If not specified, auto-assignment will work on all branches
+# onlyForBranches:
+#   - develop
+#   - main

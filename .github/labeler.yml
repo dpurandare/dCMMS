@@ -1,0 +1,100 @@
+# Labeler configuration for auto-labeling PRs based on changed files
+# https://github.com/actions/labeler
+
+# Backend
+backend:
+  - backend/**/*
+  - '!backend/**/*.md'
+
+# Frontend
+frontend:
+  - frontend/**/*
+  - '!frontend/**/*.md'
+
+# Mobile
+mobile:
+  - mobile/**/*
+  - '!mobile/**/*.md'
+
+# Documentation
+documentation:
+  - '**/*.md'
+  - docs/**/*
+  - README*
+  - CHANGELOG*
+  - CONTRIBUTING*
+
+# Infrastructure
+infrastructure:
+  - docker-compose*.yml
+  - Dockerfile*
+  - .dockerignore
+  - k8s/**/*
+  - terraform/**/*
+  - scripts/**/*
+
+# CI/CD
+ci/cd:
+  - .github/workflows/**/*
+  - .github/actions/**/*
+  - .circleci/**/*
+  - .gitlab-ci.yml
+  - azure-pipelines*.yml
+
+# Configuration
+config:
+  - '**/.*.yml'
+  - '**/.*.yaml'
+  - '**/.*.json'
+  - .env.example
+  - config/**/*
+
+# Database
+database:
+  - '**/migrations/**/*'
+  - '**/seeds/**/*
+  - scripts/init-db.sql
+  - scripts/init-timescaledb.sql
+
+# Testing
+testing:
+  - '**/__tests__/**/*'
+  - '**/*.test.ts'
+  - '**/*.test.js'
+  - '**/*.spec.ts'
+  - '**/*.spec.js'
+  - '**/test/**/*'
+  - integration_test/**/*
+
+# Security
+security:
+  - '**/auth/**/*'
+  - '**/security/**/*'
+  - '**/*security*'
+  - '**/*auth*'
+
+# API
+api:
+  - '**/api/**/*'
+  - docs/api/**/*
+  - '**/routes/**/*'
+  - '**/controllers/**/*'
+
+# UI/UX
+ui/ux:
+  - '**/components/**/*'
+  - '**/pages/**/*'
+  - '**/screens/**/*'
+  - '**/styles/**/*'
+  - '**/*.css'
+  - '**/*.scss'
+
+# Dependencies
+dependencies:
+  - package.json
+  - package-lock.json
+  - yarn.lock
+  - pubspec.yaml
+  - pubspec.lock
+  - Gemfile
+  - Gemfile.lock

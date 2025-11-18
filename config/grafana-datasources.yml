@@ -1,0 +1,89 @@
+# ==========================================
+# Grafana Data Sources Configuration
+# ==========================================
+# This file is automatically loaded by Grafana on startup
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - Metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: POST
+
+  # Loki - Logs
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+      derivedFields:
+        - datasourceUid: Prometheus
+          matcherRegex: "traceId=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+
+  # PostgreSQL - OLTP Database
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: dcmms
+    user: dcmms_user
+    editable: true
+    secureJsonData:
+      password: dcmms_password_dev
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+
+  # TimescaleDB - Time-series Aggregates
+  - name: TimescaleDB
+    type: postgres
+    access: proxy
+    url: timescaledb:5432
+    database: timescaledb
+    user: timescale_user
+    editable: true
+    secureJsonData:
+      password: timescale_password_dev
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: true
+
+  # QuestDB - Raw Telemetry (via PostgreSQL wire protocol)
+  - name: QuestDB
+    type: postgres
+    access: proxy
+    url: questdb:8812
+    database: qdb
+    user: admin
+    editable: true
+    secureJsonData:
+      password: quest
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1200
+
+  # Jaeger - Distributed Tracing (when enabled)
+  # - name: Jaeger
+  #   type: jaeger
+  #   access: proxy
+  #   url: http://jaeger:16686
+  #   editable: true
+
+deleteDatasources:
+  - name: TestData
+    orgId: 1

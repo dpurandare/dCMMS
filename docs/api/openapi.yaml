@@ -1,0 +1,1547 @@
+openapi: 3.1.0
+info:
+  title: dCMMS API
+  version: 1.0.0
+  description: |
+    Distributed Computerized Maintenance Management System (dCMMS) API for renewable energy asset management.
+
+    ## Authentication
+    All endpoints require JWT Bearer token authentication unless marked as public.
+
+    ## Rate Limiting
+    - Authenticated users: 100 requests/minute
+    - Unauthenticated: 20 requests/minute
+
+    ## Pagination
+    List endpoints support pagination with `page` and `limit` query parameters.
+    Default: `page=1&limit=20`, Max: `limit=100`
+
+    ## Filtering & Sorting
+    - Filter: Use query parameters matching field names (e.g., `?status=open&priority=high`)
+    - Sort: Use `sort` parameter with field:direction format (e.g., `?sort=createdAt:desc`)
+
+  contact:
+    name: dCMMS API Support
+    email: api-support@dcmms.io
+  license:
+    name: Proprietary
+    url: https://dcmms.io/license
+
+servers:
+  - url: https://api.dcmms.io/v1
+    description: Production server
+  - url: https://staging-api.dcmms.io/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Sites
+    description: Site/facility management
+  - name: Assets
+    description: Asset and equipment management
+  - name: Work Orders
+    description: Work order lifecycle management
+  - name: Users
+    description: User management and profiles
+  - name: Inventory
+    description: Parts and inventory management
+  - name: Sync
+    description: Mobile offline sync
+
+paths:
+  # ==========================================
+  # AUTHENTICATION
+  # ==========================================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate user
+      description: Authenticate user via Identity Provider and receive JWT tokens
+      operationId: login
+      security: []  # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Obtain new access token using refresh token
+      operationId: refreshToken
+      security: []  # Uses refresh token in body
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      description: Revoke access and refresh tokens
+      operationId: logout
+      responses:
+        '204':
+          description: Successfully logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      description: Retrieve authenticated user's profile information
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # SITES
+  # ==========================================
+  /sites:
+    get:
+      tags: [Sites]
+      summary: List sites
+      description: Retrieve paginated list of sites
+      operationId: listSites
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+      responses:
+        '200':
+          description: List of sites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Sites]
+      summary: Create site
+      description: Create a new site/facility
+      operationId: createSite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteCreate'
+      responses:
+        '201':
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sites/{siteId}:
+    get:
+      tags: [Sites]
+      summary: Get site by ID
+      operationId: getSite
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '200':
+          description: Site details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Sites]
+      summary: Update site
+      operationId: updateSite
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteUpdate'
+      responses:
+        '200':
+          description: Site updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Sites]
+      summary: Delete site
+      description: Soft delete a site
+      operationId: deleteSite
+      parameters:
+        - $ref: '#/components/parameters/SiteId'
+      responses:
+        '204':
+          description: Site deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================
+  # ASSETS
+  # ==========================================
+  /assets:
+    get:
+      tags: [Assets]
+      summary: List assets
+      description: Retrieve paginated list of assets with optional filters
+      operationId: listAssets
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: siteId
+          in: query
+          description: Filter by site ID
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          description: Filter by asset type
+          schema:
+            type: string
+            enum: [inverter, transformer, panel, turbine, battery, meter]
+        - name: status
+          in: query
+          description: Filter by asset status
+          schema:
+            type: string
+            enum: [operational, maintenance, failed, decommissioned]
+        - name: search
+          in: query
+          description: Full-text search on name and tags
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetList'
+
+    post:
+      tags: [Assets]
+      summary: Create asset
+      operationId: createAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCreate'
+      responses:
+        '201':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+
+  /assets/{assetId}:
+    get:
+      tags: [Assets]
+      summary: Get asset by ID
+      operationId: getAsset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Asset details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Assets]
+      summary: Update asset
+      operationId: updateAsset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetUpdate'
+      responses:
+        '200':
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+
+    delete:
+      tags: [Assets]
+      summary: Delete asset
+      operationId: deleteAsset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '204':
+          description: Asset deleted
+
+  /assets/{assetId}/hierarchy:
+    get:
+      tags: [Assets]
+      summary: Get asset hierarchy
+      description: Retrieve full asset hierarchy tree (parents and children)
+      operationId: getAssetHierarchy
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Asset hierarchy tree
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetHierarchy'
+
+  /assets/{assetId}/tags:
+    post:
+      tags: [Assets]
+      summary: Add tags to asset
+      operationId: addAssetTags
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tags]
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["critical", "solar", "phase-1"]
+      responses:
+        '200':
+          description: Tags added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+
+  /assets/{assetId}/tags/{tag}:
+    delete:
+      tags: [Assets]
+      summary: Remove tag from asset
+      operationId: removeAssetTag
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Tag removed
+
+  # ==========================================
+  # WORK ORDERS
+  # ==========================================
+  /workorders:
+    get:
+      tags: [Work Orders]
+      summary: List work orders
+      operationId: listWorkOrders
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, open, in_progress, on_hold, completed, cancelled]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: assignedTo
+          in: query
+          description: Filter by assigned user ID
+          schema:
+            type: string
+            format: uuid
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: assetId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of work orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderList'
+
+    post:
+      tags: [Work Orders]
+      summary: Create work order
+      operationId: createWorkOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderCreate'
+      responses:
+        '201':
+          description: Work order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+
+  /workorders/{workOrderId}:
+    get:
+      tags: [Work Orders]
+      summary: Get work order by ID
+      operationId: getWorkOrder
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      responses:
+        '200':
+          description: Work order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Work Orders]
+      summary: Update work order
+      operationId: updateWorkOrder
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderUpdate'
+      responses:
+        '200':
+          description: Work order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+
+  /workorders/{workOrderId}/transitions/{transition}:
+    post:
+      tags: [Work Orders]
+      summary: Execute state transition
+      description: |
+        Execute a state machine transition on work order.
+        Valid transitions:
+        - draft → open (submit)
+        - open → in_progress (start)
+        - in_progress → on_hold (pause)
+        - on_hold → in_progress (resume)
+        - in_progress → completed (complete)
+        - * → cancelled (cancel)
+      operationId: transitionWorkOrder
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+        - name: transition
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [submit, start, pause, resume, complete, cancel]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Notes about the transition
+      responses:
+        '200':
+          description: Transition successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+        '400':
+          description: Invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid transition 'complete' from status 'draft'. Allowed: [submit, cancel]"
+
+  /workorders/{workOrderId}/tasks:
+    get:
+      tags: [Work Orders]
+      summary: List work order tasks
+      operationId: listWorkOrderTasks
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrderTask'
+
+    post:
+      tags: [Work Orders]
+      summary: Add task to work order
+      operationId: addWorkOrderTask
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderTaskCreate'
+      responses:
+        '201':
+          description: Task added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderTask'
+
+  /workorders/{workOrderId}/tasks/{taskId}:
+    patch:
+      tags: [Work Orders]
+      summary: Update task
+      operationId: updateWorkOrderTask
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderTaskUpdate'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderTask'
+
+  /workorders/{workOrderId}/parts:
+    get:
+      tags: [Work Orders]
+      summary: List consumed parts
+      operationId: listWorkOrderParts
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      responses:
+        '200':
+          description: List of consumed parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrderPart'
+
+    post:
+      tags: [Work Orders]
+      summary: Consume parts for work order
+      operationId: consumeWorkOrderParts
+      parameters:
+        - $ref: '#/components/parameters/WorkOrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderPartCreate'
+      responses:
+        '201':
+          description: Parts consumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrderPart'
+
+  # ==========================================
+  # MOBILE SYNC
+  # ==========================================
+  /sync/pull:
+    post:
+      tags: [Sync]
+      summary: Pull changes from server
+      description: |
+        Mobile offline sync - pull changes from server since last sync.
+        Uses cursor-based pagination for efficient delta sync.
+      operationId: syncPull
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPullRequest'
+      responses:
+        '200':
+          description: Changes to pull
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPullResponse'
+
+  /sync/push:
+    post:
+      tags: [Sync]
+      summary: Push local changes to server
+      description: |
+        Mobile offline sync - push local changes to server.
+        Includes conflict resolution using version tokens.
+      operationId: syncPush
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushRequest'
+      responses:
+        '200':
+          description: Push results with conflict resolution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPushResponse'
+
+# ==========================================
+# COMPONENTS
+# ==========================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from /auth/login
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    Sort:
+      name: sort
+      in: query
+      description: Sort order (field:direction)
+      schema:
+        type: string
+      example: "createdAt:desc"
+
+    SiteId:
+      name: siteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    WorkOrderId:
+      name: workOrderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Validation failed"
+            details:
+              - field: "email"
+                message: "Invalid email format"
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized: Invalid or expired token"
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden: Insufficient permissions for 'asset:create'"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Resource not found"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Rate limit exceeded: 100 requests per minute"
+
+  schemas:
+    # ==========================================
+    # AUTHENTICATION
+    # ==========================================
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecurePassword123!"
+
+    AuthTokens:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, tokenType]
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (15 minutes)
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: Refresh token (7 days)
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expiresIn:
+          type: integer
+          description: Seconds until access token expires
+          example: 900
+        tokenType:
+          type: string
+          enum: [Bearer]
+          example: "Bearer"
+
+    # ==========================================
+    # USERS
+    # ==========================================
+    User:
+      type: object
+      required: [id, userId, email, firstName, lastName, status, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          example: "USR-JOHN-001"
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["technician", "viewer"]
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ==========================================
+    # SITES
+    # ==========================================
+    Site:
+      type: object
+      required: [id, siteId, name, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          example: "SITE-SOLAR-01"
+        name:
+          type: string
+          example: "Desert Solar Farm"
+        location:
+          type: string
+          nullable: true
+          example: "Rajasthan, India"
+        geoLocation:
+          type: object
+          nullable: true
+          properties:
+            lat:
+              type: number
+              format: double
+            lon:
+              type: number
+              format: double
+        timezone:
+          type: string
+          example: "Asia/Kolkata"
+        capacityMw:
+          type: number
+          format: float
+          example: 50.0
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        metadata:
+          type: object
+          nullable: true
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SiteCreate:
+      type: object
+      required: [siteId, name]
+      properties:
+        siteId:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
+        geoLocation:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+        timezone:
+          type: string
+          default: "UTC"
+        capacityMw:
+          type: number
+        metadata:
+          type: object
+
+    SiteUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        geoLocation:
+          type: object
+        timezone:
+          type: string
+        capacityMw:
+          type: number
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        metadata:
+          type: object
+
+    SiteList:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Site'
+        total:
+          type: integer
+          description: Total number of sites
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ==========================================
+    # ASSETS
+    # ==========================================
+    Asset:
+      type: object
+      required: [id, assetId, name, type, status, siteId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          example: "INV-001"
+        name:
+          type: string
+          example: "Inverter 1"
+        type:
+          type: string
+          enum: [inverter, transformer, panel, turbine, battery, meter, other]
+        status:
+          type: string
+          enum: [operational, maintenance, failed, decommissioned]
+        siteId:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+        hierarchyLevel:
+          type: integer
+          example: 2
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["critical", "solar", "phase-1"]
+        geoLocation:
+          type: object
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AssetCreate:
+      type: object
+      required: [assetId, name, type, siteId]
+      properties:
+        assetId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [inverter, transformer, panel, turbine, battery, meter, other]
+        status:
+          type: string
+          enum: [operational, maintenance, failed, decommissioned]
+          default: operational
+        siteId:
+          type: string
+          format: uuid
+        parentId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+        geoLocation:
+          type: object
+        metadata:
+          type: object
+
+    AssetUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [operational, maintenance, failed, decommissioned]
+        parentId:
+          type: string
+          format: uuid
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+
+    AssetList:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    AssetHierarchy:
+      type: object
+      properties:
+        asset:
+          $ref: '#/components/schemas/Asset'
+        parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+
+    # ==========================================
+    # WORK ORDERS
+    # ==========================================
+    WorkOrder:
+      type: object
+      required: [id, workOrderId, title, type, priority, status, siteId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workOrderId:
+          type: string
+          example: "WO-2025-001"
+        title:
+          type: string
+          example: "Inverter maintenance"
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [corrective, preventive, predictive, inspection, emergency]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [draft, open, in_progress, on_hold, completed, cancelled]
+        siteId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uuid
+          nullable: true
+        assignedTo:
+          type: string
+          format: uuid
+          nullable: true
+        crewId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+          nullable: true
+        actualEnd:
+          type: string
+          format: date-time
+          nullable: true
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderTask'
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrderPart'
+        tenantId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedBy:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          description: Optimistic locking version
+
+    WorkOrderCreate:
+      type: object
+      required: [workOrderId, title, type, priority, siteId]
+      properties:
+        workOrderId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [corrective, preventive, predictive, inspection, emergency]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        siteId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uuid
+        assignedTo:
+          type: string
+          format: uuid
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    WorkOrderUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+        assignedTo:
+          type: string
+          format: uuid
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+        version:
+          type: integer
+          description: Version for optimistic locking
+
+    WorkOrderList:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrder'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        totalPages:
+          type: integer
+
+    WorkOrderTask:
+      type: object
+      required: [id, workOrderId, title, sequenceOrder, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workOrderId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        sequenceOrder:
+          type: integer
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped]
+        assignedTo:
+          type: string
+          format: uuid
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedBy:
+          type: string
+          format: uuid
+          nullable: true
+        completionNotes:
+          type: string
+          nullable: true
+
+    WorkOrderTaskCreate:
+      type: object
+      required: [title, sequenceOrder]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        sequenceOrder:
+          type: integer
+        assignedTo:
+          type: string
+          format: uuid
+
+    WorkOrderTaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped]
+        completionNotes:
+          type: string
+
+    WorkOrderPart:
+      type: object
+      required: [id, workOrderId, inventoryItemId, quantityConsumed]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workOrderId:
+          type: string
+          format: uuid
+        inventoryItemId:
+          type: string
+          format: uuid
+        quantityConsumed:
+          type: integer
+        unitCost:
+          type: number
+          format: decimal
+        totalCost:
+          type: number
+          format: decimal
+        consumedAt:
+          type: string
+          format: date-time
+        consumedBy:
+          type: string
+          format: uuid
+
+    WorkOrderPartCreate:
+      type: object
+      required: [inventoryItemId, quantityConsumed]
+      properties:
+        inventoryItemId:
+          type: string
+          format: uuid
+        quantityConsumed:
+          type: integer
+
+    # ==========================================
+    # SYNC (MOBILE OFFLINE)
+    # ==========================================
+    SyncPullRequest:
+      type: object
+      required: [lastSyncTimestamp, entities]
+      properties:
+        lastSyncTimestamp:
+          type: string
+          format: date-time
+          description: Timestamp of last successful sync
+        entities:
+          type: array
+          items:
+            type: string
+            enum: [workOrders, assets, sites, users]
+          description: Entities to sync
+
+    SyncPullResponse:
+      type: object
+      properties:
+        workOrders:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOrder'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        sites:
+          type: array
+          items:
+            $ref: '#/components/schemas/Site'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        syncTimestamp:
+          type: string
+          format: date-time
+          description: Server timestamp for this sync
+
+    SyncPushRequest:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            type: object
+            required: [entity, entityId, operation, data, version]
+            properties:
+              entity:
+                type: string
+                enum: [workOrder, asset, site]
+              entityId:
+                type: string
+                format: uuid
+              operation:
+                type: string
+                enum: [create, update, delete]
+              data:
+                type: object
+              version:
+                type: integer
+                description: Local version for conflict detection
+
+    SyncPushResponse:
+      type: object
+      properties:
+        accepted:
+          type: array
+          items:
+            type: object
+            properties:
+              entityId:
+                type: string
+                format: uuid
+              serverVersion:
+                type: integer
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              entityId:
+                type: string
+                format: uuid
+              localVersion:
+                type: integer
+              serverVersion:
+                type: integer
+              resolution:
+                type: string
+                enum: [server_wins, client_wins, merged]
+              mergedData:
+                type: object
+                nullable: true
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              entityId:
+                type: string
+                format: uuid
+              error:
+                type: string
+
+    # ==========================================
+    # COMMON
+    # ==========================================
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: array
+          items:
+            type: object
+          description: Detailed validation errors
+        code:
+          type: string
+          description: Error code
+        requestId:
+          type: string
+          format: uuid
+          description: Request ID for tracing

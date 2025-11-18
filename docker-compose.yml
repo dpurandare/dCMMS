@@ -1,0 +1,367 @@
+version: '3.9'
+
+# ==========================================
+# dCMMS Docker Compose Stack
+# Local Development Environment
+# ==========================================
+
+services:
+  # ==========================================
+  # DATABASE - PostgreSQL (Transactional OLTP)
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: dcmms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dcmms
+      POSTGRES_USER: dcmms_user
+      POSTGRES_PASSWORD: dcmms_password_dev
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dcmms_user -d dcmms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # DATABASE - QuestDB (Time-Series Raw Data)
+  # ==========================================
+  questdb:
+    image: questdb/questdb:7.3.4
+    container_name: dcmms-questdb
+    restart: unless-stopped
+    environment:
+      QDB_PG_USER: admin
+      QDB_PG_PASSWORD: quest
+      QDB_HTTP_MIN_ENABLED: "true"
+      QDB_TELEMETRY_ENABLED: "false"
+    ports:
+      - "9000:9000"  # HTTP/REST API
+      - "8812:8812"  # PostgreSQL wire protocol
+      - "9009:9009"  # InfluxDB line protocol
+    volumes:
+      - questdb_data:/var/lib/questdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # DATABASE - TimescaleDB (Time-Series Aggregates)
+  # ==========================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: dcmms-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: timescaledb
+      POSTGRES_USER: timescale_user
+      POSTGRES_PASSWORD: timescale_password_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timescale_user -d timescaledb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # CACHE - Redis
+  # ==========================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: dcmms-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # MESSAGE BROKER - Apache Kafka (KRaft Mode)
+  # ==========================================
+  kafka:
+    image: bitnami/kafka:3.6
+    container_name: dcmms-kafka
+    restart: unless-stopped
+    environment:
+      # KRaft settings (no Zookeeper)
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_KRAFT_CLUSTER_ID: abcdefghijklmnopqrstuv
+
+      # Listeners
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Broker settings
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_LOG_RETENTION_HOURS: 168  # 7 days
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 1073741824  # 1GB
+      KAFKA_CFG_NUM_PARTITIONS: 12
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"  # Internal
+      - "9094:9094"  # External
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # MESSAGE BROKER - EMQX MQTT
+  # ==========================================
+  emqx:
+    image: emqx/emqx:5.3.2
+    container_name: dcmms-emqx
+    restart: unless-stopped
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: 127.0.0.1
+      EMQX_NODE__COOKIE: emqxsecretcookie
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: public
+    ports:
+      - "1883:1883"    # MQTT
+      - "8883:8883"    # MQTT/SSL
+      - "8083:8083"    # MQTT/WebSocket
+      - "18083:18083"  # Dashboard
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "emqx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # OBJECT STORAGE - MinIO (S3-compatible)
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: dcmms-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9002:9000"  # API (port 9000 used by QuestDB)
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # SECRETS MANAGEMENT - HashiCorp Vault (Dev Mode)
+  # ==========================================
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: dcmms-vault
+    restart: unless-stopped
+    command: server -dev -dev-root-token-id="root"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # MONITORING - Prometheus
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dcmms-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # MONITORING - Grafana
+  # ==========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dcmms-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - prometheus
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # LOGGING - Loki
+  # ==========================================
+  loki:
+    image: grafana/loki:latest
+    container_name: dcmms-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # DEVELOPMENT TOOLS - Kafka UI
+  # ==========================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: dcmms-kafka-ui
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # DEVELOPMENT TOOLS - pgAdmin
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: dcmms-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@dcmms.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+      - timescaledb
+    networks:
+      - dcmms-network
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  postgres_data:
+    driver: local
+  questdb_data:
+    driver: local
+  timescaledb_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
+  emqx_data:
+    driver: local
+  emqx_log:
+    driver: local
+  minio_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  dcmms-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
