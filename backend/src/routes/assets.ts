@@ -393,6 +393,133 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       }
     }
   );
+
+  // GET /api/v1/assets/:id/health-score
+  server.get(
+    '/:id/health-score',
+    {
+      schema: {
+        description: 'Get asset health score',
+        tags: ['assets'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              assetId: { type: 'string' },
+              score: { type: 'number' },
+              category: { type: 'string' },
+              components: { type: 'object' },
+              recentAlarms: { type: 'number' },
+              recentWorkOrders: { type: 'number' },
+              anomalyCount: { type: 'number' },
+              assetAge: { type: 'number' },
+              daysSinceLastMaintenance: { type: 'number' },
+              calculatedAt: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      try {
+        // Import health scoring service
+        const { createAssetHealthScoringService } = await import(
+          '../services/asset-health-scoring.service'
+        );
+        const healthService = createAssetHealthScoringService(server);
+
+        // Calculate health score
+        const healthScore = await healthService.calculateHealthScore(id);
+
+        return healthScore;
+      } catch (error: any) {
+        if (error.message.includes('not found')) {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: 'Asset not found',
+          });
+        }
+        throw error;
+      }
+    }
+  );
+
+  // GET /api/v1/assets/health-scores
+  server.get(
+    '/health-scores',
+    {
+      schema: {
+        description: 'Get health scores for multiple assets (bulk)',
+        tags: ['assets'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            assetIds: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of asset IDs',
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                assetId: { type: 'string' },
+                score: { type: 'number' },
+                category: { type: 'string' },
+                calculatedAt: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      const query = request.query as any;
+      const assetIds = query.assetIds || [];
+
+      if (!Array.isArray(assetIds) || assetIds.length === 0) {
+        return reply.status(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'assetIds must be a non-empty array',
+        });
+      }
+
+      try {
+        // Import health scoring service
+        const { createAssetHealthScoringService } = await import(
+          '../services/asset-health-scoring.service'
+        );
+        const healthService = createAssetHealthScoringService(server);
+
+        // Calculate health scores for all assets
+        const healthScores = await healthService.calculateBulkHealthScores(assetIds);
+
+        return healthScores;
+      } catch (error: any) {
+        server.log.error({ error }, 'Failed to calculate bulk health scores');
+        throw error;
+      }
+    }
+  );
 };
 
 export default assetRoutes;

@@ -61,6 +61,49 @@ export const alertStatusEnum = pgEnum('alert_status', [
   'suppressed',
 ]);
 
+export const notificationChannelEnum = pgEnum('notification_channel', [
+  'email',
+  'sms',
+  'push',
+  'webhook',
+  'slack',
+]);
+
+export const notificationEventTypeEnum = pgEnum('notification_event_type', [
+  'work_order_assigned',
+  'work_order_overdue',
+  'work_order_completed',
+  'alert_critical',
+  'alert_high',
+  'alert_medium',
+  'alert_acknowledged',
+  'alert_resolved',
+  'asset_down',
+  'maintenance_due',
+]);
+
+export const notificationStatusEnum = pgEnum('notification_status', [
+  'pending',
+  'sent',
+  'delivered',
+  'failed',
+  'bounced',
+]);
+
+export const webhookAuthTypeEnum = pgEnum('webhook_auth_type', [
+  'none',
+  'bearer',
+  'basic',
+  'api_key',
+]);
+
+export const webhookDeliveryStatusEnum = pgEnum('webhook_delivery_status', [
+  'success',
+  'failed',
+  'timeout',
+  'invalid_response',
+]);
+
 // ==========================================
 // TABLES
 // ==========================================
@@ -190,6 +233,234 @@ export const alerts = pgTable('alerts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const notificationTemplates = pgTable('notification_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: varchar('template_id', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  subject: varchar('subject', { length: 500 }),
+  bodyTemplate: text('body_template').notNull(),
+  variables: text('variables').default('[]'),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationRules = pgTable('notification_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  ruleId: varchar('rule_id', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channels: text('channels').notNull(),
+  conditions: text('conditions').default('{}'),
+  priority: integer('priority').notNull().default(5),
+  escalationMinutes: integer('escalation_minutes'),
+  escalationRoleId: uuid('escalation_role_id'),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  isEnabled: boolean('is_enabled').notNull().default(true),
+  quietHoursStart: varchar('quiet_hours_start', { length: 5 }),
+  quietHoursEnd: varchar('quiet_hours_end', { length: 5 }),
+  enableBatching: boolean('enable_batching').notNull().default(true),
+  batchIntervalMinutes: integer('batch_interval_minutes').notNull().default(15),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationHistory = pgTable('notification_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  templateId: uuid('template_id').references(() => notificationTemplates.id),
+  recipient: varchar('recipient', { length: 255 }).notNull(),
+  subject: varchar('subject', { length: 500 }),
+  body: text('body').notNull(),
+  status: notificationStatusEnum('status').notNull().default('pending'),
+  sentAt: timestamp('sent_at'),
+  deliveredAt: timestamp('delivered_at'),
+  failedAt: timestamp('failed_at'),
+  errorMessage: text('error_message'),
+  retryCount: integer('retry_count').notNull().default(0),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 500 }).notNull().unique(),
+  deviceType: varchar('device_type', { length: 50 }).notNull(),
+  deviceId: varchar('device_id', { length: 255 }),
+  appVersion: varchar('app_version', { length: 50 }),
+  isActive: boolean('is_active').notNull().default(true),
+  lastUsedAt: timestamp('last_used_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationQueue = pgTable('notification_queue', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  priority: varchar('priority', { length: 50 }).notNull().default('medium'),
+  subject: varchar('subject', { length: 500 }),
+  body: text('body').notNull(),
+  templateId: uuid('template_id'),
+  data: text('data').default('{}'),
+  batchKey: varchar('batch_key', { length: 255 }).notNull(),
+  isBatched: boolean('is_batched').notNull().default(false),
+  batchedAt: timestamp('batched_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const webhooks = pgTable('webhooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  webhookId: varchar('webhook_id', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  url: varchar('url', { length: 500 }).notNull(),
+  authType: webhookAuthTypeEnum('auth_type').notNull().default('none'),
+  authToken: varchar('auth_token', { length: 500 }),
+  authUsername: varchar('auth_username', { length: 255 }),
+  authPassword: varchar('auth_password', { length: 255 }),
+  headers: text('headers').default('{}'),
+  events: text('events').notNull(),
+  secret: varchar('secret', { length: 255 }),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  webhookId: uuid('webhook_id').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  payload: text('payload').notNull(),
+  status: webhookDeliveryStatusEnum('status').notNull(),
+  statusCode: integer('status_code'),
+  responseBody: text('response_body'),
+  errorMessage: text('error_message'),
+  attemptCount: integer('attempt_count').notNull().default(1),
+  sentAt: timestamp('sent_at'),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const reportDefinitions = pgTable('report_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  datasource: varchar('datasource', { length: 50 }).notNull(),
+  columns: text('columns').notNull(),
+  filters: text('filters').default('[]'),
+  groupBy: text('group_by').default('[]'),
+  aggregations: text('aggregations').default('[]'),
+  orderBy: text('order_by').default('[]'),
+  limitRows: integer('limit_rows').default(1000),
+  isPublic: boolean('is_public').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const assetHealthScores = pgTable('asset_health_scores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  assetId: uuid('asset_id').notNull().references(() => assets.id, { onDelete: 'cascade' }),
+  score: integer('score').notNull(),
+  category: varchar('category', { length: 20 }).notNull(),
+  recentAlarms: integer('recent_alarms').notNull().default(0),
+  recentWorkOrders: integer('recent_work_orders').notNull().default(0),
+  anomalyCount: integer('anomaly_count').notNull().default(0),
+  assetAgeMonths: integer('asset_age_months').notNull().default(0),
+  daysSinceLastMaintenance: integer('days_since_last_maintenance').notNull().default(0),
+  componentScores: text('component_scores'),
+  calculatedAt: timestamp('calculated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const complianceReportTemplates = pgTable('compliance_report_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: varchar('template_id', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  reportType: varchar('report_type', { length: 50 }).notNull(),
+  complianceStandard: varchar('compliance_standard', { length: 100 }).notNull(),
+  version: varchar('version', { length: 20 }).notNull().default('1.0'),
+  requiredFields: text('required_fields').notNull().default('[]'),
+  optionalFields: text('optional_fields').notNull().default('[]'),
+  autoPopulateMappings: text('auto_populate_mappings'),
+  validationRules: text('validation_rules'),
+  format: varchar('format', { length: 20 }).notNull().default('pdf'),
+  frequency: varchar('frequency', { length: 50 }),
+  isActive: boolean('is_active').notNull().default(true),
+  isSystemTemplate: boolean('is_system_template').notNull().default(false),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const complianceGeneratedReports = pgTable('compliance_generated_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: uuid('template_id').notNull().references(() => complianceReportTemplates.id, { onDelete: 'cascade' }),
+  siteId: uuid('site_id').references(() => sites.id, { onDelete: 'cascade' }),
+  reportName: varchar('report_name', { length: 255 }).notNull(),
+  reportType: varchar('report_type', { length: 50 }).notNull(),
+  reportingPeriodStart: timestamp('reporting_period_start').notNull(),
+  reportingPeriodEnd: timestamp('reporting_period_end').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('draft'),
+  reportData: text('report_data').notNull(),
+  fileUrl: text('file_url'),
+  fileSizeBytes: integer('file_size_bytes'),
+  fileFormat: varchar('file_format', { length: 20 }).notNull().default('pdf'),
+  watermark: varchar('watermark', { length: 50 }).default('DRAFT'),
+  generatedBy: uuid('generated_by').notNull().references(() => users.id, { onDelete: 'set null' }),
+  generatedAt: timestamp('generated_at').notNull().defaultNow(),
+  finalizedBy: uuid('finalized_by').references(() => users.id, { onDelete: 'set null' }),
+  finalizedAt: timestamp('finalized_at'),
+  submittedAt: timestamp('submitted_at'),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// Audit Logs (Tamper-proof, Append-only)
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityId: varchar('entity_id', { length: 255 }).notNull(),
+  changes: text('changes'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -295,6 +566,140 @@ export const alertsRelations = relations(alerts, ({ one }) => ({
   }),
   resolvedByUser: one(users, {
     fields: [alerts.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const notificationTemplatesRelations = relations(notificationTemplates, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [notificationTemplates.tenantId],
+    references: [tenants.id],
+  }),
+  notificationHistory: many(notificationHistory),
+}));
+
+export const notificationRulesRelations = relations(notificationRules, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationRules.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationHistoryRelations = relations(notificationHistory, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationHistory.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [notificationHistory.userId],
+    references: [users.id],
+  }),
+  template: one(notificationTemplates, {
+    fields: [notificationHistory.templateId],
+    references: [notificationTemplates.id],
+  }),
+}));
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationQueueRelations = relations(notificationQueue, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationQueue.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [notificationQueue.userId],
+    references: [users.id],
+  }),
+}));
+
+export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [webhooks.tenantId],
+    references: [tenants.id],
+  }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveries.webhookId],
+    references: [webhooks.id],
+  }),
+}));
+
+export const reportDefinitionsRelations = relations(reportDefinitions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [reportDefinitions.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [reportDefinitions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const assetHealthScoresRelations = relations(assetHealthScores, ({ one }) => ({
+  asset: one(assets, {
+    fields: [assetHealthScores.assetId],
+    references: [assets.id],
+  }),
+}));
+
+export const complianceReportTemplatesRelations = relations(complianceReportTemplates, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [complianceReportTemplates.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [complianceReportTemplates.createdBy],
+    references: [users.id],
+  }),
+  generatedReports: many(complianceGeneratedReports),
+}));
+
+export const complianceGeneratedReportsRelations = relations(complianceGeneratedReports, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [complianceGeneratedReports.tenantId],
+    references: [tenants.id],
+  }),
+  template: one(complianceReportTemplates, {
+    fields: [complianceGeneratedReports.templateId],
+    references: [complianceReportTemplates.id],
+  }),
+  site: one(sites, {
+    fields: [complianceGeneratedReports.siteId],
+    references: [sites.id],
+  }),
+  generator: one(users, {
+    fields: [complianceGeneratedReports.generatedBy],
+    references: [users.id],
+  }),
+  finalizer: one(users, {
+    fields: [complianceGeneratedReports.finalizedBy],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [auditLogs.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [auditLogs.userId],
     references: [users.id],
   }),
 }));

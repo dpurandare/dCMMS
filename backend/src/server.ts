@@ -15,6 +15,16 @@ import workOrderRoutes from './routes/work-orders';
 import assetRoutes from './routes/assets';
 import siteRoutes from './routes/sites';
 import telemetryRoutes from './routes/telemetry';
+import notificationRoutes from './routes/notifications';
+import webhookRoutes from './routes/webhooks';
+import alertRoutes from './routes/alerts';
+import integrationRoutes from './routes/integrations';
+import analyticsAdminRoutes from './routes/analytics-admin';
+import analyticsRoutes from './routes/analytics';
+import reportRoutes from './routes/reports';
+import complianceTemplateRoutes from './routes/compliance-templates';
+import complianceReportRoutes from './routes/compliance-reports';
+import auditLogRoutes from './routes/audit-logs';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -136,6 +146,26 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
             name: 'sites',
             description: 'Site management - Organize assets by location',
           },
+          {
+            name: 'notifications',
+            description: 'Notification management - Manage notification preferences and history',
+          },
+          {
+            name: 'Compliance',
+            description: 'Compliance reporting - Manage compliance templates and generate reports',
+          },
+          {
+            name: 'Reports',
+            description: 'Custom report builder - Create and execute custom reports',
+          },
+          {
+            name: 'Analytics',
+            description: 'Analytics and KPIs - Access system analytics and key performance indicators',
+          },
+          {
+            name: 'Audit',
+            description: 'Audit logs - Tamper-proof compliance audit trail (admin-only)',
+          },
         ],
         components: {
           securitySchemes: {
@@ -253,6 +283,16 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(assetRoutes, { prefix: '/api/v1/assets' });
   await server.register(siteRoutes, { prefix: '/api/v1/sites' });
   await server.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
+  await server.register(notificationRoutes, { prefix: '/api/v1' });
+  await server.register(webhookRoutes, { prefix: '/api/v1' });
+  await server.register(alertRoutes, { prefix: '/api/v1' });
+  await server.register(integrationRoutes, { prefix: '/api/v1' });
+  await server.register(analyticsAdminRoutes, { prefix: '/api/v1' });
+  await server.register(analyticsRoutes, { prefix: '/api/v1' });
+  await server.register(reportRoutes, { prefix: '/api/v1' });
+  await server.register(complianceTemplateRoutes, { prefix: '/api/v1' });
+  await server.register(complianceReportRoutes, { prefix: '/api/v1' });
+  await server.register(auditLogRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
@@ -261,6 +301,33 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
       error: 'Not Found',
       message: `Route ${request.method}:${request.url} not found`,
     });
+  });
+
+  // ==========================================
+  // NOTIFICATION BATCHING SCHEDULER
+  // ==========================================
+
+  // Start notification batching service
+  const { createNotificationBatchingService } = await import('./services/notification-batching.service');
+  const batchingService = createNotificationBatchingService(server);
+  batchingService.start();
+
+  // ==========================================
+  // ETL SCHEDULER (ClickHouse Sync)
+  // ==========================================
+
+  // Start ETL scheduler for ClickHouse analytics
+  const { createETLSchedulerService } = await import('./services/etl-scheduler.service');
+  const etlScheduler = createETLSchedulerService(server);
+  await etlScheduler.start();
+
+  // Cleanup on server close
+  server.addHook('onClose', async () => {
+    server.log.info('Shutting down notification batching service');
+    batchingService.stop();
+
+    server.log.info('Shutting down ETL scheduler');
+    etlScheduler.stop();
   });
 
   return server;
