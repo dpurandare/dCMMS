@@ -90,6 +90,20 @@ export const notificationStatusEnum = pgEnum('notification_status', [
   'bounced',
 ]);
 
+export const webhookAuthTypeEnum = pgEnum('webhook_auth_type', [
+  'none',
+  'bearer',
+  'basic',
+  'api_key',
+]);
+
+export const webhookDeliveryStatusEnum = pgEnum('webhook_delivery_status', [
+  'success',
+  'failed',
+  'timeout',
+  'invalid_response',
+]);
+
 // ==========================================
 // TABLES
 // ==========================================
@@ -299,6 +313,40 @@ export const deviceTokens = pgTable('device_tokens', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const webhooks = pgTable('webhooks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  webhookId: varchar('webhook_id', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  url: varchar('url', { length: 500 }).notNull(),
+  authType: webhookAuthTypeEnum('auth_type').notNull().default('none'),
+  authToken: varchar('auth_token', { length: 500 }),
+  authUsername: varchar('auth_username', { length: 255 }),
+  authPassword: varchar('auth_password', { length: 255 }),
+  headers: text('headers').default('{}'),
+  events: text('events').notNull(),
+  secret: varchar('secret', { length: 255 }),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  webhookId: uuid('webhook_id').notNull().references(() => webhooks.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  payload: text('payload').notNull(),
+  status: webhookDeliveryStatusEnum('status').notNull(),
+  statusCode: integer('status_code'),
+  responseBody: text('response_body'),
+  errorMessage: text('error_message'),
+  attemptCount: integer('attempt_count').notNull().default(1),
+  sentAt: timestamp('sent_at'),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -449,5 +497,20 @@ export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
   user: one(users, {
     fields: [deviceTokens.userId],
     references: [users.id],
+  }),
+}));
+
+export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [webhooks.tenantId],
+    references: [tenants.id],
+  }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  webhook: one(webhooks, {
+    fields: [webhookDeliveries.webhookId],
+    references: [webhooks.id],
   }),
 }));

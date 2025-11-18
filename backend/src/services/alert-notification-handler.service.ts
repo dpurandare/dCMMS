@@ -3,6 +3,7 @@ import { db } from '../db';
 import { alerts, users, assets, sites } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createNotificationService, NotificationEventType } from './notification.service';
+import { createWebhookService } from './webhook.service';
 
 export interface AlertEvent {
   alertId: string;
@@ -24,11 +25,13 @@ export interface AlertEvent {
 export class AlertNotificationHandler {
   private fastify: FastifyInstance;
   private notificationService: ReturnType<typeof createNotificationService>;
+  private webhookService: ReturnType<typeof createWebhookService>;
   private escalationTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
     this.notificationService = createNotificationService(fastify);
+    this.webhookService = createWebhookService(fastify);
   }
 
   /**
@@ -100,6 +103,30 @@ export class AlertNotificationHandler {
             'Failed to send notification'
           );
         }
+      }
+
+      // Send webhooks
+      try {
+        await this.webhookService.sendWebhook(alert.tenantId, eventType, {
+          alert: {
+            id: alertEvent.alertId,
+            title: alertEvent.title,
+            description: alertEvent.description,
+            severity: alertEvent.severity,
+            status: alertEvent.status,
+          },
+          asset: {
+            id: alert.asset?.assetId,
+            name: alert.asset?.name,
+          },
+          site: {
+            id: alert.site.siteId,
+            name: alert.site.name,
+          },
+          ...notificationData,
+        });
+      } catch (error) {
+        this.fastify.log.error({ error, alertId: alertEvent.alertId }, 'Failed to send webhooks');
       }
 
       // Set up escalation timer for critical alerts
