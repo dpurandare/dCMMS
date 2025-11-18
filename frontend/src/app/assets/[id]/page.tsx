@@ -1,52 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, Package } from 'lucide-react';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import {
-  PageHeader,
-  ConfirmDialog,
-  AssetStatusBadge,
-  CardSkeleton,
-} from '@/components/common';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api-client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { api } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
 
 interface Asset {
   id: string;
+  assetTag: string;
   name: string;
-  assetType: string;
+  description: string;
+  type: string;
   status: string;
-  site: {
-    id: string;
-    name: string;
-  };
-  location?: string;
-  tags?: string[];
-  parentAsset?: {
-    id: string;
-    name: string;
-  };
-  description?: string;
-  serialNumber?: string;
-  manufacturer?: string;
-  model?: string;
-  installDate?: string;
+  criticality: string;
+  manufacturer: string;
+  model: string;
+  serialNumber: string;
+  location: string;
+  installationDate: string | null;
+  warrantyExpiryDate: string | null;
+  lastMaintenanceDate: string | null;
+  specifications: any;
+  children: any[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function AssetDetailsPage() {
+export default function AssetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const params = useParams();
-  const assetId = params.id as string;
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
+
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [deleteDialog, setDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,21 +44,16 @@ export default function AssetDetailsPage() {
     }
 
     fetchAsset();
-  }, [isAuthenticated, assetId, router]);
+  }, [isAuthenticated, params.id]);
 
   const fetchAsset = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const data = await api.assets.getById(assetId);
-      setAsset(data.data);
-    } catch (err: any) {
-      console.error('Failed to fetch asset:', err);
-      if (err.response?.status === 401) {
-        logout();
-        router.push('/auth/login');
-      } else if (err.response?.status === 404) {
-        router.push('/assets');
-      }
+      const data = await api.assets.getById(params.id);
+      setAsset(data);
+    } catch (error) {
+      console.error('Error fetching asset:', error);
+      router.push('/assets');
     } finally {
       setIsLoading(false);
     }
