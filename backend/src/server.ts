@@ -23,6 +23,7 @@ import analyticsAdminRoutes from './routes/analytics-admin';
 import analyticsRoutes from './routes/analytics';
 import reportRoutes from './routes/reports';
 import complianceTemplateRoutes from './routes/compliance-templates';
+import complianceReportRoutes from './routes/compliance-reports';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -285,6 +286,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(analyticsRoutes, { prefix: '/api/v1' });
   await server.register(reportRoutes, { prefix: '/api/v1' });
   await server.register(complianceTemplateRoutes, { prefix: '/api/v1' });
+  await server.register(complianceReportRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
