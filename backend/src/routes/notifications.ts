@@ -133,13 +133,16 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       offset?: string;
       status?: string;
       channel?: string;
+      eventType?: string;
+      startDate?: string;
+      endDate?: string;
     };
   }>('/users/:userId/notification-history', async (request, reply) => {
     try {
       const { userId } = request.params;
       const limit = parseInt(request.query.limit || '50');
       const offset = parseInt(request.query.offset || '0');
-      const { status, channel } = request.query;
+      const { status, channel, eventType, startDate, endDate } = request.query;
 
       // Build where clause
       let whereConditions = [eq(notificationHistory.userId, userId)];
@@ -152,6 +155,10 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         whereConditions.push(eq(notificationHistory.channel, channel as any));
       }
 
+      if (eventType) {
+        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+      }
+
       const history = await db.query.notificationHistory.findMany({
         where: and(...whereConditions),
         orderBy: [desc(notificationHistory.createdAt)],
@@ -161,6 +168,170 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
 
       return reply.send({
         userId,
+        history,
+        pagination: {
+          limit,
+          offset,
+          total: history.length,
+        },
+      });
+    } catch (error) {
+      fastify.log.error({ error }, 'Failed to get notification history');
+      return reply.status(500).send({
+        error: 'Failed to get notification history',
+      });
+    }
+  });
+
+  // Get notification metrics (admin-only)
+  fastify.get<{
+    Querystring: {
+      tenantId: string;
+      startDate?: string;
+      endDate?: string;
+      channel?: string;
+      eventType?: string;
+    };
+  }>('/notifications/metrics', async (request, reply) => {
+    try {
+      const { tenantId, startDate, endDate, channel, eventType } = request.query;
+
+      // TODO: Add RBAC check - only admin users should access this endpoint
+      // For now, we'll allow all authenticated users
+
+      // Build where clause
+      let whereConditions = [eq(notificationHistory.tenantId, tenantId)];
+
+      if (channel) {
+        whereConditions.push(eq(notificationHistory.channel, channel as any));
+      }
+
+      if (eventType) {
+        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+      }
+
+      // Get all notifications for metrics
+      const notifications = await db.query.notificationHistory.findMany({
+        where: and(...whereConditions),
+      });
+
+      // Calculate metrics
+      const totalSent = notifications.length;
+      const successfulDeliveries = notifications.filter((n) => n.status === 'sent' || n.status === 'delivered').length;
+      const failedDeliveries = notifications.filter((n) => n.status === 'failed').length;
+      const pendingDeliveries = notifications.filter((n) => n.status === 'pending').length;
+      const bouncedDeliveries = notifications.filter((n) => n.status === 'bounced').length;
+
+      const deliveryRate = totalSent > 0 ? (successfulDeliveries / totalSent) * 100 : 0;
+
+      // Group by channel
+      const byChannel = {
+        email: notifications.filter((n) => n.channel === 'email').length,
+        sms: notifications.filter((n) => n.channel === 'sms').length,
+        push: notifications.filter((n) => n.channel === 'push').length,
+        webhook: notifications.filter((n) => n.channel === 'webhook').length,
+        slack: notifications.filter((n) => n.channel === 'slack').length,
+      };
+
+      // Group by event type
+      const byEventType: Record<string, number> = {};
+      for (const notification of notifications) {
+        const type = notification.eventType;
+        byEventType[type] = (byEventType[type] || 0) + 1;
+      }
+
+      // Group by status
+      const byStatus = {
+        pending: pendingDeliveries,
+        sent: notifications.filter((n) => n.status === 'sent').length,
+        delivered: notifications.filter((n) => n.status === 'delivered').length,
+        failed: failedDeliveries,
+        bounced: bouncedDeliveries,
+      };
+
+      return reply.send({
+        metrics: {
+          totalSent,
+          successfulDeliveries,
+          failedDeliveries,
+          pendingDeliveries,
+          bouncedDeliveries,
+          deliveryRate: Math.round(deliveryRate * 100) / 100, // Round to 2 decimal places
+          byChannel,
+          byEventType,
+          byStatus,
+        },
+        period: {
+          startDate: startDate || 'all time',
+          endDate: endDate || 'now',
+        },
+      });
+    } catch (error) {
+      fastify.log.error({ error }, 'Failed to get notification metrics');
+      return reply.status(500).send({
+        error: 'Failed to get notification metrics',
+      });
+    }
+  });
+
+  // Get all notification history (admin-only, for auditing)
+  fastify.get<{
+    Querystring: {
+      tenantId: string;
+      userId?: string;
+      status?: string;
+      channel?: string;
+      eventType?: string;
+      startDate?: string;
+      endDate?: string;
+      limit?: string;
+      offset?: string;
+    };
+  }>('/notifications/history', async (request, reply) => {
+    try {
+      const { tenantId, userId, status, channel, eventType } = request.query;
+      const limit = parseInt(request.query.limit || '100');
+      const offset = parseInt(request.query.offset || '0');
+
+      // TODO: Add RBAC check - only admin users should access this endpoint
+
+      // Build where clause
+      let whereConditions = [eq(notificationHistory.tenantId, tenantId)];
+
+      if (userId) {
+        whereConditions.push(eq(notificationHistory.userId, userId));
+      }
+
+      if (status) {
+        whereConditions.push(eq(notificationHistory.status, status as any));
+      }
+
+      if (channel) {
+        whereConditions.push(eq(notificationHistory.channel, channel as any));
+      }
+
+      if (eventType) {
+        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+      }
+
+      const history = await db.query.notificationHistory.findMany({
+        where: and(...whereConditions),
+        orderBy: [desc(notificationHistory.createdAt)],
+        limit,
+        offset,
+        with: {
+          user: {
+            columns: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      return reply.send({
         history,
         pagination: {
           limit,
