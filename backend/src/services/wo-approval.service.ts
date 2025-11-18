@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ModelPerformanceService } from './model-performance.service';
 
 export interface ApprovalRequest {
   workOrderId: string;
@@ -38,6 +39,7 @@ export interface WorkOrderApproval {
 @Injectable()
 export class WorkOrderApprovalService {
   private readonly logger = new Logger(WorkOrderApprovalService.name);
+  private readonly performanceService: ModelPerformanceService;
 
   // In-memory storage (in production, use database)
   private approvals: Map<string, WorkOrderApproval> = new Map();
@@ -47,6 +49,10 @@ export class WorkOrderApprovalService {
     feedback: string;
     timestamp: Date;
   }> = [];
+
+  constructor() {
+    this.performanceService = new ModelPerformanceService();
+  }
 
   /**
    * Approve a predictive work order
@@ -261,6 +267,33 @@ export class WorkOrderApprovalService {
    */
   async getRejectionFeedback(limit: number = 100) {
     return this.rejectionFeedback.slice(-limit);
+  }
+
+  /**
+   * Record work order completion and ground truth (for predictive WOs)
+   */
+  async recordWorkOrderCompletion(
+    workOrderId: string,
+    assetId: string,
+    failureOccurred: boolean,
+    failureType?: string
+  ): Promise<void> {
+    this.logger.log(`Recording WO completion for ${workOrderId}: failure=${failureOccurred}`);
+
+    try {
+      // Record ground truth for model performance tracking
+      await this.performanceService.recordGroundTruthFromWorkOrder(
+        workOrderId,
+        assetId,
+        failureOccurred,
+        failureType
+      );
+
+      this.logger.log(`Ground truth recorded for WO ${workOrderId}`);
+    } catch (error) {
+      this.logger.error(`Failed to record ground truth: ${error.message}`);
+      // Don't throw - this is a non-critical operation
+    }
   }
 
   // ===== Private Methods =====

@@ -522,4 +522,84 @@ router.get('/rejection-feedback', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/v1/work-orders/{id}/complete:
+ *   post:
+ *     summary: Record work order completion with ground truth
+ *     tags: [Work Order Approval]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Work order ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - assetId
+ *               - failureOccurred
+ *             properties:
+ *               assetId:
+ *                 type: string
+ *                 description: Asset ID
+ *                 example: "asset_123"
+ *               failureOccurred:
+ *                 type: boolean
+ *                 description: Did the asset actually fail?
+ *                 example: true
+ *               failureType:
+ *                 type: string
+ *                 description: Type of failure (if occurred)
+ *                 example: "mechanical_failure"
+ *     responses:
+ *       200:
+ *         description: Work order completion recorded
+ *       400:
+ *         description: Invalid request
+ */
+router.post('/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const { id: workOrderId } = req.params;
+    const { assetId, failureOccurred, failureType } = req.body;
+
+    if (!assetId) {
+      return res.status(400).json({ error: 'assetId is required' });
+    }
+
+    if (typeof failureOccurred !== 'boolean') {
+      return res.status(400).json({
+        error: 'failureOccurred must be a boolean',
+      });
+    }
+
+    await approvalService.recordWorkOrderCompletion(
+      workOrderId,
+      assetId,
+      failureOccurred,
+      failureType
+    );
+
+    res.json({
+      message: 'Work order completion recorded successfully',
+      workOrderId,
+      assetId,
+      failureOccurred,
+    });
+  } catch (error) {
+    console.error('Record completion error:', error);
+    res.status(500).json({
+      error: 'Failed to record work order completion',
+      details: error.message,
+    });
+  }
+});
+
 export default router;

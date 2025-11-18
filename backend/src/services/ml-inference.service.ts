@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import axios from 'axios';
 import { FeastFeatureService } from './feast-feature.service';
+import { ModelPerformanceService } from './model-performance.service';
 
 export interface PredictionRequest {
   modelName: string;
@@ -41,6 +42,7 @@ export class MLInferenceService {
   private readonly modelServerHost = process.env.MODEL_SERVER_HOST || 'localhost';
   private readonly modelServerPort = process.env.MODEL_SERVER_PORT || 8080;
   private readonly feastService: FeastFeatureService;
+  private readonly performanceService: ModelPerformanceService;
 
   // In-memory prediction cache (in production, use Redis)
   private predictionCache: Map<string, { prediction: AssetPrediction; timestamp: Date }> = new Map();
@@ -51,6 +53,7 @@ export class MLInferenceService {
 
   constructor() {
     this.feastService = new FeastFeatureService();
+    this.performanceService = new ModelPerformanceService();
   }
 
   /**
@@ -353,7 +356,7 @@ export class MLInferenceService {
   }
 
   /**
-   * Log predictions for drift monitoring
+   * Log predictions for drift monitoring and performance tracking
    */
   private logPredictions(
     predictions: AssetPrediction[],
@@ -363,6 +366,7 @@ export class MLInferenceService {
     const now = new Date();
 
     for (const prediction of predictions) {
+      // Log for drift monitoring
       this.predictionLogs.push({
         assetId: prediction.assetId,
         modelName,
@@ -371,6 +375,20 @@ export class MLInferenceService {
         predicted: prediction.predicted,
         features: prediction.features || {},
         timestamp: now,
+      });
+
+      // Record prediction for performance tracking
+      const predictionId = `${prediction.assetId}_${now.getTime()}_${Math.random().toString(36).substring(7)}`;
+
+      this.performanceService.recordPrediction(
+        predictionId,
+        prediction.assetId,
+        modelName,
+        modelVersion,
+        prediction.predicted,
+        prediction.failureProbability
+      ).catch(error => {
+        this.logger.error(`Failed to record prediction for performance tracking: ${error.message}`);
       });
     }
 
