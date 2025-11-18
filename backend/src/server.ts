@@ -14,6 +14,7 @@ import authRoutes from './routes/auth';
 import workOrderRoutes from './routes/work-orders';
 import assetRoutes from './routes/assets';
 import siteRoutes from './routes/sites';
+import telemetryRoutes from './routes/telemetry';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -251,6 +252,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(workOrderRoutes, { prefix: '/api/v1/work-orders' });
   await server.register(assetRoutes, { prefix: '/api/v1/assets' });
   await server.register(siteRoutes, { prefix: '/api/v1/sites' });
+  await server.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
