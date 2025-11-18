@@ -5,6 +5,9 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 
+// Plugins
+import { registerJwt } from './plugins/jwt';
+
 // Routes
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
@@ -35,6 +38,9 @@ export async function buildServer(): Promise<FastifyInstance> {
   // ==========================================
   // PLUGINS
   // ==========================================
+
+  // JWT Authentication
+  await registerJwt(server);
 
   // Security headers
   await server.register(helmet, {
