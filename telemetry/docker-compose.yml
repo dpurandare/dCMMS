@@ -1,0 +1,209 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Kafka Broker (KRaft mode - no Zookeeper)
+  # ==========================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: dcmms-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 days
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:9092
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dcmms-telemetry
+
+  # ==========================================
+  # Schema Registry (for Avro schemas)
+  # ==========================================
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: dcmms-schema-registry
+    hostname: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: backward
+    networks:
+      - dcmms-telemetry
+    healthcheck:
+      test: curl --fail http://localhost:8081/subjects || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Kafka UI (for monitoring)
+  # ==========================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: dcmms-kafka-ui
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: dcmms-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - dcmms-telemetry
+
+  # ==========================================
+  # QuestDB (Time-Series Database)
+  # ==========================================
+  questdb:
+    image: questdb/questdb:7.3.5
+    container_name: dcmms-questdb
+    hostname: questdb
+    ports:
+      - "9000:9000"  # Web console
+      - "9009:9009"  # InfluxDB line protocol
+      - "8812:8812"  # PostgreSQL wire protocol
+      - "9003:9003"  # Min health server
+    environment:
+      QDB_TELEMETRY_ENABLED: 'false'
+      QDB_PG_ENABLED: 'true'
+      QDB_HTTP_ENABLED: 'true'
+      QDB_LINE_TCP_ENABLED: 'true'
+    volumes:
+      - questdb-data:/var/lib/questdb
+    networks:
+      - dcmms-telemetry
+    healthcheck:
+      test: curl --fail http://localhost:9000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # EMQX MQTT Broker
+  # ==========================================
+  emqx:
+    image: emqx/emqx:5.3.2
+    container_name: dcmms-emqx
+    hostname: emqx
+    ports:
+      - "1883:1883"   # MQTT
+      - "8883:8883"   # MQTT/SSL
+      - "8083:8083"   # MQTT/WebSocket
+      - "8084:8084"   # MQTT/WebSocket/SSL
+      - "18083:18083" # Dashboard
+    environment:
+      EMQX_NAME: dcmms-emqx
+      EMQX_HOST: 127.0.0.1
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: dcmms123
+      EMQX_ALLOW_ANONYMOUS: 'false'
+      EMQX_LOG__CONSOLE__LEVEL: info
+    volumes:
+      - emqx-data:/opt/emqx/data
+      - emqx-log:/opt/emqx/log
+    networks:
+      - dcmms-telemetry
+    healthcheck:
+      test: emqx_ctl status || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Apache Flink JobManager
+  # ==========================================
+  flink-jobmanager:
+    image: flink:1.18-scala_2.12-java11
+    container_name: dcmms-flink-jobmanager
+    hostname: flink-jobmanager
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8081"  # Web UI (avoiding conflict with schema registry)
+    command: jobmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 2
+        state.backend: rocksdb
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        state.savepoints.dir: file:///tmp/flink-savepoints
+    volumes:
+      - flink-checkpoints:/tmp/flink-checkpoints
+      - flink-savepoints:/tmp/flink-savepoints
+    networks:
+      - dcmms-telemetry
+
+  # ==========================================
+  # Apache Flink TaskManager
+  # ==========================================
+  flink-taskmanager:
+    image: flink:1.18-scala_2.12-java11
+    container_name: dcmms-flink-taskmanager
+    hostname: flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    command: taskmanager
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        taskmanager.memory.process.size: 2048m
+    networks:
+      - dcmms-telemetry
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  kafka-data:
+    driver: local
+  questdb-data:
+    driver: local
+  emqx-data:
+    driver: local
+  emqx-log:
+    driver: local
+  flink-checkpoints:
+    driver: local
+  flink-savepoints:
+    driver: local
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  dcmms-telemetry:
+    driver: bridge
+    name: dcmms-telemetry

@@ -1,0 +1,118 @@
+{
+  "type": "record",
+  "name": "TelemetryEvent",
+  "namespace": "com.dcmms.telemetry",
+  "doc": "Schema for sensor telemetry events in dCMMS",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "doc": "Unique identifier for this telemetry event (UUID)"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "logicalType": "timestamp-millis",
+      "doc": "Event timestamp in milliseconds since epoch (UTC)"
+    },
+    {
+      "name": "site_id",
+      "type": "string",
+      "doc": "Identifier of the site where the sensor is located"
+    },
+    {
+      "name": "asset_id",
+      "type": "string",
+      "doc": "Identifier of the asset being monitored"
+    },
+    {
+      "name": "sensor_type",
+      "type": {
+        "type": "enum",
+        "name": "SensorType",
+        "symbols": [
+          "TEMPERATURE",
+          "VOLTAGE",
+          "CURRENT",
+          "POWER",
+          "FREQUENCY",
+          "PRESSURE",
+          "HUMIDITY",
+          "VIBRATION",
+          "FLOW_RATE",
+          "RPM",
+          "TORQUE",
+          "ENERGY",
+          "STATUS",
+          "OTHER"
+        ]
+      },
+      "doc": "Type of sensor measurement"
+    },
+    {
+      "name": "sensor_id",
+      "type": "string",
+      "doc": "Unique identifier of the physical sensor"
+    },
+    {
+      "name": "value",
+      "type": "double",
+      "doc": "Measured value from the sensor"
+    },
+    {
+      "name": "unit",
+      "type": "string",
+      "doc": "Unit of measurement (e.g., celsius, volts, amperes, kW)"
+    },
+    {
+      "name": "quality_flag",
+      "type": {
+        "type": "enum",
+        "name": "QualityFlag",
+        "symbols": [
+          "GOOD",
+          "BAD",
+          "UNCERTAIN",
+          "OUT_OF_RANGE",
+          "SENSOR_FAULT"
+        ]
+      },
+      "default": "GOOD",
+      "doc": "Data quality indicator"
+    },
+    {
+      "name": "metadata",
+      "type": [
+        "null",
+        {
+          "type": "map",
+          "values": "string"
+        }
+      ],
+      "default": null,
+      "doc": "Additional metadata as key-value pairs"
+    },
+    {
+      "name": "source",
+      "type": {
+        "type": "enum",
+        "name": "DataSource",
+        "symbols": [
+          "MQTT",
+          "REST_API",
+          "MODBUS",
+          "OPC_UA",
+          "MANUAL"
+        ]
+      },
+      "default": "MQTT",
+      "doc": "Source of the telemetry data"
+    },
+    {
+      "name": "schema_version",
+      "type": "string",
+      "default": "1.0.0",
+      "doc": "Version of this schema (semantic versioning)"
+    }
+  ]
+}
