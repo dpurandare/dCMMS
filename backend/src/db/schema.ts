@@ -61,6 +61,35 @@ export const alertStatusEnum = pgEnum('alert_status', [
   'suppressed',
 ]);
 
+export const notificationChannelEnum = pgEnum('notification_channel', [
+  'email',
+  'sms',
+  'push',
+  'webhook',
+  'slack',
+]);
+
+export const notificationEventTypeEnum = pgEnum('notification_event_type', [
+  'work_order_assigned',
+  'work_order_overdue',
+  'work_order_completed',
+  'alert_critical',
+  'alert_high',
+  'alert_medium',
+  'alert_acknowledged',
+  'alert_resolved',
+  'asset_down',
+  'maintenance_due',
+]);
+
+export const notificationStatusEnum = pgEnum('notification_status', [
+  'pending',
+  'sent',
+  'delivered',
+  'failed',
+  'bounced',
+]);
+
 // ==========================================
 // TABLES
 // ==========================================
@@ -190,6 +219,86 @@ export const alerts = pgTable('alerts', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const notificationTemplates = pgTable('notification_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: varchar('template_id', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  subject: varchar('subject', { length: 500 }),
+  bodyTemplate: text('body_template').notNull(),
+  variables: text('variables').default('[]'),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationRules = pgTable('notification_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  ruleId: varchar('rule_id', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channels: text('channels').notNull(),
+  conditions: text('conditions').default('{}'),
+  priority: integer('priority').notNull().default(5),
+  escalationMinutes: integer('escalation_minutes'),
+  escalationRoleId: uuid('escalation_role_id'),
+  isActive: boolean('is_active').notNull().default(true),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  isEnabled: boolean('is_enabled').notNull().default(true),
+  quietHoursStart: varchar('quiet_hours_start', { length: 5 }),
+  quietHoursEnd: varchar('quiet_hours_end', { length: 5 }),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationHistory = pgTable('notification_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  templateId: uuid('template_id').references(() => notificationTemplates.id),
+  recipient: varchar('recipient', { length: 255 }).notNull(),
+  subject: varchar('subject', { length: 500 }),
+  body: text('body').notNull(),
+  status: notificationStatusEnum('status').notNull().default('pending'),
+  sentAt: timestamp('sent_at'),
+  deliveredAt: timestamp('delivered_at'),
+  failedAt: timestamp('failed_at'),
+  errorMessage: text('error_message'),
+  retryCount: integer('retry_count').notNull().default(0),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar('token', { length: 500 }).notNull().unique(),
+  deviceType: varchar('device_type', { length: 50 }).notNull(),
+  deviceId: varchar('device_id', { length: 255 }),
+  appVersion: varchar('app_version', { length: 50 }),
+  isActive: boolean('is_active').notNull().default(true),
+  lastUsedAt: timestamp('last_used_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -295,6 +404,50 @@ export const alertsRelations = relations(alerts, ({ one }) => ({
   }),
   resolvedByUser: one(users, {
     fields: [alerts.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const notificationTemplatesRelations = relations(notificationTemplates, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [notificationTemplates.tenantId],
+    references: [tenants.id],
+  }),
+  notificationHistory: many(notificationHistory),
+}));
+
+export const notificationRulesRelations = relations(notificationRules, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationRules.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationHistoryRelations = relations(notificationHistory, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationHistory.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [notificationHistory.userId],
+    references: [users.id],
+  }),
+  template: one(notificationTemplates, {
+    fields: [notificationHistory.templateId],
+    references: [notificationTemplates.id],
+  }),
+}));
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceTokens.userId],
     references: [users.id],
   }),
 }));
