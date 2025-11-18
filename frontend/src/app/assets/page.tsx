@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wrench, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import {
   PageHeader,
   EmptyState,
   TableSkeleton,
   ConfirmDialog,
-  WorkOrderStatusBadge,
-  PriorityBadge,
+  AssetStatusBadge,
 } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,36 +39,30 @@ import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 
-interface WorkOrder {
+interface Asset {
   id: string;
-  workOrderId: string;
-  title: string;
-  type: string;
-  priority: string;
+  name: string;
+  assetType: string;
   status: string;
-  assignedTo?: {
+  site: {
     id: string;
     name: string;
   };
-  scheduledStartDate?: string;
-  asset?: {
-    id: string;
-    name: string;
-  };
+  location?: string;
+  tags?: string[];
 }
 
-export default function WorkOrdersPage() {
+export default function AssetsPage() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -77,18 +70,18 @@ export default function WorkOrdersPage() {
       return;
     }
 
-    fetchWorkOrders();
+    fetchAssets();
   }, [isAuthenticated, router]);
 
-  const fetchWorkOrders = async () => {
+  const fetchAssets = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.workOrders.list();
-      setWorkOrders(data.data || []);
+      const data = await api.assets.list();
+      setAssets(data.data || []);
     } catch (err: any) {
-      console.error('Failed to fetch work orders:', err);
-      setError(err.message || 'Failed to load work orders');
+      console.error('Failed to fetch assets:', err);
+      setError(err.message || 'Failed to load assets');
       if (err.response?.status === 401) {
         logout();
         router.push('/auth/login');
@@ -99,40 +92,30 @@ export default function WorkOrdersPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedWO) return;
+    if (!selectedAsset) return;
 
     try {
-      await api.workOrders.delete(selectedWO.id);
-      setWorkOrders(workOrders.filter((wo) => wo.id !== selectedWO.id));
+      await api.assets.delete(selectedAsset.id);
+      setAssets(assets.filter((a) => a.id !== selectedAsset.id));
       setDeleteDialog(false);
-      setSelectedWO(null);
+      setSelectedAsset(null);
     } catch (err) {
-      console.error('Failed to delete work order:', err);
-      alert('Failed to delete work order');
+      console.error('Failed to delete asset:', err);
+      alert('Failed to delete asset');
     }
   };
 
-  const filteredWorkOrders = workOrders.filter((wo) => {
+  const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
       searchQuery === '' ||
-      wo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      wo.workOrderId.toLowerCase().includes(searchQuery.toLowerCase());
+      asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      asset.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || wo.priority === priorityFilter;
-    const matchesType = typeFilter === 'all' || wo.type === typeFilter;
+    const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
+    const matchesType = typeFilter === 'all' || asset.assetType === typeFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesType;
+    return matchesSearch && matchesStatus && matchesType;
   });
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
 
   if (!isAuthenticated) {
     return null;
@@ -140,18 +123,18 @@ export default function WorkOrdersPage() {
 
   return (
     <DashboardLayout
-      title="Work Orders"
-      breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
+      title="Assets"
+      breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
       showNewButton={false}
     >
       <PageHeader
-        title="Work Orders"
-        description="Manage maintenance and repair tasks across all sites"
-        breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
+        title="Assets"
+        description="Manage your asset inventory across all sites"
+        breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
         actions={
-          <Button onClick={() => router.push('/work-orders/new')}>
+          <Button onClick={() => router.push('/assets/new')}>
             <Plus className="mr-2 h-4 w-4" />
-            New Work Order
+            New Asset
           </Button>
         }
       />
@@ -164,7 +147,7 @@ export default function WorkOrdersPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
-                placeholder="Search by title or WO ID..."
+                placeholder="Search assets by name or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -179,28 +162,11 @@ export default function WorkOrdersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="assigned">Assigned</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Priority Filter */}
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="All Priorities" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="operational">Operational</SelectItem>
+              <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+              <SelectItem value="decommissioned">Decommissioned</SelectItem>
             </SelectContent>
           </Select>
 
@@ -211,108 +177,95 @@ export default function WorkOrdersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="corrective">Corrective</SelectItem>
-              <SelectItem value="preventive">Preventive</SelectItem>
-              <SelectItem value="predictive">Predictive</SelectItem>
-              <SelectItem value="inspection">Inspection</SelectItem>
-              <SelectItem value="emergency">Emergency</SelectItem>
+              <SelectItem value="inverter">Inverter</SelectItem>
+              <SelectItem value="transformer">Transformer</SelectItem>
+              <SelectItem value="panel">Solar Panel</SelectItem>
+              <SelectItem value="battery">Battery</SelectItem>
+              <SelectItem value="turbine">Wind Turbine</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Clear Filters */}
-          {(searchQuery ||
-            statusFilter !== 'all' ||
-            priorityFilter !== 'all' ||
-            typeFilter !== 'all') && (
+          {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all') && (
             <Button
               variant="outline"
               onClick={() => {
                 setSearchQuery('');
                 setStatusFilter('all');
-                setPriorityFilter('all');
                 setTypeFilter('all');
               }}
             >
-              Clear
+              Clear Filters
             </Button>
           )}
         </div>
       </Card>
 
       {/* Loading State */}
-      {isLoading && <TableSkeleton rows={5} columns={7} />}
+      {isLoading && <TableSkeleton rows={5} columns={5} />}
 
       {/* Error State */}
       {!isLoading && error && (
         <Card className="p-8 text-center">
           <p className="text-red-600">Error: {error}</p>
-          <Button onClick={fetchWorkOrders} variant="outline" className="mt-4">
+          <Button onClick={fetchAssets} variant="outline" className="mt-4">
             Retry
           </Button>
         </Card>
       )}
 
       {/* Empty State */}
-      {!isLoading && !error && filteredWorkOrders.length === 0 && workOrders.length === 0 && (
+      {!isLoading && !error && filteredAssets.length === 0 && assets.length === 0 && (
         <EmptyState
-          icon={Wrench}
-          title="No work orders found"
-          description="Get started by creating your first work order to track maintenance tasks."
+          icon={Package}
+          title="No assets found"
+          description="Get started by creating your first asset to track equipment and infrastructure."
           action={{
-            label: 'Create Work Order',
-            onClick: () => router.push('/work-orders/new'),
+            label: 'Create Asset',
+            onClick: () => router.push('/assets/new'),
           }}
         />
       )}
 
       {/* No Results State */}
-      {!isLoading &&
-        !error &&
-        filteredWorkOrders.length === 0 &&
-        workOrders.length > 0 && (
-          <EmptyState
-            icon={Filter}
-            title="No matching work orders"
-            description="Try adjusting your search or filter criteria."
-          />
-        )}
+      {!isLoading && !error && filteredAssets.length === 0 && assets.length > 0 && (
+        <EmptyState
+          icon={Filter}
+          title="No matching assets"
+          description="Try adjusting your search or filter criteria."
+        />
+      )}
 
-      {/* Work Orders Table */}
-      {!isLoading && !error && filteredWorkOrders.length > 0 && (
+      {/* Assets Table */}
+      {!isLoading && !error && filteredAssets.length > 0 && (
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>WO ID</TableHead>
-                <TableHead>Title</TableHead>
+                <TableHead>Asset ID</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Priority</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Assigned To</TableHead>
-                <TableHead>Scheduled</TableHead>
+                <TableHead>Site</TableHead>
+                <TableHead>Location</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredWorkOrders.map((wo) => (
+              {filteredAssets.map((asset) => (
                 <TableRow
-                  key={wo.id}
+                  key={asset.id}
                   className="cursor-pointer hover:bg-slate-50"
-                  onClick={() => router.push(`/work-orders/${wo.id}`)}
+                  onClick={() => router.push(`/assets/${asset.id}`)}
                 >
-                  <TableCell className="font-mono text-xs">{wo.workOrderId}</TableCell>
-                  <TableCell className="font-medium max-w-xs truncate">{wo.title}</TableCell>
-                  <TableCell className="capitalize">{wo.type}</TableCell>
+                  <TableCell className="font-mono text-xs">{asset.id}</TableCell>
+                  <TableCell className="font-medium">{asset.name}</TableCell>
+                  <TableCell className="capitalize">{asset.assetType}</TableCell>
                   <TableCell>
-                    <PriorityBadge priority={wo.priority as any} />
+                    <AssetStatusBadge status={asset.status as any} />
                   </TableCell>
-                  <TableCell>
-                    <WorkOrderStatusBadge status={wo.status as any} />
-                  </TableCell>
-                  <TableCell>{wo.assignedTo?.name || 'Unassigned'}</TableCell>
-                  <TableCell className="text-slate-600">
-                    {formatDate(wo.scheduledStartDate)}
-                  </TableCell>
+                  <TableCell>{asset.site?.name || 'N/A'}</TableCell>
+                  <TableCell className="text-slate-600">{asset.location || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -324,7 +277,7 @@ export default function WorkOrdersPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/work-orders/${wo.id}`);
+                            router.push(`/assets/${asset.id}`);
                           }}
                         >
                           <Eye className="mr-2 h-4 w-4" />
@@ -333,7 +286,7 @@ export default function WorkOrdersPage() {
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/work-orders/${wo.id}/edit`);
+                            router.push(`/assets/${asset.id}/edit`);
                           }}
                         >
                           <Edit className="mr-2 h-4 w-4" />
@@ -344,7 +297,7 @@ export default function WorkOrdersPage() {
                           className="text-red-600"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedWO(wo);
+                            setSelectedAsset(asset);
                             setDeleteDialog(true);
                           }}
                         >
@@ -361,7 +314,7 @@ export default function WorkOrdersPage() {
 
           {/* Results Count */}
           <div className="border-t px-6 py-4 text-sm text-slate-600">
-            Showing {filteredWorkOrders.length} of {workOrders.length} work orders
+            Showing {filteredAssets.length} of {assets.length} assets
           </div>
         </Card>
       )}
@@ -370,8 +323,8 @@ export default function WorkOrdersPage() {
       <ConfirmDialog
         open={deleteDialog}
         onOpenChange={setDeleteDialog}
-        title="Delete Work Order"
-        description={`Are you sure you want to delete "${selectedWO?.title}"? This action cannot be undone.`}
+        title="Delete Asset"
+        description={`Are you sure you want to delete "${selectedAsset?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="destructive"
         onConfirm={handleDelete}
