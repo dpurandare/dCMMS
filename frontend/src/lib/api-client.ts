@@ -126,6 +126,13 @@ export const api = {
       const response = await apiClient.delete(`/work-orders/${id}`);
       return response.data;
     },
+    transition: async (id: string, action: string, data?: any) => {
+      const response = await apiClient.post(`/work-orders/${id}/transition`, {
+        action,
+        ...data,
+      });
+      return response.data;
+    },
   },
 
   // Assets endpoints
