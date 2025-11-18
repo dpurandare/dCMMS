@@ -24,6 +24,13 @@ lightgbm==4.3.0
 # Hyperparameter tuning
 optuna==3.5.0
 
+# Model explainability
+shap==0.44.1
+
+# Visualization
+matplotlib==3.8.2
+seaborn==0.13.1
+
 # Utilities
 python-dotenv==1.0.1
 pydantic==2.6.1
