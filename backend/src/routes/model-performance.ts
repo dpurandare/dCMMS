@@ -483,12 +483,14 @@ router.get('/alerts', authenticateToken, async (req, res) => {
 router.post('/alerts/:alertId/acknowledge', authenticateToken, async (req, res) => {
   try {
     const { alertId } = req.params;
+    // Sanitize alertId to prevent log injection
+    const safeAlertId = alertId ? alertId.replace(/[\r\n]/g, '') : '';
 
-    await performanceService.acknowledgeAlert(alertId);
+    await performanceService.acknowledgeAlert(safeAlertId);
 
     res.json({
       message: 'Alert acknowledged successfully',
-      alertId,
+      alertId: safeAlertId,
     });
   } catch (error) {
     console.error('Acknowledge alert error:', error);
