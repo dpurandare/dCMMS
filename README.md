@@ -144,6 +144,160 @@ The dCMMS platform follows a three-phase release plan with 100% specification co
 
 All specifications follow a TDD-friendly approach with clear acceptance criteria.
 
+## Local Development Setup
+
+### Prerequisites
+- Docker 20.10+ and Docker Compose 2.0+
+- 16GB RAM minimum (32GB recommended for full stack)
+- 50GB disk space for Docker volumes
+
+### Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/dCMMS.git
+   cd dCMMS
+   ```
+
+2. **Create environment file**
+   ```bash
+   cp .env.example .env
+   # Edit .env and update values as needed (defaults work for local dev)
+   ```
+
+3. **Start the infrastructure stack**
+   ```bash
+   docker compose up -d
+   ```
+
+   This starts 15 services:
+   - **Databases:** PostgreSQL, QuestDB, TimescaleDB, Redis
+   - **Message Brokers:** Kafka (KRaft mode), EMQX MQTT
+   - **Object Storage:** MinIO (S3-compatible)
+   - **Secrets:** HashiCorp Vault (dev mode)
+   - **Monitoring:** Prometheus, Grafana, Loki
+   - **Dev Tools:** Kafka UI, pgAdmin
+
+4. **Verify services are healthy**
+   ```bash
+   docker compose ps
+   ```
+
+   All services should show "healthy" status after 30-60 seconds.
+
+5. **Access the services**
+   - **PostgreSQL:** `postgresql://dcmms_user:dcmms_password_dev@localhost:5432/dcmms`
+   - **QuestDB UI:** http://localhost:9000
+   - **TimescaleDB:** `postgresql://timescale_user:timescale_password_dev@localhost:5433/timescaledb`
+   - **Redis:** `redis://localhost:6379` (password: redis_password_dev)
+   - **Kafka:** `localhost:9094` (external) or `kafka:9092` (internal)
+   - **EMQX Dashboard:** http://localhost:18083 (admin/public)
+   - **MinIO Console:** http://localhost:9001 (minioadmin/minioadmin)
+   - **MinIO API:** http://localhost:9002
+   - **Vault:** http://localhost:8200 (token: root)
+   - **Prometheus:** http://localhost:9090
+   - **Grafana:** http://localhost:3000 (admin/admin)
+   - **Loki:** http://localhost:3100
+   - **Kafka UI:** http://localhost:8080
+   - **pgAdmin:** http://localhost:5050 (admin@dcmms.local/admin)
+
+6. **Initialize seed data**
+
+   The PostgreSQL database is automatically initialized with:
+   - Default tenant (tenant_id: `default`)
+   - Admin user (email: `admin@dcmms.local`, password: `admin123`)
+   - Demo site (site_id: `site-001`, name: "Demo Solar Farm")
+
+### Database Schemas
+
+**PostgreSQL (Transactional OLTP)**
+- Auto-initialized with complete schema (see `scripts/init-db.sql`)
+- 16+ tables including: tenants, users, sites, assets, work_orders, alerts, audit_logs
+- Full RBAC with user roles: super_admin, tenant_admin, site_manager, technician, operator, viewer
+
+**TimescaleDB (Time-Series Aggregates)**
+- Auto-initialized with hypertables (see `scripts/init-timescaledb.sql`)
+- 4 aggregation levels: 1-minute, 5-minute, 1-hour, 1-day
+- Compression enabled for older data
+- Automatic retention policies (30 days → 5 years depending on granularity)
+
+**QuestDB (Raw Telemetry)**
+- Optimized for high-speed ingestion (72,000 events/sec)
+- Accessed via HTTP API (port 9000) or PostgreSQL wire protocol (port 8812)
+- No initialization script needed - tables created on first data write
+
+### Development Workflow
+
+1. **Stop all services**
+   ```bash
+   docker compose down
+   ```
+
+2. **Stop and remove all data (fresh start)**
+   ```bash
+   docker compose down -v
+   ```
+
+3. **View logs**
+   ```bash
+   docker compose logs -f [service-name]
+
+   # Examples:
+   docker compose logs -f postgres
+   docker compose logs -f kafka
+   docker compose logs -f emqx
+   ```
+
+4. **Restart a specific service**
+   ```bash
+   docker compose restart [service-name]
+   ```
+
+### Monitoring & Observability
+
+**Grafana Dashboards**
+- Pre-configured data sources for Prometheus, Loki, PostgreSQL, TimescaleDB, QuestDB
+- Access: http://localhost:3000 (admin/admin)
+
+**Prometheus Metrics**
+- Scraping metrics from: PostgreSQL, Redis, Kafka, EMQX, MinIO
+- Access: http://localhost:9090
+
+**Loki Logs**
+- Centralized log aggregation
+- Query via Grafana or direct API: http://localhost:3100
+
+### Troubleshooting
+
+**Port Conflicts**
+- QuestDB uses port 9000 (HTTP API)
+- MinIO uses port 9002 (API) and 9001 (Console)
+- If you have port conflicts, edit `docker-compose.yml` and update port mappings
+
+**Service Won't Start**
+- Check logs: `docker compose logs [service-name]`
+- Verify sufficient memory: `docker stats`
+- Check disk space: `df -h`
+
+**Database Connection Issues**
+- Wait for health checks to pass: `docker compose ps`
+- PostgreSQL takes ~10-15 seconds to initialize
+- TimescaleDB takes ~15-20 seconds to initialize
+
+**Kafka Issues**
+- Kafka uses KRaft mode (no Zookeeper required)
+- Takes ~20-30 seconds to fully start
+- Check Kafka UI: http://localhost:8080
+
+### Next Steps
+
+After infrastructure is running:
+1. Set up backend API (Sprint 1)
+2. Set up frontend web app (Sprint 1)
+3. Set up mobile app (Sprint 1)
+
+See `docs/` for detailed architecture and API specifications.
+
 ## Technology Stack
 
 ### Frontend

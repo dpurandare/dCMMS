@@ -1,0 +1,111 @@
+# ==========================================
+# Prometheus Configuration for dCMMS
+# ==========================================
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'dcmms-local'
+    environment: 'development'
+
+# Alertmanager configuration (optional - add when implementing alerting)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+# rule_files:
+#   - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # PostgreSQL metrics (requires postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          database: 'dcmms'
+
+  # Redis metrics (requires redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+
+  # Kafka metrics (JMX exporter)
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9308']
+        labels:
+          service: 'kafka'
+
+  # EMQX MQTT metrics (built-in Prometheus endpoint)
+  - job_name: 'emqx'
+    static_configs:
+      - targets: ['emqx:18083']
+        labels:
+          service: 'emqx'
+    metrics_path: '/api/v5/prometheus/stats'
+    basic_auth:
+      username: 'admin'
+      password: 'public'
+
+  # MinIO metrics (built-in Prometheus endpoint)
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['minio:9000']
+        labels:
+          service: 'minio'
+    metrics_path: '/minio/v2/metrics/cluster'
+    scheme: http
+
+  # QuestDB metrics (future - when implemented)
+  # - job_name: 'questdb'
+  #   static_configs:
+  #     - targets: ['questdb:9003']
+  #       labels:
+  #         service: 'questdb'
+
+  # TimescaleDB metrics (via postgres_exporter)
+  - job_name: 'timescaledb'
+    static_configs:
+      - targets: ['timescaledb-exporter:9187']
+        labels:
+          service: 'timescaledb'
+          database: 'timescaledb'
+
+  # Node.js API metrics (requires prom-client)
+  # Will be added when API is implemented
+  # - job_name: 'dcmms-api'
+  #   static_configs:
+  #     - targets: ['dcmms-api:3000']
+  #       labels:
+  #         service: 'dcmms-api'
+  #   metrics_path: '/metrics'
+
+  # Next.js frontend metrics
+  # - job_name: 'dcmms-web'
+  #   static_configs:
+  #     - targets: ['dcmms-web:4200']
+  #       labels:
+  #         service: 'dcmms-web'
+
+  # Edge Gateway metrics (future)
+  # - job_name: 'edge-gateway'
+  #   static_configs:
+  #     - targets: ['edge-gateway:9100']
+  #       labels:
+  #         service: 'edge-gateway'
