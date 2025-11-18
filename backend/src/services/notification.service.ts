@@ -350,6 +350,9 @@ export class NotificationService {
         return user.phone || '';
       case 'push':
         return user.id; // Will use device tokens
+      case 'slack':
+        // Slack channel from user metadata or default to #general
+        return user.slackChannel || user.metadata?.slackChannel || '#general';
       default:
         return user.email;
     }
@@ -405,6 +408,9 @@ export class NotificationService {
           break;
         case 'push':
           await this.sendPushNotification(userId, subject || '', body, historyRecord.id);
+          break;
+        case 'slack':
+          await this.sendSlackNotification(tenantId, recipient, subject || '', body, eventType, historyRecord.id);
           break;
         default:
           this.fastify.log.warn({ channel }, 'Unsupported channel');
@@ -538,6 +544,72 @@ export class NotificationService {
       await this.updateNotificationStatus(historyId, 'failed', error);
       throw error;
     }
+  }
+
+  /**
+   * Send Slack notification
+   */
+  private async sendSlackNotification(
+    tenantId: string,
+    channel: string,
+    title: string,
+    body: string,
+    eventType: NotificationEventType,
+    historyId: string
+  ): Promise<void> {
+    this.fastify.log.info({ tenantId, channel, title }, 'Sending Slack notification');
+
+    try {
+      // Import Slack provider dynamically
+      const { createSlackProviderService } = await import('./slack-provider.service');
+      const slackService = createSlackProviderService(this.fastify);
+
+      // Determine severity from event type
+      const severity = this.getSeverityFromEventType(eventType);
+
+      // Send Slack message
+      const result = await slackService.send({
+        tenantId,
+        channel,
+        text: body,
+        title,
+        severity,
+      });
+
+      if (result.status === 'sent') {
+        await this.updateNotificationStatus(historyId, 'sent');
+        this.fastify.log.info(
+          { channel, messageId: result.messageId },
+          'Slack notification sent successfully'
+        );
+      } else {
+        throw new Error(result.error || 'Failed to send Slack notification');
+      }
+    } catch (error) {
+      this.fastify.log.error({ error, channel }, 'Failed to send Slack notification');
+      await this.updateNotificationStatus(historyId, 'failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get severity from event type
+   */
+  private getSeverityFromEventType(eventType: NotificationEventType): 'critical' | 'high' | 'medium' | 'low' | 'info' {
+    const severityMap: Record<NotificationEventType, 'critical' | 'high' | 'medium' | 'low' | 'info'> = {
+      alert_critical: 'critical',
+      alert_high: 'high',
+      alert_medium: 'medium',
+      work_order_overdue: 'high',
+      work_order_assigned: 'medium',
+      work_order_completed: 'low',
+      alert_acknowledged: 'info',
+      alert_resolved: 'info',
+      asset_down: 'critical',
+      maintenance_due: 'medium',
+    };
+
+    return severityMap[eventType] || 'info';
   }
 
   /**
