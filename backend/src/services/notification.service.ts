@@ -1,685 +1,599 @@
-import { db } from '../db';
-import {
-  notificationHistory,
-  notificationPreferences,
-  notificationRules,
-  notificationTemplates,
-  deviceTokens,
-  users,
-} from '../db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
-import { FastifyInstance } from 'fastify';
+/**
+ * Notification Service (DCMMS-063)
+ *
+ * Core notification system with:
+ * - Template rendering (Handlebars)
+ * - Rule engine
+ * - Priority queue
+ * - Rate limiting
+ * - Retry logic with exponential backoff
+ * - Multi-channel support (email, SMS, push)
+ *
+ * Usage:
+ *   const notificationService = new NotificationService(db);
+ *   await notificationService.sendNotification({
+ *     templateCode: 'alarm_critical',
+ *     userId: '123',
+ *     channels: ['email', 'sms'],
+ *     variables: { asset_name: 'Pump #1', value: 85, unit: '°C' }
+ *   });
+ */
 
-export type NotificationChannel = 'email' | 'sms' | 'push' | 'webhook' | 'slack';
-export type NotificationEventType =
-  | 'work_order_assigned'
-  | 'work_order_overdue'
-  | 'work_order_completed'
-  | 'alert_critical'
-  | 'alert_high'
-  | 'alert_medium'
-  | 'alert_acknowledged'
-  | 'alert_resolved'
-  | 'asset_down'
-  | 'maintenance_due';
+import Handlebars from 'handlebars';
+import { Pool } from 'pg';
+import { v4 as uuidv4 } from 'uuid';
 
-export interface NotificationPayload {
+// ==========================================
+// Types
+// ==========================================
+
+export interface NotificationTemplate {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  subject?: string;
+  body_text: string;
+  body_html?: string;
+  variables: string[];
+  category: string;
+  enabled: boolean;
+}
+
+export interface NotificationRule {
+  id: string;
+  tenant_id: string;
+  name: string;
+  enabled: boolean;
+  trigger_conditions: Record<string, any>;
+  template_code: string;
+  channels: string[];
+  recipient_type: 'user' | 'role' | 'dynamic';
+  recipient_ids?: string[];
+  recipient_dynamic?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  rate_limit_count: number;
+  rate_limit_period_seconds: number;
+  escalation_enabled: boolean;
+  escalation_delay_minutes?: number;
+  escalation_recipient_ids?: string[];
+}
+
+export interface NotificationRequest {
   tenantId: string;
+  templateCode: string;
   userId: string;
-  eventType: NotificationEventType;
-  data: Record<string, any>;
-  severity?: 'critical' | 'high' | 'medium' | 'low';
+  channels: ('email' | 'sms' | 'push')[];
+  variables: Record<string, any>;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  scheduledAt?: Date;
+  metadata?: Record<string, any>;
+  ruleId?: string;
 }
 
-export interface TemplateVariables {
-  asset_name?: string;
-  wo_id?: string;
-  alarm_severity?: string;
-  value?: string;
-  threshold?: string;
-  site_name?: string;
-  assigned_to?: string;
-  priority?: string;
-  [key: string]: any;
+export interface QueuedNotification {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  channel: string;
+  template_code: string;
+  subject?: string;
+  body: string;
+  priority: string;
+  status: string;
+  scheduled_at: Date;
+  retry_count: number;
+  max_retries: number;
+  metadata?: Record<string, any>;
 }
+
+// ==========================================
+// Notification Service
+// ==========================================
 
 export class NotificationService {
-  private fastify: FastifyInstance;
-  private rateLimitMap: Map<string, { count: number; resetAt: number }> = new Map();
-  private readonly MAX_EMAILS_PER_MINUTE = 10;
-  private readonly MAX_SMS_PER_MINUTE = 5;
-  private readonly RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+  private db: Pool;
+  private templateCache: Map<string, Handlebars.TemplateDelegate> = new Map();
 
-  constructor(fastify: FastifyInstance) {
-    this.fastify = fastify;
+  constructor(db: Pool) {
+    this.db = db;
+    this.registerHandlebarsHelpers();
   }
 
   /**
-   * Send notification based on event type and user preferences
+   * Register custom Handlebars helpers
    */
-  async sendNotification(payload: NotificationPayload): Promise<void> {
-    const { tenantId, userId, eventType, data, severity } = payload;
+  private registerHandlebarsHelpers() {
+    // Date formatting helper
+    Handlebars.registerHelper('formatDate', (date: string | Date, format: string) => {
+      const d = new Date(date);
+      if (format === 'short') {
+        return d.toLocaleDateString();
+      } else if (format === 'long') {
+        return d.toLocaleString();
+      }
+      return d.toISOString();
+    });
 
-    this.fastify.log.info({ payload }, 'Sending notification');
+    // Currency formatting helper
+    Handlebars.registerHelper('formatCurrency', (value: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+      }).format(value);
+    });
 
-    try {
-      // Get user details
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, userId),
+    // Uppercase helper
+    Handlebars.registerHelper('uppercase', (str: string) => {
+      return str ? str.toUpperCase() : '';
+    });
+
+    // Conditional helper
+    Handlebars.registerHelper('eq', (a: any, b: any) => {
+      return a === b;
+    });
+  }
+
+  /**
+   * Send notification to specified channels
+   */
+  async sendNotification(request: NotificationRequest): Promise<string[]> {
+    const {
+      tenantId,
+      templateCode,
+      userId,
+      channels,
+      variables,
+      priority = 'medium',
+      scheduledAt = new Date(),
+      metadata,
+      ruleId,
+    } = request;
+
+    // Validate inputs
+    if (!tenantId || !templateCode || !userId || !channels || channels.length === 0) {
+      throw new Error('Missing required notification parameters');
+    }
+
+    // Get template
+    const template = await this.getTemplate(tenantId, templateCode);
+    if (!template) {
+      throw new Error(`Template not found: ${templateCode}`);
+    }
+
+    // Validate template variables
+    this.validateTemplateVariables(template, variables);
+
+    // Check rate limits for each channel
+    const allowedChannels: string[] = [];
+    for (const channel of channels) {
+      const allowed = await this.checkRateLimit(tenantId, userId, channel);
+      if (allowed) {
+        allowedChannels.push(channel);
+      } else {
+        console.warn(`Rate limit exceeded for user ${userId} on channel ${channel}`);
+      }
+    }
+
+    if (allowedChannels.length === 0) {
+      throw new Error('All channels rate limited');
+    }
+
+    // Queue notifications for each allowed channel
+    const notificationIds: string[] = [];
+
+    for (const channel of allowedChannels) {
+      // Render template
+      const { subject, body } = await this.renderTemplate(template, variables, channel);
+
+      // Queue notification
+      const notificationId = await this.queueNotification({
+        tenantId,
+        userId,
+        channel,
+        templateCode,
+        subject,
+        body,
+        priority,
+        scheduledAt,
+        metadata,
+        ruleId,
+        variables,
       });
 
-      if (!user || !user.isActive) {
-        this.fastify.log.warn({ userId }, 'User not found or inactive');
-        return;
-      }
+      notificationIds.push(notificationId);
 
-      // Get notification rules for this event type
-      const rules = await this.getNotificationRules(tenantId, eventType);
+      // Update rate limit
+      await this.incrementRateLimit(tenantId, userId, channel);
+    }
 
-      if (rules.length === 0) {
-        this.fastify.log.info({ eventType }, 'No notification rules found for event type');
-        return;
-      }
+    return notificationIds;
+  }
 
-      // Get user preferences
-      const preferences = await this.getUserPreferences(userId);
+  /**
+   * Get notification template from database (with caching)
+   */
+  private async getTemplate(tenantId: string, code: string): Promise<NotificationTemplate | null> {
+    const result = await this.db.query(
+      `SELECT * FROM notification_templates
+       WHERE tenant_id = $1 AND code = $2 AND enabled = true`,
+      [tenantId, code]
+    );
 
-      // Determine priority for batching
-      const priority = severity || this.getPriorityFromEventType(eventType);
+    if (result.rows.length === 0) {
+      return null;
+    }
 
-      // Send notifications through enabled channels
-      for (const rule of rules) {
-        const channels = JSON.parse(rule.channels) as NotificationChannel[];
+    return result.rows[0];
+  }
 
-        for (const channel of channels) {
-          // Check if user has this channel enabled
-          const pref = preferences.find(
-            (p) => p.eventType === eventType && p.channel === channel
-          );
+  /**
+   * Validate that all required template variables are provided
+   */
+  private validateTemplateVariables(template: NotificationTemplate, variables: Record<string, any>) {
+    const requiredVars = template.variables || [];
+    const missingVars = requiredVars.filter((v: string) => !(v in variables));
 
-          if (pref && !pref.isEnabled) {
-            this.fastify.log.info(
-              { userId, channel, eventType },
-              'User has disabled this notification channel'
-            );
-            continue;
-          }
-
-          // Check quiet hours
-          if (pref && this.isInQuietHours(pref)) {
-            this.fastify.log.info({ userId, channel }, 'User is in quiet hours');
-            continue;
-          }
-
-          // Check rate limits
-          if (!this.checkRateLimit(userId, channel)) {
-            this.fastify.log.warn({ userId, channel }, 'Rate limit exceeded');
-            continue;
-          }
-
-          // Get template
-          const template = await this.getTemplate(tenantId, eventType, channel);
-
-          if (!template) {
-            this.fastify.log.warn({ eventType, channel }, 'No template found');
-            continue;
-          }
-
-          // Render template
-          const rendered = this.renderTemplate(template.bodyTemplate, data);
-          const subject = template.subject
-            ? this.renderTemplate(template.subject, data)
-            : undefined;
-
-          // Check if batching is enabled and should be used
-          const shouldBatch =
-            pref &&
-            pref.enableBatching &&
-            (priority === 'low' || priority === 'medium') &&
-            channel === 'email'; // Only batch email notifications for now
-
-          if (shouldBatch) {
-            // Queue for batching
-            await this.queueForBatching({
-              tenantId,
-              userId,
-              eventType,
-              channel,
-              priority,
-              subject,
-              body: rendered,
-              templateId: template.id,
-              data,
-            });
-          } else {
-            // Send immediately
-            await this.sendToChannel({
-              channel,
-              userId,
-              tenantId,
-              eventType,
-              recipient: this.getRecipient(user, channel),
-              subject,
-              body: rendered,
-              templateId: template.id,
-            });
-          }
-        }
-      }
-    } catch (error) {
-      this.fastify.log.error({ error, payload }, 'Failed to send notification');
-      throw error;
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required template variables: ${missingVars.join(', ')}`);
     }
   }
 
   /**
-   * Get priority from event type
+   * Render template with variables using Handlebars
    */
-  private getPriorityFromEventType(eventType: NotificationEventType): 'critical' | 'high' | 'medium' | 'low' {
-    const priorityMap: Record<NotificationEventType, 'critical' | 'high' | 'medium' | 'low'> = {
-      alert_critical: 'critical',
-      alert_high: 'high',
-      alert_medium: 'medium',
-      work_order_overdue: 'high',
-      work_order_assigned: 'medium',
-      work_order_completed: 'low',
-      alert_acknowledged: 'low',
-      alert_resolved: 'low',
-      asset_down: 'high',
-      maintenance_due: 'medium',
-    };
+  private async renderTemplate(
+    template: NotificationTemplate,
+    variables: Record<string, any>,
+    channel: string
+  ): Promise<{ subject?: string; body: string }> {
+    // Compile templates (use cache if available)
+    const subjectCacheKey = `${template.id}:subject`;
+    const bodyCacheKey = `${template.id}:body:${channel}`;
 
-    return priorityMap[eventType] || 'medium';
+    let subjectTemplate: Handlebars.TemplateDelegate | undefined;
+    let bodyTemplate: Handlebars.TemplateDelegate;
+
+    // Subject (email only)
+    if (template.subject) {
+      if (!this.templateCache.has(subjectCacheKey)) {
+        this.templateCache.set(subjectCacheKey, Handlebars.compile(template.subject));
+      }
+      subjectTemplate = this.templateCache.get(subjectCacheKey);
+    }
+
+    // Body
+    if (!this.templateCache.has(bodyCacheKey)) {
+      const bodySource = channel === 'email' && template.body_html ? template.body_html : template.body_text;
+      this.templateCache.set(bodyCacheKey, Handlebars.compile(bodySource));
+    }
+    bodyTemplate = this.templateCache.get(bodyCacheKey)!;
+
+    // Render
+    const subject = subjectTemplate ? subjectTemplate(variables) : undefined;
+    const body = bodyTemplate(variables);
+
+    return { subject, body };
   }
 
   /**
-   * Queue notification for batching
+   * Queue notification for delivery
    */
-  private async queueForBatching(params: {
+  private async queueNotification(params: {
     tenantId: string;
     userId: string;
-    eventType: NotificationEventType;
-    channel: NotificationChannel;
-    priority: 'critical' | 'high' | 'medium' | 'low';
+    channel: string;
+    templateCode: string;
     subject?: string;
     body: string;
-    templateId: string;
-    data: Record<string, any>;
-  }): Promise<void> {
-    try {
-      const { createNotificationBatchingService } = await import('./notification-batching.service');
-      const batchingService = createNotificationBatchingService(this.fastify);
+    priority: string;
+    scheduledAt: Date;
+    metadata?: Record<string, any>;
+    ruleId?: string;
+    variables: Record<string, any>;
+  }): Promise<string> {
+    const id = uuidv4();
 
-      await batchingService.queueNotification({
-        tenantId: params.tenantId,
-        userId: params.userId,
-        eventType: params.eventType,
-        channel: params.channel,
-        priority: params.priority,
-        subject: params.subject,
-        body: params.body,
-        templateId: params.templateId,
-        data: params.data,
-      });
+    await this.db.query(
+      `INSERT INTO notification_queue
+       (id, tenant_id, notification_rule_id, user_id, channel, template_code,
+        subject, body, template_variables, priority, status, scheduled_at, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        id,
+        params.tenantId,
+        params.ruleId || null,
+        params.userId,
+        params.channel,
+        params.templateCode,
+        params.subject || null,
+        params.body,
+        JSON.stringify(params.variables),
+        params.priority,
+        'pending',
+        params.scheduledAt,
+        params.metadata ? JSON.stringify(params.metadata) : null,
+      ]
+    );
 
-      this.fastify.log.info(
-        { userId: params.userId, eventType: params.eventType },
-        'Notification queued for batching'
-      );
-    } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to queue notification for batching');
-      // Fall back to immediate send
-      throw error;
+    return id;
+  }
+
+  /**
+   * Check if user has exceeded rate limit for channel
+   */
+  private async checkRateLimit(tenantId: string, userId: string, channel: string): Promise<boolean> {
+    // Get default rate limit (can be customized per user/tenant)
+    const rateLimit = 10; // Max 10 notifications
+    const periodSeconds = 60; // Per 60 seconds
+
+    const windowStart = new Date(Date.now() - periodSeconds * 1000);
+    const windowEnd = new Date();
+
+    // Count notifications in current window
+    const result = await this.db.query(
+      `SELECT COALESCE(SUM(notification_count), 0) as count
+       FROM notification_rate_limits
+       WHERE tenant_id = $1 AND user_id = $2 AND channel = $3
+         AND window_end > $4`,
+      [tenantId, userId, channel, windowStart]
+    );
+
+    const currentCount = parseInt(result.rows[0]?.count || '0');
+
+    return currentCount < rateLimit;
+  }
+
+  /**
+   * Increment rate limit counter
+   */
+  private async incrementRateLimit(tenantId: string, userId: string, channel: string) {
+    const windowSize = 60; // 60 seconds
+    const windowStart = new Date();
+    windowStart.setSeconds(0, 0); // Align to minute boundary
+    const windowEnd = new Date(windowStart.getTime() + windowSize * 1000);
+
+    await this.db.query(
+      `INSERT INTO notification_rate_limits
+       (tenant_id, user_id, channel, window_start, window_end, notification_count)
+       VALUES ($1, $2, $3, $4, $5, 1)
+       ON CONFLICT (tenant_id, user_id, channel, window_start)
+       DO UPDATE SET
+         notification_count = notification_rate_limits.notification_count + 1,
+         updated_at = NOW()`,
+      [tenantId, userId, channel, windowStart, windowEnd]
+    );
+  }
+
+  /**
+   * Get pending notifications from queue (for worker to process)
+   */
+  async getPendingNotifications(limit: number = 100): Promise<QueuedNotification[]> {
+    const result = await this.db.query(
+      `SELECT * FROM notification_queue
+       WHERE status = 'pending'
+         AND scheduled_at <= NOW()
+       ORDER BY
+         CASE priority
+           WHEN 'critical' THEN 1
+           WHEN 'high' THEN 2
+           WHEN 'medium' THEN 3
+           WHEN 'low' THEN 4
+         END,
+         scheduled_at
+       LIMIT $1`,
+      [limit]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Mark notification as processing
+   */
+  async markAsProcessing(notificationId: string): Promise<void> {
+    await this.db.query(
+      `UPDATE notification_queue
+       SET status = 'processing', updated_at = NOW()
+       WHERE id = $1`,
+      [notificationId]
+    );
+  }
+
+  /**
+   * Mark notification as sent
+   */
+  async markAsSent(notificationId: string, providerMessageId?: string): Promise<void> {
+    await this.db.query(
+      `UPDATE notification_queue
+       SET status = 'sent', sent_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [notificationId]
+    );
+
+    // Record in history
+    const notification = await this.db.query(
+      `SELECT * FROM notification_queue WHERE id = $1`,
+      [notificationId]
+    );
+
+    if (notification.rows.length > 0) {
+      const n = notification.rows[0];
+      await this.recordHistory(n, 'sent', providerMessageId);
     }
   }
 
   /**
-   * Get notification rules for event type
+   * Mark notification as failed (with retry logic)
    */
-  private async getNotificationRules(
-    tenantId: string,
-    eventType: NotificationEventType
-  ) {
-    return db.query.notificationRules.findMany({
-      where: and(
-        eq(notificationRules.tenantId, tenantId),
-        eq(notificationRules.eventType, eventType),
-        eq(notificationRules.isActive, true)
-      ),
-    });
+  async markAsFailed(notificationId: string, error: string): Promise<void> {
+    const result = await this.db.query(
+      `UPDATE notification_queue
+       SET
+         status = CASE
+           WHEN retry_count < max_retries THEN 'failed'
+           ELSE 'cancelled'
+         END,
+         retry_count = retry_count + 1,
+         next_retry_at = CASE
+           WHEN retry_count < max_retries THEN NOW() + (INTERVAL '1 minute' * POWER(2, retry_count))
+           ELSE NULL
+         END,
+         error_message = $2,
+         failed_at = NOW(),
+         updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [notificationId, error]
+    );
+
+    if (result.rows.length > 0) {
+      const n = result.rows[0];
+      await this.recordHistory(n, 'failed', null, error);
+    }
   }
 
   /**
-   * Get user notification preferences
+   * Record notification in history
    */
-  private async getUserPreferences(userId: string) {
-    return db.query.notificationPreferences.findMany({
-      where: eq(notificationPreferences.userId, userId),
-    });
+  private async recordHistory(
+    notification: QueuedNotification,
+    status: string,
+    providerMessageId?: string,
+    errorMessage?: string
+  ): Promise<void> {
+    // Get user details
+    const userResult = await this.db.query(
+      `SELECT email, phone FROM users WHERE id = $1`,
+      [notification.user_id]
+    );
+
+    const user = userResult.rows[0];
+
+    await this.db.query(
+      `INSERT INTO notification_history
+       (tenant_id, notification_rule_id, notification_queue_id, user_id, user_email, user_phone,
+        channel, template_code, subject, body, status, provider_message_id, sent_at, error_message, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, $14)`,
+      [
+        notification.tenant_id,
+        null, // Will be populated if from rule
+        notification.id,
+        notification.user_id,
+        user?.email,
+        user?.phone,
+        notification.channel,
+        notification.template_code,
+        notification.subject,
+        notification.body,
+        status,
+        providerMessageId,
+        errorMessage,
+        notification.metadata ? JSON.stringify(notification.metadata) : null,
+      ]
+    );
   }
 
   /**
-   * Get notification template
+   * Evaluate notification rules for an event
    */
-  private async getTemplate(
-    tenantId: string,
-    eventType: NotificationEventType,
-    channel: NotificationChannel
-  ) {
-    return db.query.notificationTemplates.findFirst({
-      where: and(
-        eq(notificationTemplates.tenantId, tenantId),
-        eq(notificationTemplates.eventType, eventType),
-        eq(notificationTemplates.channel, channel),
-        eq(notificationTemplates.isActive, true)
-      ),
-    });
-  }
+  async evaluateRules(tenantId: string, eventType: string, eventData: Record<string, any>): Promise<NotificationRule[]> {
+    const result = await this.db.query(
+      `SELECT * FROM notification_rules
+       WHERE tenant_id = $1 AND enabled = true`,
+      [tenantId]
+    );
 
-  /**
-   * Render template with variables
-   */
-  private renderTemplate(template: string, variables: TemplateVariables): string {
-    let rendered = template;
+    const matchingRules: NotificationRule[] = [];
 
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`\\{${key}\\}`, 'g');
-      rendered = rendered.replace(regex, String(value || ''));
+    for (const rule of result.rows) {
+      if (this.ruleMatches(rule, eventType, eventData)) {
+        matchingRules.push(rule);
+      }
     }
 
-    return rendered;
+    return matchingRules;
   }
 
   /**
-   * Check if user is in quiet hours
+   * Check if rule conditions match the event
    */
-  private isInQuietHours(pref: any): boolean {
-    if (!pref.quietHoursStart || !pref.quietHoursEnd) {
+  private ruleMatches(rule: NotificationRule, eventType: string, eventData: Record<string, any>): boolean {
+    const conditions = rule.trigger_conditions;
+
+    // Check event type
+    if (conditions.event_type && conditions.event_type !== eventType) {
       return false;
     }
 
-    const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, '0')}`;
-
-    return currentTime >= pref.quietHoursStart && currentTime <= pref.quietHoursEnd;
-  }
-
-  /**
-   * Check rate limit for user and channel
-   */
-  private checkRateLimit(userId: string, channel: NotificationChannel): boolean {
-    const key = `${userId}:${channel}`;
-    const now = Date.now();
-
-    const limit =
-      channel === 'email'
-        ? this.MAX_EMAILS_PER_MINUTE
-        : channel === 'sms'
-          ? this.MAX_SMS_PER_MINUTE
-          : 100; // Higher limit for push
-
-    const entry = this.rateLimitMap.get(key);
-
-    if (!entry || entry.resetAt < now) {
-      this.rateLimitMap.set(key, {
-        count: 1,
-        resetAt: now + this.RATE_LIMIT_WINDOW_MS,
-      });
-      return true;
+    // Check severity (for alarms)
+    if (conditions.severity && Array.isArray(conditions.severity)) {
+      if (!conditions.severity.includes(eventData.severity)) {
+        return false;
+      }
     }
 
-    if (entry.count >= limit) {
-      return false;
+    // Check sensor type (for alarms)
+    if (conditions.sensor_type && Array.isArray(conditions.sensor_type)) {
+      if (!conditions.sensor_type.includes(eventData.sensor_type)) {
+        return false;
+      }
     }
 
-    entry.count++;
+    // Check priority (for work orders)
+    if (conditions.priority && Array.isArray(conditions.priority)) {
+      if (!conditions.priority.includes(eventData.priority)) {
+        return false;
+      }
+    }
+
+    // All conditions matched
     return true;
   }
 
   /**
-   * Get recipient based on channel
+   * Resolve dynamic recipients (e.g., "asset_owner", "wo_assignee")
    */
-  private getRecipient(user: any, channel: NotificationChannel): string {
-    switch (channel) {
-      case 'email':
-        return user.email;
-      case 'sms':
-        return user.phone || '';
-      case 'push':
-        return user.id; // Will use device tokens
-      case 'slack':
-        // Slack channel from user metadata or default to #general
-        return user.slackChannel || user.metadata?.slackChannel || '#general';
-      default:
-        return user.email;
-    }
-  }
+  async resolveDynamicRecipients(recipientType: string, eventData: Record<string, any>): Promise<string[]> {
+    const userIds: string[] = [];
 
-  /**
-   * Send notification to specific channel
-   */
-  private async sendToChannel(params: {
-    channel: NotificationChannel;
-    userId: string;
-    tenantId: string;
-    eventType: NotificationEventType;
-    recipient: string;
-    subject?: string;
-    body: string;
-    templateId: string;
-  }): Promise<void> {
-    const {
-      channel,
-      userId,
-      tenantId,
-      eventType,
-      recipient,
-      subject,
-      body,
-      templateId,
-    } = params;
-
-    // Create notification history record
-    const [historyRecord] = await db
-      .insert(notificationHistory)
-      .values({
-        tenantId,
-        userId,
-        eventType,
-        channel,
-        templateId,
-        recipient,
-        subject,
-        body,
-        status: 'pending',
-      })
-      .returning();
-
-    try {
-      switch (channel) {
-        case 'email':
-          await this.sendEmail(recipient, subject || '', body, historyRecord.id);
-          break;
-        case 'sms':
-          await this.sendSMS(recipient, body, historyRecord.id);
-          break;
-        case 'push':
-          await this.sendPushNotification(userId, subject || '', body, historyRecord.id);
-          break;
-        case 'slack':
-          await this.sendSlackNotification(tenantId, recipient, subject || '', body, eventType, historyRecord.id);
-          break;
-        default:
-          this.fastify.log.warn({ channel }, 'Unsupported channel');
-      }
-    } catch (error) {
-      this.fastify.log.error({ error, channel, recipient }, 'Failed to send to channel');
-      await this.updateNotificationStatus(historyRecord.id, 'failed', error);
-    }
-  }
-
-  /**
-   * Send email notification
-   */
-  private async sendEmail(
-    to: string,
-    subject: string,
-    body: string,
-    historyId: string
-  ): Promise<void> {
-    this.fastify.log.info({ to, subject }, 'Sending email notification');
-
-    try {
-      // Import email provider dynamically
-      const { createEmailProviderService } = await import('./email-provider.service');
-      const emailProvider = createEmailProviderService(this.fastify);
-
-      // Send email
-      const result = await emailProvider.send({
-        to,
-        subject,
-        html: body,
-      });
-
-      if (result.status === 'sent') {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info({ to, messageId: result.messageId }, 'Email sent successfully');
-      } else {
-        throw new Error(result.error || 'Failed to send email');
-      }
-    } catch (error) {
-      this.fastify.log.error({ error, to }, 'Failed to send email');
-      await this.updateNotificationStatus(historyId, 'failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send SMS notification
-   */
-  private async sendSMS(to: string, body: string, historyId: string): Promise<void> {
-    this.fastify.log.info({ to, body }, 'Sending SMS notification');
-
-    try {
-      // Import SMS provider dynamically
-      const { createSMSProviderService } = await import('./sms-provider.service');
-      const smsProvider = createSMSProviderService(this.fastify);
-
-      // Check if user has opted out
-      const hasOptedOut = await smsProvider.checkOptOut(to);
-      if (hasOptedOut) {
-        this.fastify.log.warn({ to }, 'User has opted out of SMS notifications');
-        await this.updateNotificationStatus(historyId, 'failed', new Error('User opted out'));
-        return;
-      }
-
-      // Send SMS
-      const result = await smsProvider.send({
-        to,
-        body,
-      });
-
-      if (result.status === 'sent') {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info(
-          { to, messageId: result.messageId, cost: result.cost },
-          'SMS sent successfully'
+    if (recipientType === 'asset_owner') {
+      // Get asset owner from assets table
+      if (eventData.asset_id) {
+        const result = await this.db.query(
+          `SELECT owner_id FROM assets WHERE id = $1`,
+          [eventData.asset_id]
         );
-      } else {
-        throw new Error(result.error || 'Failed to send SMS');
+        if (result.rows[0]?.owner_id) {
+          userIds.push(result.rows[0].owner_id);
+        }
       }
-    } catch (error) {
-      this.fastify.log.error({ error, to }, 'Failed to send SMS');
-      await this.updateNotificationStatus(historyId, 'failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send push notification
-   */
-  private async sendPushNotification(
-    userId: string,
-    title: string,
-    body: string,
-    historyId: string
-  ): Promise<void> {
-    this.fastify.log.info({ userId, title, body }, 'Sending push notification');
-
-    try {
-      // Import push notification provider dynamically
-      const { createPushNotificationService } = await import('./push-notification.service');
-      const pushService = createPushNotificationService(this.fastify);
-
-      // Send push notification
-      const result = await pushService.send({
-        userId,
-        title,
-        body,
-        data: {
-          historyId,
-          timestamp: new Date().toISOString(),
-        },
-      });
-
-      if (result.status === 'sent' && (result.successCount || 0) > 0) {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info(
-          {
-            userId,
-            messageId: result.messageId,
-            successCount: result.successCount,
-            failureCount: result.failureCount,
-          },
-          'Push notification sent successfully'
+    } else if (recipientType === 'wo_assignee') {
+      // Get work order assignee
+      if (eventData.work_order_id) {
+        const result = await this.db.query(
+          `SELECT assigned_to FROM work_orders WHERE id = $1`,
+          [eventData.work_order_id]
         );
-      } else {
-        throw new Error(result.error || 'Failed to send push notification');
+        if (result.rows[0]?.assigned_to) {
+          userIds.push(result.rows[0].assigned_to);
+        }
       }
-    } catch (error) {
-      this.fastify.log.error({ error, userId }, 'Failed to send push notification');
-      await this.updateNotificationStatus(historyId, 'failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send Slack notification
-   */
-  private async sendSlackNotification(
-    tenantId: string,
-    channel: string,
-    title: string,
-    body: string,
-    eventType: NotificationEventType,
-    historyId: string
-  ): Promise<void> {
-    this.fastify.log.info({ tenantId, channel, title }, 'Sending Slack notification');
-
-    try {
-      // Import Slack provider dynamically
-      const { createSlackProviderService } = await import('./slack-provider.service');
-      const slackService = createSlackProviderService(this.fastify);
-
-      // Determine severity from event type
-      const severity = this.getSeverityFromEventType(eventType);
-
-      // Send Slack message
-      const result = await slackService.send({
-        tenantId,
-        channel,
-        text: body,
-        title,
-        severity,
-      });
-
-      if (result.status === 'sent') {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info(
-          { channel, messageId: result.messageId },
-          'Slack notification sent successfully'
+    } else if (recipientType === 'supervisor') {
+      // Get user's supervisor
+      if (eventData.user_id) {
+        const result = await this.db.query(
+          `SELECT supervisor_id FROM users WHERE id = $1`,
+          [eventData.user_id]
         );
-      } else {
-        throw new Error(result.error || 'Failed to send Slack notification');
-      }
-    } catch (error) {
-      this.fastify.log.error({ error, channel }, 'Failed to send Slack notification');
-      await this.updateNotificationStatus(historyId, 'failed', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get severity from event type
-   */
-  private getSeverityFromEventType(eventType: NotificationEventType): 'critical' | 'high' | 'medium' | 'low' | 'info' {
-    const severityMap: Record<NotificationEventType, 'critical' | 'high' | 'medium' | 'low' | 'info'> = {
-      alert_critical: 'critical',
-      alert_high: 'high',
-      alert_medium: 'medium',
-      work_order_overdue: 'high',
-      work_order_assigned: 'medium',
-      work_order_completed: 'low',
-      alert_acknowledged: 'info',
-      alert_resolved: 'info',
-      asset_down: 'critical',
-      maintenance_due: 'medium',
-    };
-
-    return severityMap[eventType] || 'info';
-  }
-
-  /**
-   * Update notification history status
-   */
-  private async updateNotificationStatus(
-    historyId: string,
-    status: 'sent' | 'delivered' | 'failed',
-    error?: any
-  ): Promise<void> {
-    const updateData: any = {
-      status,
-      updatedAt: new Date(),
-    };
-
-    if (status === 'sent') {
-      updateData.sentAt = new Date();
-    } else if (status === 'delivered') {
-      updateData.deliveredAt = new Date();
-    } else if (status === 'failed') {
-      updateData.failedAt = new Date();
-      updateData.errorMessage = error?.message || 'Unknown error';
-    }
-
-    await db
-      .update(notificationHistory)
-      .set(updateData)
-      .where(eq(notificationHistory.id, historyId));
-  }
-
-  /**
-   * Retry failed notifications with exponential backoff
-   */
-  async retryFailedNotifications(): Promise<void> {
-    const failedNotifications = await db.query.notificationHistory.findMany({
-      where: and(
-        eq(notificationHistory.status, 'failed'),
-        eq(notificationHistory.retryCount, 0) // Only retry once for now
-      ),
-      limit: 100,
-    });
-
-    for (const notification of failedNotifications) {
-      try {
-        await this.sendToChannel({
-          channel: notification.channel as NotificationChannel,
-          userId: notification.userId,
-          tenantId: notification.tenantId,
-          eventType: notification.eventType as NotificationEventType,
-          recipient: notification.recipient,
-          subject: notification.subject || undefined,
-          body: notification.body,
-          templateId: notification.templateId || '',
-        });
-
-        // Increment retry count
-        await db
-          .update(notificationHistory)
-          .set({
-            retryCount: notification.retryCount + 1,
-            updatedAt: new Date(),
-          })
-          .where(eq(notificationHistory.id, notification.id));
-      } catch (error) {
-        this.fastify.log.error({ error, notification }, 'Retry failed');
+        if (result.rows[0]?.supervisor_id) {
+          userIds.push(result.rows[0].supervisor_id);
+        }
       }
     }
+
+    return userIds;
   }
 }
 
-export function createNotificationService(fastify: FastifyInstance): NotificationService {
-  return new NotificationService(fastify);
-}
+export default NotificationService;
