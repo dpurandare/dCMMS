@@ -1,5 +1,5 @@
 """
-Flink Stream Processing Job for dCMMS Telemetry Pipeline
+Flink Stream Processing Job for dCMMS Telemetry Pipeline (OPTIMIZED)
 
 Reads from Kafka raw_telemetry topic, processes and validates data,
 then writes to QuestDB and Kafka validated_telemetry topic.
@@ -11,6 +11,15 @@ Processing steps:
 4. Filter invalid/out-of-range values
 5. Deduplicate within 1-minute window
 6. Write to QuestDB (batch) and Kafka validated_telemetry
+
+Optimizations (Sprint 7 - DCMMS-057):
+- Parallelism: 32 (matches production Kafka partitions)
+- State backend: RocksDB with incremental checkpoints
+- Checkpointing: 30s interval, 10min timeout, 2 concurrent
+- Memory tuning: 2GB heap, 1GB managed memory per TaskManager
+- Backpressure handling: Event-time watermarks
+- Metrics: Throughput, backpressure, checkpoint duration
+- Target: 10K events/sec locally (72K in production)
 
 Requirements:
     pip install apache-flink kafka-python psycopg2-binary
@@ -169,13 +178,34 @@ class DeduplicationProcessor(KeyedProcessFunction):
 
 
 class QuestDBSink:
-    """Batch write to QuestDB (simplified implementation)"""
+    """
+    Optimized batch write to QuestDB using InfluxDB Line Protocol (DCMMS-058)
 
-    def __init__(self, batch_size=1000, batch_interval_ms=10000):
+    Improvements:
+    - InfluxDB Line Protocol (3-10x faster than SQL inserts)
+    - Batch size: 5000 records (optimized for throughput)
+    - Connection pooling
+    - Socket-based ILP (port 9009)
+    - Target: >100K rows/sec
+    """
+
+    def __init__(self, batch_size=5000, batch_interval_ms=5000):
         self.batch_size = batch_size
         self.batch_interval_ms = batch_interval_ms
         self.batch = []
         self.last_flush = datetime.utcnow()
+
+        # QuestDB ILP configuration
+        self.questdb_host = os.getenv('QUESTDB_HOST', 'questdb')
+        self.questdb_ilp_port = int(os.getenv('QUESTDB_ILP_PORT', 9009))
+
+        # Connection pool for PostgreSQL fallback
+        self.pg_pool = None
+
+        # Performance metrics
+        self.total_flushed = 0
+        self.flush_count = 0
+        self.start_time = datetime.utcnow()
 
     def invoke(self, value, context):
         """Add event to batch and flush if needed"""
@@ -194,15 +224,108 @@ class QuestDBSink:
             logger.error(f"Error adding to batch: {e}")
 
     def flush(self):
-        """Write batch to QuestDB"""
+        """Write batch to QuestDB using InfluxDB Line Protocol"""
         if not self.batch:
             return
 
-        try:
-            import psycopg2
+        flush_start = datetime.utcnow()
 
-            # Connect to QuestDB via PostgreSQL protocol
-            conn = psycopg2.connect(
+        try:
+            # Use InfluxDB Line Protocol for maximum performance
+            self._flush_via_ilp()
+
+        except Exception as e:
+            logger.error(f"ILP flush failed: {e}, falling back to PostgreSQL")
+            try:
+                # Fallback to PostgreSQL protocol
+                self._flush_via_postgres()
+            except Exception as pg_error:
+                logger.error(f"PostgreSQL flush also failed: {pg_error}")
+                return
+
+        # Calculate performance metrics
+        flush_duration = (datetime.utcnow() - flush_start).total_seconds()
+        self.total_flushed += len(self.batch)
+        self.flush_count += 1
+
+        throughput = len(self.batch) / flush_duration if flush_duration > 0 else 0
+
+        logger.info(
+            f"Flushed {len(self.batch)} events to QuestDB in {flush_duration:.3f}s "
+            f"({throughput:.0f} rows/sec) - Total: {self.total_flushed}"
+        )
+
+        # Clear batch
+        self.batch = []
+        self.last_flush = datetime.utcnow()
+
+    def _flush_via_ilp(self):
+        """
+        Flush using InfluxDB Line Protocol (ILP) - FASTEST METHOD
+
+        Format: table_name,tag1=value1,tag2=value2 field1=value1,field2=value2 timestamp
+        Example: sensor_readings,site=site-001,sensor=temp-001 value=72.5,quality=GOOD 1234567890000000
+        """
+        import socket
+
+        # Create socket connection
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)  # 10 second timeout
+
+        try:
+            sock.connect((self.questdb_host, self.questdb_ilp_port))
+
+            # Build ILP messages
+            ilp_messages = []
+            for event in self.batch:
+                # Tags (indexed fields): site_id, asset_id, sensor_type, sensor_id
+                tags = (
+                    f"site_id={event['site_id']},"
+                    f"asset_id={event['asset_id']},"
+                    f"sensor_type={event['sensor_type']},"
+                    f"sensor_id={event['sensor_id']}"
+                )
+
+                # Fields (data): value, unit, quality_flag, metadata
+                metadata_escaped = json.dumps(event.get('metadata', {})).replace('"', '\\"')
+                fields = (
+                    f"value={event['value']},"
+                    f"unit=\"{event['unit']}\","
+                    f"quality_flag=\"{event.get('quality_flag', 'GOOD')}\","
+                    f"metadata=\"{metadata_escaped}\","
+                    f"ingested_at={event.get('processed_at', event['timestamp'])}"
+                )
+
+                # Timestamp in microseconds
+                timestamp_us = event['timestamp'] * 1000
+
+                # InfluxDB Line Protocol format
+                ilp_line = f"sensor_readings,{tags} {fields} {timestamp_us}\n"
+                ilp_messages.append(ilp_line)
+
+            # Send all messages in one batch
+            message_data = ''.join(ilp_messages).encode('utf-8')
+            sock.sendall(message_data)
+
+            logger.debug(f"Sent {len(ilp_messages)} ILP messages ({len(message_data)} bytes)")
+
+        finally:
+            sock.close()
+
+    def _flush_via_postgres(self):
+        """
+        Fallback flush using PostgreSQL protocol (slower but reliable)
+        Uses batched INSERT statements for better performance than individual inserts
+        """
+        import psycopg2
+        from psycopg2.extras import execute_values
+
+        # Create connection pool if not exists
+        if self.pg_pool is None:
+            import psycopg2.pool
+            self.pg_pool = psycopg2.pool.SimpleConnectionPool(
+                minconn=1,
+                maxconn=5,
                 host=os.getenv('QUESTDB_HOST', 'questdb'),
                 port=int(os.getenv('QUESTDB_PORT', 8812)),
                 user=os.getenv('QUESTDB_USER', 'admin'),
@@ -210,56 +333,130 @@ class QuestDBSink:
                 database=os.getenv('QUESTDB_DATABASE', 'qdb')
             )
 
+        # Get connection from pool
+        conn = self.pg_pool.getconn()
+
+        try:
             cursor = conn.cursor()
 
-            # Build batch insert query
-            insert_query = """
-                INSERT INTO sensor_readings
-                (timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag, metadata, ingested_at)
-                VALUES
-            """
-
-            values = []
+            # Prepare data for execute_values (fast batch insert)
+            insert_data = []
             for event in self.batch:
                 ts = datetime.fromtimestamp(event['timestamp'] / 1000)
                 metadata_json = json.dumps(event.get('metadata', {}))
                 ingested_at = datetime.fromtimestamp(event.get('processed_at', event['timestamp']) / 1000)
 
-                values.append(
-                    f"('{ts}', '{event['site_id']}', '{event['asset_id']}', "
-                    f"'{event['sensor_type']}', '{event['sensor_id']}', "
-                    f"{event['value']}, '{event['unit']}', '{event.get('quality_flag', 'GOOD')}', "
-                    f"'{metadata_json}', '{ingested_at}')"
-                )
+                insert_data.append((
+                    ts,
+                    event['site_id'],
+                    event['asset_id'],
+                    event['sensor_type'],
+                    event['sensor_id'],
+                    event['value'],
+                    event['unit'],
+                    event.get('quality_flag', 'GOOD'),
+                    metadata_json,
+                    ingested_at
+                ))
 
-            insert_query += ','.join(values)
+            # Batch insert using execute_values (much faster than individual inserts)
+            insert_query = """
+                INSERT INTO sensor_readings
+                (timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag, metadata, ingested_at)
+                VALUES %s
+            """
 
-            cursor.execute(insert_query)
+            execute_values(cursor, insert_query, insert_data, page_size=1000)
             conn.commit()
 
-            logger.info(f"Flushed {len(self.batch)} events to QuestDB")
-
             cursor.close()
-            conn.close()
 
-            # Clear batch
-            self.batch = []
-            self.last_flush = datetime.utcnow()
+        finally:
+            # Return connection to pool
+            self.pg_pool.putconn(conn)
 
-        except Exception as e:
-            logger.error(f"Error flushing to QuestDB: {e}")
+    def get_stats(self):
+        """Get performance statistics"""
+        elapsed = (datetime.utcnow() - self.start_time).total_seconds()
+        avg_throughput = self.total_flushed / elapsed if elapsed > 0 else 0
+
+        return {
+            'total_flushed': self.total_flushed,
+            'flush_count': self.flush_count,
+            'elapsed_seconds': elapsed,
+            'avg_throughput_per_sec': avg_throughput,
+            'current_batch_size': len(self.batch)
+        }
 
 
 def create_flink_job():
-    """Create and configure Flink streaming job"""
+    """Create and configure Flink streaming job with production optimizations"""
 
     # Set up execution environment
     env = StreamExecutionEnvironment.get_execution_environment()
     env.set_stream_time_characteristic(TimeCharacteristic.EventTime)
-    env.set_parallelism(2)
 
-    # Enable checkpointing (every 60 seconds)
-    env.enable_checkpointing(60000)
+    # Production parallelism: 32 (matches Kafka partitions)
+    # Local testing: Use fewer workers (4-8) based on available cores
+    parallelism = int(os.getenv('FLINK_PARALLELISM', '8'))
+    env.set_parallelism(parallelism)
+    logger.info(f"Flink parallelism set to: {parallelism}")
+
+    # Checkpointing configuration (optimized for production)
+    # Checkpoint every 30 seconds (balance between recovery time and overhead)
+    checkpoint_interval = int(os.getenv('CHECKPOINT_INTERVAL_MS', '30000'))
+    env.enable_checkpointing(checkpoint_interval)
+
+    # Get checkpoint config for advanced settings
+    checkpoint_config = env.get_checkpoint_config()
+
+    # Checkpoint timeout: 10 minutes (for large state)
+    checkpoint_config.set_checkpoint_timeout(600000)
+
+    # Allow 2 concurrent checkpoints for better throughput
+    checkpoint_config.set_max_concurrent_checkpoints(2)
+
+    # Minimum pause between checkpoints: 10 seconds
+    checkpoint_config.set_min_pause_between_checkpoints(10000)
+
+    # Tolerate 3 consecutive checkpoint failures
+    checkpoint_config.set_tolerable_checkpoint_failures(3)
+
+    # Enable externalized checkpoints (persist on cancellation)
+    from pyflink.datastream.checkpointing_mode import CheckpointingMode
+    checkpoint_config.enable_externalized_checkpoints(
+        CheckpointingMode.EXACTLY_ONCE
+    )
+
+    # RocksDB state backend with incremental checkpoints
+    # Much more efficient for large state (GB to TB scale)
+    try:
+        from pyflink.datastream.state_backend import RocksDBStateBackend
+        state_backend = RocksDBStateBackend(
+            checkpoint_data_uri=os.getenv('CHECKPOINT_DIR', 'file:///tmp/flink-checkpoints'),
+            enable_incremental_checkpointing=True
+        )
+        env.set_state_backend(state_backend)
+        logger.info("RocksDB state backend enabled with incremental checkpoints")
+    except ImportError:
+        logger.warning("RocksDB state backend not available, using default")
+
+    # Restart strategy: Fixed delay restart (restart up to 10 times, wait 30s between attempts)
+    from pyflink.common.restart_strategy import RestartStrategies
+    env.set_restart_strategy(
+        RestartStrategies.fixed_delay_restart(
+            restart_attempts=10,
+            delay_between_attempts=30000  # 30 seconds
+        )
+    )
+
+    # Watermark strategy for event-time processing (handle out-of-order events)
+    # Allow 5 seconds of lateness for events
+    from pyflink.common.watermark_strategy import WatermarkStrategy
+    from pyflink.common.time import Duration
+    watermark_strategy = WatermarkStrategy.for_bounded_out_of_orderness(
+        Duration.of_seconds(5)
+    )
 
     # Kafka consumer properties
     kafka_props = {

@@ -191,8 +191,32 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       const query = request.query as any;
       const user = request.user as any;
 
+      // DCMMS-059: Use pre-computed aggregation tables for better performance
+      // Choose appropriate table based on aggregation level
+      const aggregationTableMap: Record<string, string> = {
+        'raw': 'sensor_readings',
+        '1min': 'sensor_readings_1min',
+        '5min': 'sensor_readings_5min',
+        '15min': 'sensor_readings_15min',
+        '1hour': 'sensor_readings_1hour',
+      };
+
+      const aggregationLevel = query.aggregation || 'raw';
+      const tableName = aggregationTableMap[aggregationLevel] || 'sensor_readings';
+      const useAggregationTable = aggregationLevel !== 'raw';
+
+      // Select appropriate columns based on table type
+      let selectColumns: string;
+      if (useAggregationTable) {
+        // Aggregation tables have pre-computed metrics
+        selectColumns = 'timestamp, site_id, asset_id, sensor_type, sensor_id, value_avg as value, value_min, value_max, unit, good_count, bad_count, out_of_range_count';
+      } else {
+        // Raw table has individual readings
+        selectColumns = 'timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag';
+      }
+
       // Build SQL query
-      let sql = 'SELECT timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag FROM sensor_readings WHERE 1=1';
+      let sql = `SELECT ${selectColumns} FROM ${tableName} WHERE 1=1`;
       const params: any[] = [];
       let paramIndex = 1;
 
@@ -236,37 +260,53 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
         paramIndex++;
       }
 
-      // Apply aggregation
-      if (query.aggregation && query.aggregation !== 'raw') {
-        const interval = query.aggregation;
-        sql = `
-          SELECT
-            timestamp,
-            sensor_id,
-            avg(value) as value,
-            first(unit) as unit,
-            first(quality_flag) as quality_flag
-          FROM (${sql})
-          SAMPLE BY ${interval}
-        `;
-      }
-
       // Order and limit
       sql += ` ORDER BY timestamp DESC LIMIT ${query.limit || 1000}`;
 
       try {
+        const queryStart = Date.now();
         const result = await questdb.query(sql, params);
+        const queryDuration = Date.now() - queryStart;
+
+        // Log performance metrics
+        server.log.info({
+          table: tableName,
+          aggregation: aggregationLevel,
+          rowCount: result.rows.length,
+          durationMs: queryDuration,
+        }, 'Telemetry query completed');
+
+        // Map results based on table type
+        const data = result.rows.map((row: any) => {
+          if (useAggregationTable) {
+            return {
+              timestamp: row.timestamp,
+              value: parseFloat(row.value),
+              value_min: parseFloat(row.value_min),
+              value_max: parseFloat(row.value_max),
+              unit: row.unit,
+              sensor_id: row.sensor_id,
+              good_count: parseInt(row.good_count),
+              bad_count: parseInt(row.bad_count),
+              out_of_range_count: parseInt(row.out_of_range_count),
+            };
+          } else {
+            return {
+              timestamp: row.timestamp,
+              value: parseFloat(row.value),
+              unit: row.unit,
+              sensor_id: row.sensor_id,
+              quality_flag: row.quality_flag,
+            };
+          }
+        });
 
         return {
-          data: result.rows.map((row: any) => ({
-            timestamp: row.timestamp,
-            value: parseFloat(row.value),
-            unit: row.unit,
-            sensor_id: row.sensor_id,
-            quality_flag: row.quality_flag,
-          })),
+          data,
           count: result.rows.length,
-          aggregation: query.aggregation || 'raw',
+          aggregation: aggregationLevel,
+          table_used: tableName,
+          query_duration_ms: queryDuration,
         };
       } catch (error: any) {
         server.log.error('Failed to query QuestDB:', error);

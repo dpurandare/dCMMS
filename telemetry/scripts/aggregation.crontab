@@ -1,0 +1,83 @@
+# dCMMS Telemetry Aggregation Cron Jobs (DCMMS-059)
+#
+# Schedule pre-computed aggregations for fast time-series queries
+#
+# Installation:
+#   crontab aggregation.crontab
+#
+# Or add to existing crontab:
+#   crontab -e
+#   # then paste the lines below
+#
+# Note: Adjust paths to match your installation directory
+
+# ==========================================
+# Environment Variables
+# ==========================================
+QUESTDB_HOST=localhost
+QUESTDB_PORT=8812
+QUESTDB_USER=admin
+QUESTDB_PASSWORD=quest
+PATH=/usr/local/bin:/usr/bin:/bin
+
+# ==========================================
+# Aggregation Jobs
+# ==========================================
+
+# 1-minute aggregation (every minute)
+# Processes last 5 minutes of raw data
+* * * * * /path/to/telemetry/scripts/compute_aggregations.py --level 1min --quiet >> /var/log/dcmms/aggregation-1min.log 2>&1
+
+# 5-minute aggregation (every 5 minutes)
+# Processes from 1min aggregations
+*/5 * * * * /path/to/telemetry/scripts/compute_aggregations.py --level 5min --quiet >> /var/log/dcmms/aggregation-5min.log 2>&1
+
+# 15-minute aggregation (every 15 minutes)
+# Processes from 5min aggregations
+*/15 * * * * /path/to/telemetry/scripts/compute_aggregations.py --level 15min --quiet >> /var/log/dcmms/aggregation-15min.log 2>&1
+
+# 1-hour aggregation (every hour)
+# Processes from 15min aggregations
+0 * * * * /path/to/telemetry/scripts/compute_aggregations.py --level 1hour --quiet >> /var/log/dcmms/aggregation-1hour.log 2>&1
+
+# ==========================================
+# Data Retention (cleanup old partitions)
+# ==========================================
+
+# Drop raw data older than 90 days (daily at 2 AM)
+0 2 * * * psql -h localhost -p 8812 -U admin -d qdb -c "ALTER TABLE sensor_readings DROP PARTITION WHERE timestamp < dateadd('d', -90, now());" >> /var/log/dcmms/retention.log 2>&1
+
+# Drop 1min aggregations older than 1 year (daily at 2:05 AM)
+5 2 * * * psql -h localhost -p 8812 -U admin -d qdb -c "ALTER TABLE sensor_readings_1min DROP PARTITION WHERE timestamp < dateadd('y', -1, now());" >> /var/log/dcmms/retention.log 2>&1
+
+# Drop 5min aggregations older than 2 years (weekly on Sunday at 2:10 AM)
+10 2 * * 0 psql -h localhost -p 8812 -U admin -d qdb -c "ALTER TABLE sensor_readings_5min DROP PARTITION WHERE timestamp < dateadd('y', -2, now());" >> /var/log/dcmms/retention.log 2>&1
+
+# Drop 15min aggregations older than 3 years (monthly on 1st at 2:15 AM)
+15 2 1 * * psql -h localhost -p 8812 -U admin -d qdb -c "ALTER TABLE sensor_readings_15min DROP PARTITION WHERE timestamp < dateadd('y', -3, now());" >> /var/log/dcmms/retention.log 2>&1
+
+# Drop 1hour aggregations older than 5 years (monthly on 1st at 2:20 AM)
+20 2 1 * * psql -h localhost -p 8812 -U admin -d qdb -c "ALTER TABLE sensor_readings_1hour DROP PARTITION WHERE timestamp < dateadd('y', -5, now());" >> /var/log/dcmms/retention.log 2>&1
+
+# ==========================================
+# Health Monitoring
+# ==========================================
+
+# Check aggregation status (every hour)
+# Sends alert if aggregations are falling behind
+0 * * * * /path/to/telemetry/scripts/check_aggregation_health.sh >> /var/log/dcmms/health.log 2>&1
+
+# ==========================================
+# Log Rotation
+# ==========================================
+# Add to /etc/logrotate.d/dcmms-telemetry:
+#
+# /var/log/dcmms/*.log {
+#     daily
+#     missingok
+#     rotate 30
+#     compress
+#     delaycompress
+#     notifempty
+#     create 0644 dcmms dcmms
+# }
