@@ -21,6 +21,7 @@ import alertRoutes from './routes/alerts';
 import integrationRoutes from './routes/integrations';
 import analyticsAdminRoutes from './routes/analytics-admin';
 import analyticsRoutes from './routes/analytics';
+import reportRoutes from './routes/reports';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -269,6 +270,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(integrationRoutes, { prefix: '/api/v1' });
   await server.register(analyticsAdminRoutes, { prefix: '/api/v1' });
   await server.register(analyticsRoutes, { prefix: '/api/v1' });
+  await server.register(reportRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

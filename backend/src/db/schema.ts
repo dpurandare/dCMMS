@@ -366,6 +366,24 @@ export const webhookDeliveries = pgTable('webhook_deliveries', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const reportDefinitions = pgTable('report_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  datasource: varchar('datasource', { length: 50 }).notNull(),
+  columns: text('columns').notNull(),
+  filters: text('filters').default('[]'),
+  groupBy: text('group_by').default('[]'),
+  aggregations: text('aggregations').default('[]'),
+  orderBy: text('order_by').default('[]'),
+  limitRows: integer('limit_rows').default(1000),
+  isPublic: boolean('is_public').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -542,5 +560,16 @@ export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one })
   webhook: one(webhooks, {
     fields: [webhookDeliveries.webhookId],
     references: [webhooks.id],
+  }),
+}));
+
+export const reportDefinitionsRelations = relations(reportDefinitions, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [reportDefinitions.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [reportDefinitions.createdBy],
+    references: [users.id],
   }),
 }));
