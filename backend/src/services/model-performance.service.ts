@@ -488,8 +488,11 @@ export class ModelPerformanceService {
     );
 
     if (!currentMetrics) {
+      // Sanitize user-controlled input to prevent log injection
+      const safeModelName = typeof modelName === 'string' ? modelName.replace(/[\r\n]+/g, ' ') : modelName;
+      const safeCurrentVersion = typeof currentVersion === 'string' ? currentVersion.replace(/[\r\n]+/g, ' ') : currentVersion;
       throw new Error(
-        `No metrics found for model ${modelName} version ${currentVersion}`
+        `No metrics found for model ${safeModelName} version ${safeCurrentVersion}`
       );
     }
 
