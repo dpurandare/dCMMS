@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 
 /**
  * Cost Management Data Models
