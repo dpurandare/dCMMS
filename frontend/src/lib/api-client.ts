@@ -128,26 +128,54 @@ export const api = {
     },
   },
 
-  // Assets endpoints (to be implemented)
+  // Assets endpoints
   assets: {
-    list: async () => {
-      const response = await apiClient.get('/assets');
+    list: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/assets', { params });
       return response.data;
     },
     getById: async (id: string) => {
       const response = await apiClient.get(`/assets/${id}`);
       return response.data;
     },
+    create: async (data: any) => {
+      const response = await apiClient.post('/assets', data);
+      return response.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await apiClient.patch(`/assets/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/assets/${id}`);
+      return response.data;
+    },
+    getHierarchy: async (id: string) => {
+      const response = await apiClient.get(`/assets/${id}/hierarchy`);
+      return response.data;
+    },
   },
 
-  // Sites endpoints (to be implemented)
+  // Sites endpoints
   sites: {
-    list: async () => {
-      const response = await apiClient.get('/sites');
+    list: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/sites', { params });
       return response.data;
     },
     getById: async (id: string) => {
       const response = await apiClient.get(`/sites/${id}`);
+      return response.data;
+    },
+    create: async (data: any) => {
+      const response = await apiClient.post('/sites', data);
+      return response.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await apiClient.patch(`/sites/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/sites/${id}`);
       return response.data;
     },
   },
