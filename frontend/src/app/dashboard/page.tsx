@@ -1,15 +1,65 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Wrench, Package, Bell, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  iconBgColor: string;
+  iconColor: string;
+  change?: number;
+  changeLabel?: string;
+}
+
+function StatCard({
+  title,
+  value,
+  icon,
+  iconBgColor,
+  iconColor,
+  change,
+  changeLabel,
+}: StatCardProps) {
+  const isPositive = change !== undefined && change >= 0;
+
+  return (
+    <Card className="transition-all hover:shadow-md hover:-translate-y-0.5">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-slate-600">{title}</CardTitle>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBgColor}`}>
+          <div className={iconColor}>{icon}</div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-slate-900">{value}</div>
+        {change !== undefined && (
+          <div className="mt-2 flex items-center gap-1 text-sm">
+            {isPositive ? (
+              <ArrowUpRight className="h-4 w-4 text-green-600" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 text-red-600" />
+            )}
+            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
+              {Math.abs(change)}%
+            </span>
+            {changeLabel && <span className="text-slate-500">{changeLabel}</span>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is authenticated
@@ -18,11 +68,10 @@ export default function DashboardPage() {
       return;
     }
 
-    // Verify token is still valid by fetching user profile
+    // Verify token is still valid
     const verifyAuth = async () => {
       try {
         await api.auth.getMe();
-        setIsLoading(false);
       } catch (error) {
         console.error('Auth verification failed:', error);
         logout();
@@ -33,85 +82,130 @@ export default function DashboardPage() {
     verifyAuth();
   }, [isAuthenticated, router, logout]);
 
-  const handleLogout = async () => {
-    try {
-      await api.auth.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      logout();
-      router.push('/auth/login');
-    }
-  };
-
-  if (isLoading) {
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-slate-600">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">dCMMS Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
-        </div>
-      </header>
+    <DashboardLayout
+      title="Dashboard"
+      breadcrumbs={[{ label: 'Home' }]}
+      showNewButton={true}
+      newButtonText="New Work Order"
+      onNewClick={() => router.push('/work-orders/new')}
+    >
+      {/* Welcome Section */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-slate-900">
+          Welcome back, {user?.username || 'User'}!
+        </h2>
+        <p className="text-slate-600">Here&apos;s what&apos;s happening with your operations today.</p>
+      </div>
 
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Welcome, {user?.username}!</h2>
+      {/* Stats Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard
+          title="Active Work Orders"
+          value="24"
+          icon={<Wrench className="h-6 w-6" />}
+          iconBgColor="bg-blue-50"
+          iconColor="text-blue-600"
+          change={12}
+          changeLabel="from last week"
+        />
+        <StatCard
+          title="Total Assets"
+          value="156"
+          icon={<Package className="h-6 w-6" />}
+          iconBgColor="bg-green-50"
+          iconColor="text-green-600"
+          change={3}
+          changeLabel="new this month"
+        />
+        <StatCard
+          title="Active Alerts"
+          value="8"
+          icon={<Bell className="h-6 w-6" />}
+          iconBgColor="bg-red-50"
+          iconColor="text-red-600"
+          change={-25}
+          changeLabel="from yesterday"
+        />
+        <StatCard
+          title="Uptime"
+          value="99.2%"
+          icon={<TrendingUp className="h-6 w-6" />}
+          iconBgColor="bg-purple-50"
+          iconColor="text-purple-600"
+          change={0.5}
+          changeLabel="this month"
+        />
+      </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-2">User Information</h3>
-                <dl className="space-y-2 text-sm">
-                  <div>
-                    <dt className="text-gray-600">Email:</dt>
-                    <dd className="text-gray-900">{user?.email}</dd>
+      {/* Recent Activity & Quick Links */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recent Work Orders */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Work Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between border-b border-slate-100 pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900">
+                      WO-{1000 + i}: Inverter Maintenance
+                    </p>
+                    <p className="text-xs text-slate-500">Solar Farm A - Section {i}</p>
                   </div>
-                  <div>
-                    <dt className="text-gray-600">Username:</dt>
-                    <dd className="text-gray-900">{user?.username}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-600">Role:</dt>
-                    <dd className="text-gray-900 capitalize">{user?.role}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-gray-600">Tenant ID:</dt>
-                    <dd className="text-gray-900 font-mono text-xs">{user?.tenantId}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-2">Quick Stats</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>📋 Work Orders: Coming soon</p>
-                  <p>🔧 Assets: Coming soon</p>
-                  <p>📍 Sites: Coming soon</p>
-                  <p>⚠️ Active Alerts: Coming soon</p>
+                  <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
+                    In Progress
+                  </span>
                 </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Stats */}
+        <Card>
+          <CardHeader>
+            <CardTitle>System Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Total Sites</span>
+                <span className="text-sm font-semibold text-slate-900">12</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Technicians Active</span>
+                <span className="text-sm font-semibold text-slate-900">8</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Pending Approvals</span>
+                <span className="text-sm font-semibold text-slate-900">3</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Overdue Work Orders</span>
+                <span className="text-sm font-semibold text-red-600">2</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-600">Avg. Completion Time</span>
+                <span className="text-sm font-semibold text-slate-900">4.2 days</span>
               </div>
             </div>
-
-            <div className="border-t border-gray-200 pt-4 mt-4">
-              <p className="text-sm text-gray-600">
-                This is a placeholder dashboard. Full functionality will be implemented in upcoming sprints.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
