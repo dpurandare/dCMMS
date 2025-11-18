@@ -19,6 +19,7 @@ import notificationRoutes from './routes/notifications';
 import webhookRoutes from './routes/webhooks';
 import alertRoutes from './routes/alerts';
 import integrationRoutes from './routes/integrations';
+import analyticsAdminRoutes from './routes/analytics-admin';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -265,6 +266,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(webhookRoutes, { prefix: '/api/v1' });
   await server.register(alertRoutes, { prefix: '/api/v1' });
   await server.register(integrationRoutes, { prefix: '/api/v1' });
+  await server.register(analyticsAdminRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
@@ -284,10 +286,22 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   const batchingService = createNotificationBatchingService(server);
   batchingService.start();
 
+  // ==========================================
+  // ETL SCHEDULER (ClickHouse Sync)
+  // ==========================================
+
+  // Start ETL scheduler for ClickHouse analytics
+  const { createETLSchedulerService } = await import('./services/etl-scheduler.service');
+  const etlScheduler = createETLSchedulerService(server);
+  await etlScheduler.start();
+
   // Cleanup on server close
   server.addHook('onClose', async () => {
     server.log.info('Shutting down notification batching service');
     batchingService.stop();
+
+    server.log.info('Shutting down ETL scheduler');
+    etlScheduler.stop();
   });
 
   return server;
