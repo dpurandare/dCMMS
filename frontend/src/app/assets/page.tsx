@@ -1,39 +1,68 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { api } from '@/lib/api-client';
+import { Package, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import {
+  PageHeader,
+  EmptyState,
+  TableSkeleton,
+  ConfirmDialog,
+  AssetStatusBadge,
+} from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
-import { Search, Plus } from 'lucide-react';
+import { api } from '@/lib/api-client';
+import { useAuthStore } from '@/store/auth-store';
 
 interface Asset {
   id: string;
-  assetTag: string;
   name: string;
-  type: string;
+  assetType: string;
   status: string;
-  criticality: string;
-  manufacturer: string;
-  model: string;
-  location: string;
+  site: {
+    id: string;
+    name: string;
+  };
+  location?: string;
+  tags?: string[];
 }
 
 export default function AssetsPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-
+  const { isAuthenticated, logout } = useAuthStore();
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    status: '',
-    criticality: '',
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,223 +71,264 @@ export default function AssetsPage() {
     }
 
     fetchAssets();
-  }, [isAuthenticated, pagination.page, filters]);
+  }, [isAuthenticated, router]);
 
   const fetchAssets = async () => {
-    setIsLoading(true);
     try {
-      const response = await api.assets.list();
-      setAssets(response.data || []);
-      setPagination(response.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-      setAssets([]);
+      setIsLoading(true);
+      setError(null);
+      const data = await api.assets.list();
+      setAssets(data.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch assets:', err);
+      setError(err.message || 'Failed to load assets');
+      if (err.response?.status === 401) {
+        logout();
+        router.push('/auth/login');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'operational':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'down':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'maintenance':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'retired':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleDelete = async () => {
+    if (!selectedAsset) return;
+
+    try {
+      await api.assets.delete(selectedAsset.id);
+      setAssets(assets.filter((a) => a.id !== selectedAsset.id));
+      setDeleteDialog(false);
+      setSelectedAsset(null);
+    } catch (err) {
+      console.error('Failed to delete asset:', err);
+      alert('Failed to delete asset');
     }
   };
 
-  const getCriticalityColor = (criticality: string) => {
-    switch (criticality) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const filteredAssets = assets.filter((asset) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      asset.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
+    const matchesType = typeFilter === 'all' || asset.assetType === typeFilter;
+
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   if (!isAuthenticated) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Assets</h1>
-              <p className="text-sm text-gray-600 mt-1">Manage equipment and machinery</p>
+    <DashboardLayout
+      title="Assets"
+      breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
+      showNewButton={false}
+    >
+      <PageHeader
+        title="Assets"
+        description="Manage your asset inventory across all sites"
+        breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
+        actions={
+          <Button onClick={() => router.push('/assets/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Asset
+          </Button>
+        }
+      />
+
+      {/* Filters and Search */}
+      <Card className="mb-6 p-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search assets by name or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <Button onClick={() => alert('Asset creation coming soon')}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Asset
-            </Button>
           </div>
+
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="operational">Operational</SelectItem>
+              <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+              <SelectItem value="decommissioned">Decommissioned</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="inverter">Inverter</SelectItem>
+              <SelectItem value="transformer">Transformer</SelectItem>
+              <SelectItem value="panel">Solar Panel</SelectItem>
+              <SelectItem value="battery">Battery</SelectItem>
+              <SelectItem value="turbine">Wind Turbine</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear Filters */}
+          {(searchQuery || statusFilter !== 'all' || typeFilter !== 'all') && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+                setTypeFilter('all');
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
-      </header>
+      </Card>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <Card className="p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search assets..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchAssets()}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+      {/* Loading State */}
+      {isLoading && <TableSkeleton rows={5} columns={5} />}
 
-            <div className="flex gap-2">
-              <select
-                className="border rounded-md px-3 py-2 text-sm"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="">All Status</option>
-                <option value="operational">Operational</option>
-                <option value="down">Down</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="retired">Retired</option>
-              </select>
-
-              <select
-                className="border rounded-md px-3 py-2 text-sm"
-                value={filters.criticality}
-                onChange={(e) => setFilters({ ...filters, criticality: e.target.value })}
-              >
-                <option value="">All Criticality</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
+      {/* Error State */}
+      {!isLoading && error && (
+        <Card className="p-8 text-center">
+          <p className="text-red-600">Error: {error}</p>
+          <Button onClick={fetchAssets} variant="outline" className="mt-4">
+            Retry
+          </Button>
         </Card>
+      )}
 
-        {/* Assets Grid */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Loading assets...</p>
-          </div>
-        ) : assets.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-gray-600 mb-4">No assets found</p>
-            <Button onClick={() => alert('Asset creation coming soon')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create First Asset
-            </Button>
-          </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {assets.map((asset) => (
-                <Card
+      {/* Empty State */}
+      {!isLoading && !error && filteredAssets.length === 0 && assets.length === 0 && (
+        <EmptyState
+          icon={Package}
+          title="No assets found"
+          description="Get started by creating your first asset to track equipment and infrastructure."
+          action={{
+            label: 'Create Asset',
+            onClick: () => router.push('/assets/new'),
+          }}
+        />
+      )}
+
+      {/* No Results State */}
+      {!isLoading && !error && filteredAssets.length === 0 && assets.length > 0 && (
+        <EmptyState
+          icon={Filter}
+          title="No matching assets"
+          description="Try adjusting your search or filter criteria."
+        />
+      )}
+
+      {/* Assets Table */}
+      {!isLoading && !error && filteredAssets.length > 0 && (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Asset ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Site</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAssets.map((asset) => (
+                <TableRow
                   key={asset.id}
-                  className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                  className="cursor-pointer hover:bg-slate-50"
                   onClick={() => router.push(`/assets/${asset.id}`)}
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate">{asset.name}</h3>
-                        <p className="text-sm text-gray-500 font-mono">{asset.assetTag}</p>
-                      </div>
-                      <Badge className={getStatusColor(asset.status)}>{asset.status}</Badge>
-                    </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Type:</span>
-                        <span className="text-gray-900">{asset.type}</span>
-                      </div>
-
-                      {asset.manufacturer && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Manufacturer:</span>
-                          <span className="text-gray-900 truncate ml-2">{asset.manufacturer}</span>
-                        </div>
-                      )}
-
-                      {asset.model && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Model:</span>
-                          <span className="text-gray-900 truncate ml-2">{asset.model}</span>
-                        </div>
-                      )}
-
-                      {asset.location && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Location:</span>
-                          <span className="text-gray-900 truncate ml-2">{asset.location}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-3 border-t">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Criticality:</span>
-                        <Badge className={getCriticalityColor(asset.criticality)}>
-                          {asset.criticality}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                  <TableCell className="font-mono text-xs">{asset.id}</TableCell>
+                  <TableCell className="font-medium">{asset.name}</TableCell>
+                  <TableCell className="capitalize">{asset.assetType}</TableCell>
+                  <TableCell>
+                    <AssetStatusBadge status={asset.status as any} />
+                  </TableCell>
+                  <TableCell>{asset.site?.name || 'N/A'}</TableCell>
+                  <TableCell className="text-slate-600">{asset.location || 'N/A'}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/assets/${asset.id}`);
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/assets/${asset.id}/edit`);
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAsset(asset);
+                            setDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+            </TableBody>
+          </Table>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}{' '}
-                  results
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === 1}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === pagination.totalPages}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+          {/* Results Count */}
+          <div className="border-t px-6 py-4 text-sm text-slate-600">
+            Showing {filteredAssets.length} of {assets.length} assets
+          </div>
+        </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog}
+        onOpenChange={setDeleteDialog}
+        title="Delete Asset"
+        description={`Are you sure you want to delete "${selectedAsset?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
+    </DashboardLayout>
   );
 }

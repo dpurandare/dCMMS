@@ -1,14 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { api } from '@/lib/api-client';
+import { Wrench, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import {
+  PageHeader,
+  EmptyState,
+  TableSkeleton,
+  ConfirmDialog,
+  WorkOrderStatusBadge,
+  PriorityBadge,
+} from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
-import { Search, Plus, Filter } from 'lucide-react';
+import { api } from '@/lib/api-client';
+import { useAuthStore } from '@/store/auth-store';
 
 interface WorkOrder {
   id: string;
@@ -17,33 +47,29 @@ interface WorkOrder {
   type: string;
   priority: string;
   status: string;
-  scheduledStartDate: string;
-  createdAt: string;
-}
-
-interface PaginatedResponse {
-  data: WorkOrder[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
+  assignedTo?: {
+    id: string;
+    name: string;
+  };
+  scheduledStartDate?: string;
+  asset?: {
+    id: string;
+    name: string;
   };
 }
 
 export default function WorkOrdersPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-
+  const { isAuthenticated, logout } = useAuthStore();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({
-    status: '',
-    priority: '',
-    type: '',
-  });
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -52,67 +78,55 @@ export default function WorkOrdersPage() {
     }
 
     fetchWorkOrders();
-  }, [isAuthenticated, pagination.page, filters]);
+  }, [isAuthenticated, router]);
 
   const fetchWorkOrders = async () => {
-    setIsLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.priority && { priority: filters.priority }),
-        ...(filters.type && { type: filters.type }),
-        ...(searchTerm && { search: searchTerm }),
-      });
-
-      const response = await api.workOrders.list();
-      // Note: In production, api.workOrders.list() should accept params
-      setWorkOrders(response.data || []);
-      setPagination(response.pagination);
-    } catch (error) {
-      console.error('Error fetching work orders:', error);
-      setWorkOrders([]);
+      setIsLoading(true);
+      setError(null);
+      const data = await api.workOrders.list();
+      setWorkOrders(data.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch work orders:', err);
+      setError(err.message || 'Failed to load work orders');
+      if (err.response?.status === 401) {
+        logout();
+        router.push('/auth/login');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handleDelete = async () => {
+    if (!selectedWO) return;
+
+    try {
+      await api.workOrders.delete(selectedWO.id);
+      setWorkOrders(workOrders.filter((wo) => wo.id !== selectedWO.id));
+      setDeleteDialog(false);
+      setSelectedWO(null);
+    } catch (err) {
+      console.error('Failed to delete work order:', err);
+      alert('Failed to delete work order');
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'open':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_progress':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'on_hold':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const filteredWorkOrders = workOrders.filter((wo) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      wo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      wo.workOrderId.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const formatDate = (dateString: string) => {
+    const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || wo.priority === priorityFilter;
+    const matchesType = typeFilter === 'all' || wo.type === typeFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority && matchesType;
+  });
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -125,194 +139,243 @@ export default function WorkOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage maintenance and repair tasks
-              </p>
+    <DashboardLayout
+      title="Work Orders"
+      breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
+      showNewButton={false}
+    >
+      <PageHeader
+        title="Work Orders"
+        description="Manage maintenance and repair tasks across all sites"
+        breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
+        actions={
+          <Button onClick={() => router.push('/work-orders/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Work Order
+          </Button>
+        }
+      />
+
+      {/* Filters and Search */}
+      <Card className="mb-6 p-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Search by title or WO ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <Button onClick={() => router.push('/work-orders/new')}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Work Order
-            </Button>
           </div>
+
+          {/* Status Filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Priority Filter */}
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Priorities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="corrective">Corrective</SelectItem>
+              <SelectItem value="preventive">Preventive</SelectItem>
+              <SelectItem value="predictive">Predictive</SelectItem>
+              <SelectItem value="inspection">Inspection</SelectItem>
+              <SelectItem value="emergency">Emergency</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear Filters */}
+          {(searchQuery ||
+            statusFilter !== 'all' ||
+            priorityFilter !== 'all' ||
+            typeFilter !== 'all') && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setStatusFilter('all');
+                setPriorityFilter('all');
+                setTypeFilter('all');
+              }}
+            >
+              Clear
+            </Button>
+          )}
         </div>
-      </header>
+      </Card>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <Card className="p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search work orders..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchWorkOrders()}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+      {/* Loading State */}
+      {isLoading && <TableSkeleton rows={5} columns={7} />}
 
-            <div className="flex gap-2">
-              <select
-                className="border rounded-md px-3 py-2 text-sm"
-                value={filters.status}
-                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              >
-                <option value="">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="on_hold">On Hold</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-
-              <select
-                className="border rounded-md px-3 py-2 text-sm"
-                value={filters.priority}
-                onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-              >
-                <option value="">All Priorities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-
-              <Button variant="outline" onClick={fetchWorkOrders}>
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+      {/* Error State */}
+      {!isLoading && error && (
+        <Card className="p-8 text-center">
+          <p className="text-red-600">Error: {error}</p>
+          <Button onClick={fetchWorkOrders} variant="outline" className="mt-4">
+            Retry
+          </Button>
         </Card>
+      )}
 
-        {/* Work Orders List */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Loading work orders...</p>
-          </div>
-        ) : workOrders.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-gray-600 mb-4">No work orders found</p>
-            <Button onClick={() => router.push('/work-orders/new')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create First Work Order
-            </Button>
-          </Card>
-        ) : (
-          <>
-            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Work Order
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Priority
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Scheduled
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {workOrders.map((wo) => (
-                    <tr
-                      key={wo.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.push(`/work-orders/${wo.id}`)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{wo.workOrderId}</div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">{wo.title}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900 capitalize">
-                          {wo.type.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getPriorityColor(wo.priority)}>
-                          {wo.priority}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={getStatusColor(wo.status)}>
-                          {wo.status.replace('_', ' ')}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {wo.scheduledStartDate ? formatDate(wo.scheduledStartDate) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+      {/* Empty State */}
+      {!isLoading && !error && filteredWorkOrders.length === 0 && workOrders.length === 0 && (
+        <EmptyState
+          icon={Wrench}
+          title="No work orders found"
+          description="Get started by creating your first work order to track maintenance tasks."
+          action={{
+            label: 'Create Work Order',
+            onClick: () => router.push('/work-orders/new'),
+          }}
+        />
+      )}
+
+      {/* No Results State */}
+      {!isLoading &&
+        !error &&
+        filteredWorkOrders.length === 0 &&
+        workOrders.length > 0 && (
+          <EmptyState
+            icon={Filter}
+            title="No matching work orders"
+            description="Try adjusting your search or filter criteria."
+          />
+        )}
+
+      {/* Work Orders Table */}
+      {!isLoading && !error && filteredWorkOrders.length > 0 && (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>WO ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assigned To</TableHead>
+                <TableHead>Scheduled</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredWorkOrders.map((wo) => (
+                <TableRow
+                  key={wo.id}
+                  className="cursor-pointer hover:bg-slate-50"
+                  onClick={() => router.push(`/work-orders/${wo.id}`)}
+                >
+                  <TableCell className="font-mono text-xs">{wo.workOrderId}</TableCell>
+                  <TableCell className="font-medium max-w-xs truncate">{wo.title}</TableCell>
+                  <TableCell className="capitalize">{wo.type}</TableCell>
+                  <TableCell>
+                    <PriorityBadge priority={wo.priority as any} />
+                  </TableCell>
+                  <TableCell>
+                    <WorkOrderStatusBadge status={wo.status as any} />
+                  </TableCell>
+                  <TableCell>{wo.assignedTo?.name || 'Unassigned'}</TableCell>
+                  <TableCell className="text-slate-600">
+                    {formatDate(wo.scheduledStartDate)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/work-orders/${wo.id}`);
                           }}
                         >
-                          View
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/work-orders/${wo.id}/edit`);
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWO(wo);
+                            setDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                  {pagination.total} results
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === 1}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === pagination.totalPages}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+          {/* Results Count */}
+          <div className="border-t px-6 py-4 text-sm text-slate-600">
+            Showing {filteredWorkOrders.length} of {workOrders.length} work orders
+          </div>
+        </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog}
+        onOpenChange={setDeleteDialog}
+        title="Delete Work Order"
+        description={`Are you sure you want to delete "${selectedWO?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
+    </DashboardLayout>
   );
 }

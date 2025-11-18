@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Plus, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { PageHeader } from '@/components/common';
+import { PageHeader, CardSkeleton } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
+import { useAuthStore } from '@/store/auth-store';
 
 interface Task {
   id: string;
@@ -34,8 +35,12 @@ interface Part {
   quantity: number;
 }
 
-export default function NewWorkOrderPage() {
+export default function EditWorkOrderPage() {
   const router = useRouter();
+  const params = useParams();
+  const workOrderId = params.id as string;
+  const { isAuthenticated, logout } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTab, setCurrentTab] = useState('basic');
   const [formData, setFormData] = useState({
@@ -49,11 +54,74 @@ export default function NewWorkOrderPage() {
     scheduledStartDate: '',
     scheduledEndDate: '',
     estimatedHours: '',
+    status: '',
   });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState({ title: '', description: '' });
   const [parts, setParts] = useState<Part[]>([]);
   const [newPart, setNewPart] = useState({ partId: '', name: '', quantity: 1 });
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchWorkOrder();
+  }, [isAuthenticated, workOrderId, router]);
+
+  const fetchWorkOrder = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api.workOrders.getById(workOrderId);
+      const wo = data.data;
+
+      // Populate form data
+      setFormData({
+        title: wo.title || '',
+        description: wo.description || '',
+        type: wo.type || 'corrective',
+        priority: wo.priority || 'medium',
+        assetId: wo.asset?.id || '',
+        siteId: wo.site?.id || '',
+        assignedToId: wo.assignedTo?.id || '',
+        scheduledStartDate: wo.scheduledStartDate ? wo.scheduledStartDate.split('T')[0] : '',
+        scheduledEndDate: wo.scheduledEndDate ? wo.scheduledEndDate.split('T')[0] : '',
+        estimatedHours: wo.estimatedHours?.toString() || '',
+        status: wo.status || '',
+      });
+
+      // Populate tasks if they exist
+      if (wo.tasks && Array.isArray(wo.tasks)) {
+        setTasks(wo.tasks.map((t: any) => ({
+          id: t.id || `task-${Date.now()}-${Math.random()}`,
+          title: t.title || '',
+          description: t.description || '',
+          sequence: t.sequence || 0,
+        })));
+      }
+
+      // Populate parts if they exist
+      if (wo.parts && Array.isArray(wo.parts)) {
+        setParts(wo.parts.map((p: any) => ({
+          id: p.id || `part-${Date.now()}-${Math.random()}`,
+          partId: p.partId || p.id || '',
+          name: p.part?.name || p.name || 'Unknown Part',
+          quantity: p.quantity || 1,
+        })));
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch work order:', err);
+      if (err.response?.status === 401) {
+        logout();
+        router.push('/auth/login');
+      } else if (err.response?.status === 404) {
+        router.push('/work-orders');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -100,7 +168,7 @@ export default function NewWorkOrderPage() {
     setParts(parts.filter((p) => p.id !== id));
   };
 
-  const handleSubmit = async (saveAsDraft: boolean = false) => {
+  const handleSubmit = async () => {
     if (!formData.title || !formData.assetId) {
       alert('Please fill in all required fields');
       return;
@@ -110,7 +178,6 @@ export default function NewWorkOrderPage() {
       setIsSubmitting(true);
       const submitData = {
         ...formData,
-        status: saveAsDraft ? 'draft' : 'scheduled',
         estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : null,
         tasks: tasks.map((t) => ({
           title: t.title,
@@ -123,35 +190,56 @@ export default function NewWorkOrderPage() {
         })),
       };
 
-      await api.workOrders.create(submitData);
-      router.push('/work-orders');
+      await api.workOrders.update(workOrderId, submitData);
+      router.push(`/work-orders/${workOrderId}`);
     } catch (err: any) {
-      console.error('Failed to create work order:', err);
-      alert(err.response?.data?.message || 'Failed to create work order');
+      console.error('Failed to update work order:', err);
+      alert(err.response?.data?.message || 'Failed to update work order');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <DashboardLayout
-      title="New Work Order"
-      breadcrumbs={[
-        { label: 'Home', href: '/dashboard' },
-        { label: 'Work Orders', href: '/work-orders' },
-        { label: 'New' },
-      ]}
-    >
-      <PageHeader
-        title="Create Work Order"
-        description="Create a new maintenance or repair work order"
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <DashboardLayout
+        title="Edit Work Order"
         breadcrumbs={[
           { label: 'Home', href: '/dashboard' },
           { label: 'Work Orders', href: '/work-orders' },
-          { label: 'New' },
+          { label: 'Edit' },
+        ]}
+      >
+        <CardSkeleton count={1} />
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout
+      title="Edit Work Order"
+      breadcrumbs={[
+        { label: 'Home', href: '/dashboard' },
+        { label: 'Work Orders', href: '/work-orders' },
+        { label: formData.title },
+        { label: 'Edit' },
+      ]}
+    >
+      <PageHeader
+        title="Edit Work Order"
+        description={`Update work order information for ${formData.title}`}
+        breadcrumbs={[
+          { label: 'Home', href: '/dashboard' },
+          { label: 'Work Orders', href: '/work-orders' },
+          { label: formData.title, href: `/work-orders/${workOrderId}` },
+          { label: 'Edit' },
         ]}
         actions={
-          <Button variant="outline" onClick={() => router.push('/work-orders')}>
+          <Button variant="outline" onClick={() => router.push(`/work-orders/${workOrderId}`)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Cancel
           </Button>
@@ -336,7 +424,7 @@ export default function NewWorkOrderPage() {
 
               <div className="flex justify-end">
                 <Button onClick={() => setCurrentTab('tasks')}>
-                  Next: Add Tasks
+                  Next: Edit Tasks
                 </Button>
               </div>
             </CardContent>
@@ -407,7 +495,7 @@ export default function NewWorkOrderPage() {
                   Back
                 </Button>
                 <Button onClick={() => setCurrentTab('parts')}>
-                  Next: Add Parts
+                  Next: Edit Parts
                 </Button>
               </div>
             </CardContent>
@@ -487,26 +575,18 @@ export default function NewWorkOrderPage() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push('/work-orders')}
+          onClick={() => router.push(`/work-orders/${workOrderId}`)}
           disabled={isSubmitting}
         >
           Cancel
         </Button>
         <Button
           type="button"
-          variant="outline"
-          onClick={() => handleSubmit(true)}
-          disabled={isSubmitting}
-        >
-          Save as Draft
-        </Button>
-        <Button
-          type="button"
-          onClick={() => handleSubmit(false)}
+          onClick={handleSubmit}
           disabled={isSubmitting}
         >
           <Save className="mr-2 h-4 w-4" />
-          {isSubmitting ? 'Creating...' : 'Create & Schedule'}
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </DashboardLayout>

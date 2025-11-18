@@ -1,36 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth-store';
-import { api } from '@/lib/api-client';
+import { MapPin, Plus, Search, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import {
+  PageHeader,
+  EmptyState,
+  TableSkeleton,
+  ConfirmDialog,
+} from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
-import { Search, Plus, MapPin } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { api } from '@/lib/api-client';
+import { useAuthStore } from '@/store/auth-store';
 
 interface Site {
   id: string;
-  siteCode: string;
   name: string;
-  type: string;
-  city: string;
-  state: string;
-  country: string;
-  isActive: boolean;
+  location: string;
+  capacity?: number;
+  timezone?: string;
   assetCount?: number;
+  status?: string;
 }
 
 export default function SitesPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-
+  const { isAuthenticated, logout } = useAuthStore();
   const [sites, setSites] = useState<Site[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -39,164 +59,210 @@ export default function SitesPage() {
     }
 
     fetchSites();
-  }, [isAuthenticated, pagination.page, statusFilter]);
+  }, [isAuthenticated, router]);
 
   const fetchSites = async () => {
-    setIsLoading(true);
     try {
-      const response = await api.sites.list();
-      setSites(response.data || []);
-      setPagination(response.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 });
-    } catch (error) {
-      console.error('Error fetching sites:', error);
-      setSites([]);
+      setIsLoading(true);
+      setError(null);
+      const data = await api.sites.list();
+      setSites(data.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch sites:', err);
+      setError(err.message || 'Failed to load sites');
+      if (err.response?.status === 401) {
+        logout();
+        router.push('/auth/login');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!selectedSite) return;
+
+    try {
+      await api.sites.delete(selectedSite.id);
+      setSites(sites.filter((s) => s.id !== selectedSite.id));
+      setDeleteDialog(false);
+      setSelectedSite(null);
+    } catch (err) {
+      console.error('Failed to delete site:', err);
+      alert('Failed to delete site');
+    }
+  };
+
+  const filteredSites = sites.filter((site) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      site.location.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesSearch;
+  });
 
   if (!isAuthenticated) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sites</h1>
-              <p className="text-sm text-gray-600 mt-1">Manage facility locations</p>
-            </div>
-            <Button onClick={() => alert('Site creation coming soon')}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Site
-            </Button>
-          </div>
+    <DashboardLayout
+      title="Sites"
+      breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Sites' }]}
+      showNewButton={false}
+    >
+      <PageHeader
+        title="Sites"
+        description="Manage your facility locations and sites"
+        breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Sites' }]}
+        actions={
+          <Button onClick={() => router.push('/sites/new')}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Site
+          </Button>
+        }
+      />
+
+      {/* Search */}
+      <Card className="mb-6 p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder="Search sites by name or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-      </header>
+      </Card>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
-        <Card className="p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search sites..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && fetchSites()}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+      {/* Loading State */}
+      {isLoading && <TableSkeleton rows={5} columns={5} />}
 
-            <select
-              className="border rounded-md px-3 py-2 text-sm"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Sites</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
+      {/* Error State */}
+      {!isLoading && error && (
+        <Card className="p-8 text-center">
+          <p className="text-red-600">Error: {error}</p>
+          <Button onClick={fetchSites} variant="outline" className="mt-4">
+            Retry
+          </Button>
         </Card>
+      )}
 
-        {/* Sites Grid */}
-        {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Loading sites...</p>
-          </div>
-        ) : sites.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-gray-600 mb-4">No sites found</p>
-            <Button onClick={() => alert('Site creation coming soon')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create First Site
-            </Button>
-          </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sites.map((site) => (
-                <Card
+      {/* Empty State */}
+      {!isLoading && !error && filteredSites.length === 0 && sites.length === 0 && (
+        <EmptyState
+          icon={MapPin}
+          title="No sites found"
+          description="Get started by creating your first site to organize your assets and operations."
+          action={{
+            label: 'Create Site',
+            onClick: () => router.push('/sites/new'),
+          }}
+        />
+      )}
+
+      {/* No Results State */}
+      {!isLoading && !error && filteredSites.length === 0 && sites.length > 0 && (
+        <EmptyState
+          icon={Search}
+          title="No matching sites"
+          description="Try adjusting your search criteria."
+        />
+      )}
+
+      {/* Sites Table */}
+      {!isLoading && !error && filteredSites.length > 0 && (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Site Name</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Capacity</TableHead>
+                <TableHead>Timezone</TableHead>
+                <TableHead>Assets</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSites.map((site) => (
+                <TableRow
                   key={site.id}
-                  className="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+                  className="cursor-pointer hover:bg-slate-50"
                   onClick={() => router.push(`/sites/${site.id}`)}
                 >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate">{site.name}</h3>
-                        <p className="text-sm text-gray-500 font-mono">{site.siteCode}</p>
-                      </div>
-                      <Badge className={site.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {site.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      {site.type && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-500">Type:</span>
-                          <span className="text-gray-900">{site.type}</span>
-                        </div>
-                      )}
-
-                      <div className="flex items-start gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                        <div className="text-gray-900">
-                          {[site.city, site.state, site.country].filter(Boolean).join(', ')}
-                        </div>
-                      </div>
-
-                      {site.assetCount !== undefined && (
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <span className="text-sm text-gray-500">Assets:</span>
-                          <span className="text-sm font-semibold text-gray-900">{site.assetCount}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
+                  <TableCell className="font-medium">{site.name}</TableCell>
+                  <TableCell>{site.location}</TableCell>
+                  <TableCell>{site.capacity ? `${site.capacity} MW` : 'N/A'}</TableCell>
+                  <TableCell>{site.timezone || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{site.assetCount || 0} assets</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/sites/${site.id}`);
+                          }}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/sites/${site.id}/edit`);
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSite(site);
+                            setDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+            </TableBody>
+          </Table>
 
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div className="mt-6 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} results
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === 1}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page === pagination.totalPages}
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-    </div>
+          {/* Results Count */}
+          <div className="border-t px-6 py-4 text-sm text-slate-600">
+            Showing {filteredSites.length} of {sites.length} sites
+          </div>
+        </Card>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialog}
+        onOpenChange={setDeleteDialog}
+        title="Delete Site"
+        description={`Are you sure you want to delete "${selectedSite?.name}"? This action cannot be undone and will affect all associated assets.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDelete}
+      />
+    </DashboardLayout>
   );
 }

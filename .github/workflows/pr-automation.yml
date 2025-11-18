@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Check for issue reference
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         if: |
           !contains(github.event.pull_request.body, '#') &&
           !contains(github.event.pull_request.body, 'fixes') &&
@@ -129,7 +129,7 @@ jobs:
     steps:
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v1
+        uses: dependabot/fetch-metadata@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 

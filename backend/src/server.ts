@@ -65,13 +65,75 @@ export async function buildServer(): Promise<FastifyInstance> {
       openapi: {
         info: {
           title: 'dCMMS API',
-          description: 'Distributed Computerized Maintenance Management System API',
+          description: `
+# Distributed Computerized Maintenance Management System API
+
+A modern CMMS API for managing assets, work orders, sites, and maintenance operations.
+
+## Features
+
+- **Asset Management**: Track and manage all your physical assets
+- **Work Order Management**: Create, assign, and track maintenance work orders
+- **Site Management**: Organize assets by location
+- **Multi-tenancy**: Isolated data per organization
+- **Role-based Access Control**: Fine-grained permissions
+- **Real-time Updates**: WebSocket support for live updates (coming soon)
+
+## Getting Started
+
+1. **Authenticate**: Use POST /api/v1/auth/login to get a JWT token
+2. **Use Token**: Include token in Authorization header: \`Bearer YOUR_TOKEN\`
+3. **Explore**: Use the interactive API documentation below
+
+## Rate Limits
+
+- **Default**: 100 requests per minute per IP
+- Check response headers for rate limit status
+          `,
           version: '1.0.0',
+          contact: {
+            name: 'dCMMS Support',
+            email: 'support@dcmms.com',
+            url: 'https://dcmms.com/support',
+          },
+          license: {
+            name: 'UNLICENSED',
+          },
         },
         servers: [
           {
             url: `http://${process.env.SWAGGER_HOST || 'localhost:3000'}`,
             description: 'Development server',
+          },
+          {
+            url: 'https://api.dcmms.com',
+            description: 'Production server',
+          },
+          {
+            url: 'https://staging-api.dcmms.com',
+            description: 'Staging server',
+          },
+        ],
+        tags: [
+          {
+            name: 'health',
+            description: 'Health check and system status endpoints',
+          },
+          {
+            name: 'auth',
+            description: 'Authentication and authorization endpoints',
+          },
+          {
+            name: 'work-orders',
+            description: 'Work order management - Create, assign, and track maintenance work',
+          },
+          {
+            name: 'assets',
+            description: 'Asset management - Track physical assets and their hierarchy',
+          },
+          {
+            name: 'sites',
+            description: 'Site management - Organize assets by location',
           },
         ],
         components: {
@@ -80,8 +142,13 @@ export async function buildServer(): Promise<FastifyInstance> {
               type: 'http',
               scheme: 'bearer',
               bearerFormat: 'JWT',
+              description: 'JWT token obtained from /api/v1/auth/login',
             },
           },
+        },
+        externalDocs: {
+          description: 'API Usage Guide and Examples',
+          url: 'https://docs.dcmms.com/api/usage-guide',
         },
       },
     });
@@ -91,6 +158,10 @@ export async function buildServer(): Promise<FastifyInstance> {
       uiConfig: {
         docExpansion: 'list',
         deepLinking: true,
+        filter: true,
+        showRequestDuration: true,
+        tryItOutEnabled: true,
+        persistAuthorization: true,
       },
       staticCSP: true,
     });
