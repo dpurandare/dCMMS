@@ -164,7 +164,7 @@ export class BudgetManagementService {
    * Delete a budget
    */
   async deleteBudget(budgetId: string, deletedBy: string): Promise<void> {
-    const budget = await this.getBudget(budgetId);
+    await this.getBudget(budgetId);
 
     this.budgets.delete(budgetId);
 
