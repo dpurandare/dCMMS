@@ -22,6 +22,7 @@
 import Handlebars from 'handlebars';
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import WebhookService from './webhook.service';
 
 // ==========================================
 // Types
@@ -94,9 +95,11 @@ export interface QueuedNotification {
 export class NotificationService {
   private db: Pool;
   private templateCache: Map<string, Handlebars.TemplateDelegate> = new Map();
+  private webhookService: WebhookService;
 
   constructor(db: Pool) {
     this.db = db;
+    this.webhookService = new WebhookService();
     this.registerHandlebarsHelpers();
   }
 
@@ -206,6 +209,17 @@ export class NotificationService {
       // Update rate limit
       await this.incrementRateLimit(tenantId, userId, channel);
     }
+
+    // Trigger webhooks (asynchronously, don't wait)
+    this.triggerWebhooksAsync(tenantId, templateCode, {
+      notificationIds,
+      userId,
+      channels: allowedChannels,
+      variables,
+      metadata,
+    }).catch((error) => {
+      console.error('Error triggering webhooks:', error);
+    });
 
     return notificationIds;
   }
@@ -593,6 +607,22 @@ export class NotificationService {
     }
 
     return userIds;
+  }
+
+  /**
+   * Trigger webhooks for notification event (async, non-blocking)
+   */
+  private async triggerWebhooksAsync(
+    tenantId: string,
+    eventType: string,
+    eventData: Record<string, any>
+  ): Promise<void> {
+    try {
+      await this.webhookService.triggerWebhooks(tenantId, eventType, eventData);
+    } catch (error) {
+      // Log but don't throw - webhooks should not block notifications
+      console.error(`Webhook trigger failed for event ${eventType}:`, error);
+    }
   }
 }
 

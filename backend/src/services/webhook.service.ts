@@ -1,248 +1,273 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { webhooks, webhookDeliveries } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+/**
+ * Webhook Notification Service (DCMMS-071)
+ *
+ * Features:
+ * - Webhook delivery with HTTP POST
+ * - HMAC-SHA256 signature verification
+ * - Retry logic (exponential backoff)
+ * - Delivery tracking and logging
+ * - Timeout enforcement (10 seconds)
+ *
+ * Configuration:
+ *   WEBHOOK_TIMEOUT_MS=10000
+ *   WEBHOOK_MAX_RETRIES=3
+ */
+
 import crypto from 'crypto';
+import axios, { AxiosError } from 'axios';
+import { db } from '../db';
+
+// ==========================================
+// Types
+// ==========================================
+
+export interface WebhookConfig {
+  id: string;
+  url: string;
+  authType: 'none' | 'bearer' | 'basic' | 'hmac';
+  authToken?: string;
+  customHeaders?: Record<string, string>;
+  secretKey?: string;
+  timeoutSeconds: number;
+  maxRetries: number;
+}
 
 export interface WebhookPayload {
   event: string;
+  eventType: string;
   timestamp: string;
   tenantId: string;
   data: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface WebhookDeliveryResult {
-  webhookId: string;
-  status: 'success' | 'failed' | 'timeout' | 'invalid_response';
-  statusCode?: number;
-  responseBody?: string;
-  errorMessage?: string;
+  success: boolean;
+  deliveryId: string;
+  status?: number;
+  responseTime?: number;
+  error?: string;
+  attemptNumber: number;
 }
 
-/**
- * Webhook Service
- * Handles webhook delivery with retry logic and signature verification
- */
-export class WebhookService {
-  private fastify: FastifyInstance;
-  private readonly MAX_RETRIES = 3;
-  private readonly TIMEOUT_MS = 10000; // 10 seconds
-  private readonly RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff: 1s, 2s, 4s
+// ==========================================
+// Webhook Service
+// ==========================================
 
-  constructor(fastify: FastifyInstance) {
-    this.fastify = fastify;
+export class WebhookService {
+  private timeout: number;
+  private maxRetries: number;
+
+  constructor() {
+    this.timeout = parseInt(process.env.WEBHOOK_TIMEOUT_MS || '10000');
+    this.maxRetries = parseInt(process.env.WEBHOOK_MAX_RETRIES || '3');
   }
 
   /**
-   * Send webhook to all registered webhooks for an event
+   * Send webhook notification
    */
   async sendWebhook(
-    tenantId: string,
-    eventType: string,
-    data: Record<string, any>
-  ): Promise<WebhookDeliveryResult[]> {
-    this.fastify.log.info({ tenantId, eventType }, 'Sending webhooks for event');
-
-    try {
-      // Get all active webhooks for this tenant and event
-      const tenantWebhooks = await db.query.webhooks.findMany({
-        where: and(
-          eq(webhooks.tenantId, tenantId),
-          eq(webhooks.isActive, true)
-        ),
-      });
-
-      // Filter webhooks that are subscribed to this event
-      const subscribedWebhooks = tenantWebhooks.filter((webhook) => {
-        const events = JSON.parse(webhook.events) as string[];
-        return events.includes(eventType) || events.includes('*');
-      });
-
-      if (subscribedWebhooks.length === 0) {
-        this.fastify.log.info({ tenantId, eventType }, 'No webhooks subscribed to this event');
-        return [];
-      }
-
-      // Prepare payload
-      const payload: WebhookPayload = {
-        event: eventType,
-        timestamp: new Date().toISOString(),
-        tenantId,
-        data,
-      };
-
-      // Send to all subscribed webhooks
-      const results: WebhookDeliveryResult[] = [];
-      for (const webhook of subscribedWebhooks) {
-        const result = await this.deliverWebhook(webhook, payload);
-        results.push(result);
-      }
-
-      return results;
-    } catch (error) {
-      this.fastify.log.error({ error, tenantId, eventType }, 'Failed to send webhooks');
-      throw error;
-    }
-  }
-
-  /**
-   * Deliver webhook to a specific endpoint with retry logic
-   */
-  private async deliverWebhook(
-    webhook: any,
-    payload: WebhookPayload
+    webhook: WebhookConfig,
+    payload: WebhookPayload,
+    attemptNumber: number = 1
   ): Promise<WebhookDeliveryResult> {
-    const { id, url, authType, authToken, authUsername, authPassword, headers, secret } = webhook;
-
-    this.fastify.log.info({ webhookId: id, url }, 'Delivering webhook');
-
-    let lastError: any = null;
-    let attemptCount = 0;
-
-    // Try delivery with retries
-    for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
-      attemptCount = attempt + 1;
-
-      try {
-        // Add delay for retries (exponential backoff)
-        if (attempt > 0) {
-          const delay = this.RETRY_DELAYS[attempt - 1] || 4000;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          this.fastify.log.info(
-            { webhookId: id, attempt: attemptCount },
-            'Retrying webhook delivery'
-          );
-        }
-
-        // Make HTTP request
-        const result = await this.makeWebhookRequest(webhook, payload);
-
-        // Log successful delivery
-        await this.logDelivery(id, payload.event, payload, result, attemptCount);
-
-        return {
-          webhookId: id,
-          ...result,
-        };
-      } catch (error) {
-        lastError = error;
-        this.fastify.log.warn(
-          { error, webhookId: id, attempt: attemptCount },
-          'Webhook delivery attempt failed'
-        );
-      }
-    }
-
-    // All retries exhausted, log final failure
-    const failureResult: WebhookDeliveryResult = {
-      webhookId: id,
-      status: 'failed',
-      errorMessage: lastError?.message || 'Unknown error',
-    };
-
-    await this.logDelivery(id, payload.event, payload, failureResult, attemptCount);
-
-    return failureResult;
-  }
-
-  /**
-   * Make HTTP request to webhook endpoint
-   */
-  private async makeWebhookRequest(
-    webhook: any,
-    payload: WebhookPayload
-  ): Promise<Omit<WebhookDeliveryResult, 'webhookId'>> {
-    const { url, authType, authToken, authUsername, authPassword, headers: customHeaders, secret } = webhook;
-
-    // Prepare headers
-    const requestHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'dCMMS-Webhook/1.0',
-      ...JSON.parse(customHeaders || '{}'),
-    };
-
-    // Add authentication
-    if (authType === 'bearer' && authToken) {
-      requestHeaders['Authorization'] = `Bearer ${authToken}`;
-    } else if (authType === 'basic' && authUsername && authPassword) {
-      const credentials = Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
-      requestHeaders['Authorization'] = `Basic ${credentials}`;
-    } else if (authType === 'api_key' && authToken) {
-      requestHeaders['X-API-Key'] = authToken;
-    }
-
-    // Add HMAC signature for payload verification
-    if (secret) {
-      const signature = this.generateSignature(payload, secret);
-      requestHeaders['X-Webhook-Signature'] = signature;
-    }
-
-    // Make request with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT_MS);
+    const startTime = Date.now();
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: requestHeaders,
-        body: JSON.stringify(payload),
-        signal: controller.signal,
+      // Build headers
+      const headers = this.buildHeaders(webhook, payload);
+
+      // Build request body
+      const requestBody = JSON.stringify(payload);
+
+      // Log delivery attempt
+      const deliveryId = await this.logDeliveryAttempt(
+        webhook.id,
+        payload.eventType,
+        payload.data,
+        webhook.url,
+        requestBody,
+        attemptNumber
+      );
+
+      // Send HTTP POST
+      const response = await axios.post(webhook.url, requestBody, {
+        headers,
+        timeout: webhook.timeoutSeconds * 1000,
+        validateStatus: () => true, // Don't throw on any status
       });
 
-      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
 
-      const statusCode = response.status;
-      const responseBody = await response.text().catch(() => '');
+      // Check if successful (2xx status)
+      const success = response.status >= 200 && response.status < 300;
 
-      // Check if response is successful (2xx)
-      if (statusCode >= 200 && statusCode < 300) {
+      // Update delivery log
+      await this.updateDeliveryLog(deliveryId, {
+        status: success ? 'success' : 'failed',
+        responseStatus: response.status,
+        responseBody: JSON.stringify(response.data).substring(0, 10000), // Limit size
+        responseTimeMs: responseTime,
+        errorMessage: success ? null : `HTTP ${response.status}: ${response.statusText}`,
+        completedAt: new Date(),
+      });
+
+      if (success) {
+        console.log(`✓ Webhook delivered successfully: ${webhook.url} (${response.status}) in ${responseTime}ms`);
         return {
-          status: 'success',
-          statusCode,
-          responseBody: responseBody.substring(0, 1000), // Limit response body size
+          success: true,
+          deliveryId,
+          status: response.status,
+          responseTime,
+          attemptNumber,
+        };
+      } else {
+        // Schedule retry if not max attempts
+        if (attemptNumber < webhook.maxRetries) {
+          await this.scheduleRetry(deliveryId, webhook, payload, attemptNumber);
+          return {
+            success: false,
+            deliveryId,
+            status: response.status,
+            error: `HTTP ${response.status}, will retry`,
+            attemptNumber,
+          };
+        } else {
+          console.error(`✗ Webhook failed after ${attemptNumber} attempts: ${webhook.url} (${response.status})`);
+          return {
+            success: false,
+            deliveryId,
+            status: response.status,
+            error: `HTTP ${response.status}: ${response.statusText}`,
+            attemptNumber,
+          };
+        }
+      }
+    } catch (error: any) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = this.getErrorMessage(error);
+
+      console.error(`✗ Webhook error: ${webhook.url} - ${errorMessage}`);
+
+      // Log error (use existing deliveryId if available)
+      const deliveryId = await this.logDeliveryAttempt(
+        webhook.id,
+        payload.eventType,
+        payload.data,
+        webhook.url,
+        JSON.stringify(payload),
+        attemptNumber,
+        'failed',
+        errorMessage
+      );
+
+      // Schedule retry if not max attempts
+      if (attemptNumber < webhook.maxRetries) {
+        await this.scheduleRetry(deliveryId, webhook, payload, attemptNumber);
+        return {
+          success: false,
+          deliveryId,
+          error: `${errorMessage}, will retry`,
+          attemptNumber,
         };
       } else {
         return {
-          status: 'invalid_response',
-          statusCode,
-          responseBody: responseBody.substring(0, 1000),
-          errorMessage: `HTTP ${statusCode}: ${response.statusText}`,
+          success: false,
+          deliveryId,
+          error: errorMessage,
+          attemptNumber,
         };
       }
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-
-      if (error.name === 'AbortError') {
-        return {
-          status: 'timeout',
-          errorMessage: `Request timeout after ${this.TIMEOUT_MS}ms`,
-        };
-      }
-
-      return {
-        status: 'failed',
-        errorMessage: error.message || 'Network error',
-      };
     }
   }
 
   /**
-   * Generate HMAC-SHA256 signature for payload
+   * Send webhook to all registered webhooks for event type
    */
-  private generateSignature(payload: WebhookPayload, secret: string): string {
-    const payloadString = JSON.stringify(payload);
+  async triggerWebhooks(
+    tenantId: string,
+    eventType: string,
+    eventData: Record<string, any>
+  ): Promise<WebhookDeliveryResult[]> {
+    // Get webhooks for this event type
+    const webhooks = await this.getWebhooksForEvent(tenantId, eventType);
+
+    if (webhooks.length === 0) {
+      console.log(`No webhooks registered for event: ${eventType}`);
+      return [];
+    }
+
+    console.log(`Triggering ${webhooks.length} webhook(s) for event: ${eventType}`);
+
+    // Build payload
+    const payload: WebhookPayload = {
+      event: `notification.${eventType}`,
+      eventType,
+      timestamp: new Date().toISOString(),
+      tenantId,
+      data: eventData,
+      metadata: {
+        source: 'dCMMS',
+        version: '1.0',
+      },
+    };
+
+    // Send to all webhooks in parallel
+    const results = await Promise.all(
+      webhooks.map((webhook) => this.sendWebhook(webhook, payload))
+    );
+
+    return results;
+  }
+
+  /**
+   * Build HTTP headers for webhook request
+   */
+  private buildHeaders(webhook: WebhookConfig, payload: WebhookPayload): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'dCMMS-Webhook/1.0',
+      'X-Webhook-Event': payload.eventType,
+      'X-Webhook-Timestamp': payload.timestamp,
+      'X-Webhook-ID': crypto.randomUUID(),
+    };
+
+    // Add authentication
+    if (webhook.authType === 'bearer' && webhook.authToken) {
+      headers['Authorization'] = `Bearer ${webhook.authToken}`;
+    } else if (webhook.authType === 'basic' && webhook.authToken) {
+      headers['Authorization'] = `Basic ${webhook.authToken}`;
+    }
+
+    // Add HMAC signature
+    if (webhook.authType === 'hmac' && webhook.secretKey) {
+      const signature = this.generateSignature(JSON.stringify(payload), webhook.secretKey);
+      headers['X-Webhook-Signature'] = signature;
+      headers['X-Webhook-Signature-Algorithm'] = 'sha256';
+    }
+
+    // Add custom headers
+    if (webhook.customHeaders) {
+      Object.assign(headers, webhook.customHeaders);
+    }
+
+    return headers;
+  }
+
+  /**
+   * Generate HMAC-SHA256 signature
+   */
+  private generateSignature(payload: string, secret: string): string {
     const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(payloadString);
+    hmac.update(payload);
     return `sha256=${hmac.digest('hex')}`;
   }
 
   /**
-   * Verify webhook signature
+   * Verify HMAC signature (for incoming webhook verification)
    */
-  static verifySignature(payload: string, signature: string, secret: string): boolean {
-    const hmac = crypto.createHmac('sha256', secret);
-    hmac.update(payload);
-    const expectedSignature = `sha256=${hmac.digest('hex')}`;
+  verifySignature(payload: string, signature: string, secret: string): boolean {
+    const expectedSignature = this.generateSignature(payload, secret);
     return crypto.timingSafeEqual(
       Buffer.from(signature),
       Buffer.from(expectedSignature)
@@ -250,114 +275,225 @@ export class WebhookService {
   }
 
   /**
-   * Log webhook delivery
+   * Get webhooks for event type
    */
-  private async logDelivery(
+  private async getWebhooksForEvent(tenantId: string, eventType: string): Promise<WebhookConfig[]> {
+    const result = await db.query(`
+      SELECT
+        w.id,
+        w.url,
+        w.auth_type AS "authType",
+        w.auth_token AS "authToken",
+        w.custom_headers AS "customHeaders",
+        w.secret_key AS "secretKey",
+        w.timeout_seconds AS "timeoutSeconds",
+        w.max_retries AS "maxRetries"
+      FROM webhooks w
+      WHERE w.tenant_id = $1
+        AND w.active = true
+        AND (
+          $2 = ANY(w.event_types)
+          OR 'all' = ANY(w.event_types)
+        )
+    `, [tenantId, eventType]);
+
+    return result.rows;
+  }
+
+  /**
+   * Log webhook delivery attempt
+   */
+  private async logDeliveryAttempt(
     webhookId: string,
     eventType: string,
-    payload: WebhookPayload,
-    result: Omit<WebhookDeliveryResult, 'webhookId'>,
-    attemptCount: number
+    eventData: Record<string, any>,
+    url: string,
+    requestBody: string,
+    attemptNumber: number,
+    status: string = 'pending',
+    errorMessage?: string
+  ): Promise<string> {
+    const result = await db.query(`
+      INSERT INTO webhook_deliveries (
+        webhook_id,
+        event_type,
+        event_data,
+        request_url,
+        request_body,
+        attempt_number,
+        status,
+        error_message
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `, [
+      webhookId,
+      eventType,
+      JSON.stringify(eventData),
+      url,
+      requestBody,
+      attemptNumber,
+      status,
+      errorMessage || null,
+    ]);
+
+    return result.rows[0].id;
+  }
+
+  /**
+   * Update delivery log
+   */
+  private async updateDeliveryLog(
+    deliveryId: string,
+    updates: {
+      status?: string;
+      responseStatus?: number;
+      responseBody?: string;
+      responseTimeMs?: number;
+      errorMessage?: string | null;
+      completedAt?: Date;
+    }
   ): Promise<void> {
-    try {
-      await db.insert(webhookDeliveries).values({
-        webhookId,
-        eventType: eventType as any,
-        payload: JSON.stringify(payload),
-        status: result.status,
-        statusCode: result.statusCode,
-        responseBody: result.responseBody,
-        errorMessage: result.errorMessage,
-        attemptCount,
-        sentAt: new Date(),
-      });
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
 
-      this.fastify.log.info(
-        {
-          webhookId,
-          eventType,
-          status: result.status,
-          attemptCount,
-        },
-        'Webhook delivery logged'
-      );
-    } catch (error) {
-      this.fastify.log.error({ error, webhookId }, 'Failed to log webhook delivery');
+    if (updates.status !== undefined) {
+      fields.push(`status = $${paramCount++}`);
+      values.push(updates.status);
     }
-  }
-
-  /**
-   * Get webhook deliveries for a webhook
-   */
-  async getDeliveries(
-    webhookId: string,
-    options: { limit?: number; offset?: number } = {}
-  ) {
-    const { limit = 50, offset = 0 } = options;
-
-    return db.query.webhookDeliveries.findMany({
-      where: eq(webhookDeliveries.webhookId, webhookId),
-      orderBy: (deliveries, { desc }) => [desc(deliveries.createdAt)],
-      limit,
-      offset,
-    });
-  }
-
-  /**
-   * Test webhook endpoint
-   */
-  async testWebhook(webhookId: string): Promise<WebhookDeliveryResult> {
-    this.fastify.log.info({ webhookId }, 'Testing webhook');
-
-    const webhook = await db.query.webhooks.findFirst({
-      where: eq(webhooks.id, webhookId),
-    });
-
-    if (!webhook) {
-      throw new Error('Webhook not found');
+    if (updates.responseStatus !== undefined) {
+      fields.push(`response_status = $${paramCount++}`);
+      values.push(updates.responseStatus);
+    }
+    if (updates.responseBody !== undefined) {
+      fields.push(`response_body = $${paramCount++}`);
+      values.push(updates.responseBody);
+    }
+    if (updates.responseTimeMs !== undefined) {
+      fields.push(`response_time_ms = $${paramCount++}`);
+      values.push(updates.responseTimeMs);
+    }
+    if (updates.errorMessage !== undefined) {
+      fields.push(`error_message = $${paramCount++}`);
+      values.push(updates.errorMessage);
+    }
+    if (updates.completedAt !== undefined) {
+      fields.push(`completed_at = $${paramCount++}`);
+      values.push(updates.completedAt);
     }
 
-    // Send test payload
-    const testPayload: WebhookPayload = {
-      event: 'webhook.test',
-      timestamp: new Date().toISOString(),
-      tenantId: webhook.tenantId,
-      data: {
-        message: 'This is a test webhook from dCMMS',
-        test: true,
-      },
-    };
+    if (fields.length === 0) return;
 
-    return this.deliverWebhook(webhook, testPayload);
+    values.push(deliveryId);
+
+    await db.query(`
+      UPDATE webhook_deliveries
+      SET ${fields.join(', ')}
+      WHERE id = $${paramCount}
+    `, values);
   }
 
   /**
-   * Cleanup old webhook deliveries (retention: 90 days)
+   * Schedule retry with exponential backoff
    */
-  async cleanupOldDeliveries(): Promise<number> {
-    this.fastify.log.info('Cleaning up old webhook deliveries');
+  private async scheduleRetry(
+    deliveryId: string,
+    webhook: WebhookConfig,
+    payload: WebhookPayload,
+    attemptNumber: number
+  ): Promise<void> {
+    // Exponential backoff: 2^attempt seconds
+    const delaySeconds = Math.pow(2, attemptNumber); // 2, 4, 8 seconds
+    const nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
 
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    await db.query(`
+      UPDATE webhook_deliveries
+      SET
+        status = 'retrying',
+        next_retry_at = $1
+      WHERE id = $2
+    `, [nextRetryAt, deliveryId]);
 
-    try {
-      const result = await db
-        .delete(webhookDeliveries)
-        .where(
-          // Delete deliveries older than 90 days
-          eq(webhookDeliveries.createdAt, ninetyDaysAgo)
-        )
-        .returning();
+    console.log(`Scheduled retry #${attemptNumber + 1} for webhook ${webhook.url} in ${delaySeconds}s`);
 
-      this.fastify.log.info({ count: result.length }, 'Cleaned up old webhook deliveries');
-      return result.length;
-    } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to cleanup old webhook deliveries');
-      throw error;
+    // In production, this would be handled by a background worker
+    // For now, schedule in-memory retry
+    setTimeout(() => {
+      this.sendWebhook(webhook, payload, attemptNumber + 1);
+    }, delaySeconds * 1000);
+  }
+
+  /**
+   * Get error message from axios error
+   */
+  private getErrorMessage(error: any): string {
+    if (axios.isAxiosError(error)) {
+      if (error.code === 'ECONNABORTED') {
+        return 'Request timeout';
+      } else if (error.code === 'ENOTFOUND') {
+        return 'DNS lookup failed';
+      } else if (error.code === 'ECONNREFUSED') {
+        return 'Connection refused';
+      } else if (error.response) {
+        return `HTTP ${error.response.status}: ${error.response.statusText}`;
+      } else if (error.request) {
+        return 'No response received';
+      }
+    }
+    return error.message || 'Unknown error';
+  }
+
+  /**
+   * Process pending retries
+   * (Called by background worker)
+   */
+  async processRetries(): Promise<void> {
+    const result = await db.query(`
+      SELECT
+        wd.id AS delivery_id,
+        wd.webhook_id,
+        wd.event_type,
+        wd.event_data,
+        wd.attempt_number,
+        w.url,
+        w.auth_type AS "authType",
+        w.auth_token AS "authToken",
+        w.custom_headers AS "customHeaders",
+        w.secret_key AS "secretKey",
+        w.timeout_seconds AS "timeoutSeconds",
+        w.max_retries AS "maxRetries"
+      FROM webhook_deliveries wd
+      INNER JOIN webhooks w ON wd.webhook_id = w.id
+      WHERE wd.status = 'retrying'
+        AND wd.next_retry_at <= NOW()
+      LIMIT 100
+    `);
+
+    console.log(`Processing ${result.rows.length} webhook retries`);
+
+    for (const row of result.rows) {
+      const webhook: WebhookConfig = {
+        id: row.webhook_id,
+        url: row.url,
+        authType: row.authType,
+        authToken: row.authToken,
+        customHeaders: row.customHeaders,
+        secretKey: row.secretKey,
+        timeoutSeconds: row.timeoutSeconds,
+        maxRetries: row.maxRetries,
+      };
+
+      const payload: WebhookPayload = {
+        event: `notification.${row.event_type}`,
+        eventType: row.event_type,
+        timestamp: new Date().toISOString(),
+        tenantId: row.event_data.tenantId || '',
+        data: row.event_data,
+      };
+
+      await this.sendWebhook(webhook, payload, row.attempt_number + 1);
     }
   }
 }
 
-export function createWebhookService(fastify: FastifyInstance): WebhookService {
-  return new WebhookService(fastify);
-}
+export default WebhookService;
