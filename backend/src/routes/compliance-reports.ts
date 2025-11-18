@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createComplianceReportGenerationService } from '../services/compliance-report-generation.service';
+import { createAuditLogService } from '../services/audit-log.service';
 import { createReadStream, existsSync } from 'fs';
 
 // Validation schemas
@@ -24,6 +25,7 @@ const updateStatusSchema = z.object({
  */
 export default async function complianceReportRoutes(fastify: FastifyInstance) {
   const reportService = createComplianceReportGenerationService(fastify);
+  const auditService = createAuditLogService(fastify);
 
   // ==========================================
   // Report Generation
@@ -59,6 +61,16 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         };
 
         const report = await reportService.generateReport(reportRequest, tenantId, userId);
+
+        // Audit log
+        await auditService.logReportGenerated(
+          tenantId,
+          userId,
+          report.reportId,
+          report.templateId,
+          request.ip,
+          request.headers['user-agent']
+        );
 
         fastify.log.info({ reportId: report.reportId }, 'Compliance report generated');
 
@@ -262,6 +274,16 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         const contentType = contentTypes[report.format] || 'application/octet-stream';
         const fileName = `${reportId}.${report.format}`;
 
+        // Audit log
+        await auditService.logReportDownloaded(
+          tenantId,
+          request.user!.id,
+          reportId,
+          report.format,
+          request.ip,
+          request.headers['user-agent']
+        );
+
         reply.header('Content-Type', contentType);
         reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
 
@@ -312,6 +334,9 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         const { reportId } = request.params;
         const { status } = request.body;
 
+        // Get old status first
+        const oldReport = await reportService.getReport(reportId, tenantId);
+
         const updated = await reportService.updateReportStatus(reportId, tenantId, status);
 
         if (!updated) {
@@ -319,6 +344,17 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
             error: 'Report not found',
           });
         }
+
+        // Audit log
+        await auditService.logReportStatusChanged(
+          tenantId,
+          request.user!.id,
+          reportId,
+          oldReport?.status || 'unknown',
+          status,
+          request.ip,
+          request.headers['user-agent']
+        );
 
         fastify.log.info({ reportId, status }, 'Report status updated');
 

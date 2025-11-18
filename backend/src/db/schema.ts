@@ -446,6 +446,21 @@ export const complianceGeneratedReports = pgTable('compliance_generated_reports'
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Audit Logs (Tamper-proof, Append-only)
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityId: varchar('entity_id', { length: 255 }).notNull(),
+  changes: text('changes'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -674,6 +689,17 @@ export const complianceGeneratedReportsRelations = relations(complianceGenerated
   }),
   finalizer: one(users, {
     fields: [complianceGeneratedReports.finalizedBy],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [auditLogs.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [auditLogs.userId],
     references: [users.id],
   }),
 }));
