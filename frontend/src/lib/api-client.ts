@@ -104,14 +104,26 @@ export const api = {
     },
   },
 
-  // Work orders endpoints (to be implemented)
+  // Work orders endpoints
   workOrders: {
-    list: async () => {
-      const response = await apiClient.get('/work-orders');
+    list: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/work-orders', { params });
       return response.data;
     },
     getById: async (id: string) => {
       const response = await apiClient.get(`/work-orders/${id}`);
+      return response.data;
+    },
+    create: async (data: any) => {
+      const response = await apiClient.post('/work-orders', data);
+      return response.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await apiClient.patch(`/work-orders/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/work-orders/${id}`);
       return response.data;
     },
   },
