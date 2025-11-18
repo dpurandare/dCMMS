@@ -364,21 +364,6 @@ export class WorkOrderApprovalService {
     this.logger.log(`Notifying ML team of rejection: ${request.workOrderId}`);
 
     // Send summary to ML team
-    const notification = {
-      to: 'ml-team@example.com',
-      subject: 'Predictive WO Rejected - Review Required',
-      body: `
-A predictive work order was rejected by supervisor:
-
-Work Order ID: ${request.workOrderId}
-Rejected By: ${request.rejectedBy}
-Reason: ${request.reason}
-Feedback: ${request.feedback || 'None'}
-
-Please review the rejection to improve model accuracy.
-      `,
-    };
-
     // TODO: Integrate with notification service
   }
 }
