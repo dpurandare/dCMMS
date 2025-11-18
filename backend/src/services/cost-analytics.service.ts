@@ -5,7 +5,6 @@ import {
   CostTrend,
   CostBySite,
   CostByWOType,
-  CostCategory,
   CostExportOptions,
 } from '../models/cost.models';
 import { CostCalculationService } from './cost-calculation.service';
