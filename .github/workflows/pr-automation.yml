@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Check for issue reference
-        uses: hmarr/auto-approve-action@v3
+        uses: hmarr/auto-approve-action@v4
         if: |
           !contains(github.event.pull_request.body, '#') &&
           !contains(github.event.pull_request.body, 'fixes') &&
