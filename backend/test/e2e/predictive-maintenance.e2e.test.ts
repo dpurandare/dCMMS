@@ -15,7 +15,6 @@ import { expect } from 'chai';
 import { app } from '../../src/app';
 import { MLInferenceService } from '../../src/services/ml-inference.service';
 import { PredictiveWOService } from '../../src/services/predictive-wo.service';
-import { WorkOrderApprovalService } from '../../src/services/wo-approval.service';
 import { ModelPerformanceService } from '../../src/services/model-performance.service';
 
 describe('Predictive Maintenance E2E Tests', () => {
