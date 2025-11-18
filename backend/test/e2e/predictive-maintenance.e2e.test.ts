@@ -27,7 +27,6 @@ describe('Predictive Maintenance E2E Tests', () => {
   // Test services
   const inferenceService = new MLInferenceService();
   const predictiveWOService = new PredictiveWOService();
-  const approvalService = new WorkOrderApprovalService();
   const performanceService = new ModelPerformanceService();
 
   before(async () => {
