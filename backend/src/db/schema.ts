@@ -384,6 +384,21 @@ export const reportDefinitions = pgTable('report_definitions', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const assetHealthScores = pgTable('asset_health_scores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  assetId: uuid('asset_id').notNull().references(() => assets.id, { onDelete: 'cascade' }),
+  score: integer('score').notNull(),
+  category: varchar('category', { length: 20 }).notNull(),
+  recentAlarms: integer('recent_alarms').notNull().default(0),
+  recentWorkOrders: integer('recent_work_orders').notNull().default(0),
+  anomalyCount: integer('anomaly_count').notNull().default(0),
+  assetAgeMonths: integer('asset_age_months').notNull().default(0),
+  daysSinceLastMaintenance: integer('days_since_last_maintenance').notNull().default(0),
+  componentScores: text('component_scores'),
+  calculatedAt: timestamp('calculated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -571,5 +586,12 @@ export const reportDefinitionsRelations = relations(reportDefinitions, ({ one })
   creator: one(users, {
     fields: [reportDefinitions.createdBy],
     references: [users.id],
+  }),
+}));
+
+export const assetHealthScoresRelations = relations(assetHealthScores, ({ one }) => ({
+  asset: one(assets, {
+    fields: [assetHealthScores.assetId],
+    references: [assets.id],
   }),
 }));
