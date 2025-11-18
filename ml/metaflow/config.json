@@ -1,7 +1,0 @@
-{
-  "METAFLOW_DATASTORE_SYSROOT_LOCAL": "/tmp/dcmms/metaflow",
-  "METAFLOW_DEFAULT_DATASTORE": "local",
-  "METAFLOW_DEFAULT_METADATA": "local",
-  "METAFLOW_SERVICE_URL": "http://localhost:8080",
-  "METAFLOW_SERVICE_INTERNAL_URL": "http://localhost:8080"
-}
