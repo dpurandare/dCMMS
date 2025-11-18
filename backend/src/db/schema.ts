@@ -399,6 +399,53 @@ export const assetHealthScores = pgTable('asset_health_scores', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const complianceReportTemplates = pgTable('compliance_report_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: varchar('template_id', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  reportType: varchar('report_type', { length: 50 }).notNull(),
+  complianceStandard: varchar('compliance_standard', { length: 100 }).notNull(),
+  version: varchar('version', { length: 20 }).notNull().default('1.0'),
+  requiredFields: text('required_fields').notNull().default('[]'),
+  optionalFields: text('optional_fields').notNull().default('[]'),
+  autoPopulateMappings: text('auto_populate_mappings'),
+  validationRules: text('validation_rules'),
+  format: varchar('format', { length: 20 }).notNull().default('pdf'),
+  frequency: varchar('frequency', { length: 50 }),
+  isActive: boolean('is_active').notNull().default(true),
+  isSystemTemplate: boolean('is_system_template').notNull().default(false),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const complianceGeneratedReports = pgTable('compliance_generated_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  templateId: uuid('template_id').notNull().references(() => complianceReportTemplates.id, { onDelete: 'cascade' }),
+  siteId: uuid('site_id').references(() => sites.id, { onDelete: 'cascade' }),
+  reportName: varchar('report_name', { length: 255 }).notNull(),
+  reportType: varchar('report_type', { length: 50 }).notNull(),
+  reportingPeriodStart: timestamp('reporting_period_start').notNull(),
+  reportingPeriodEnd: timestamp('reporting_period_end').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('draft'),
+  reportData: text('report_data').notNull(),
+  fileUrl: text('file_url'),
+  fileSizeBytes: integer('file_size_bytes'),
+  fileFormat: varchar('file_format', { length: 20 }).notNull().default('pdf'),
+  watermark: varchar('watermark', { length: 50 }).default('DRAFT'),
+  generatedBy: uuid('generated_by').notNull().references(() => users.id, { onDelete: 'set null' }),
+  generatedAt: timestamp('generated_at').notNull().defaultNow(),
+  finalizedBy: uuid('finalized_by').references(() => users.id, { onDelete: 'set null' }),
+  finalizedAt: timestamp('finalized_at'),
+  submittedAt: timestamp('submitted_at'),
+  metadata: text('metadata').default('{}'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // ==========================================
 // RELATIONS
 // ==========================================
@@ -593,5 +640,40 @@ export const assetHealthScoresRelations = relations(assetHealthScores, ({ one })
   asset: one(assets, {
     fields: [assetHealthScores.assetId],
     references: [assets.id],
+  }),
+}));
+
+export const complianceReportTemplatesRelations = relations(complianceReportTemplates, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [complianceReportTemplates.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [complianceReportTemplates.createdBy],
+    references: [users.id],
+  }),
+  generatedReports: many(complianceGeneratedReports),
+}));
+
+export const complianceGeneratedReportsRelations = relations(complianceGeneratedReports, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [complianceGeneratedReports.tenantId],
+    references: [tenants.id],
+  }),
+  template: one(complianceReportTemplates, {
+    fields: [complianceGeneratedReports.templateId],
+    references: [complianceReportTemplates.id],
+  }),
+  site: one(sites, {
+    fields: [complianceGeneratedReports.siteId],
+    references: [sites.id],
+  }),
+  generator: one(users, {
+    fields: [complianceGeneratedReports.generatedBy],
+    references: [users.id],
+  }),
+  finalizer: one(users, {
+    fields: [complianceGeneratedReports.finalizedBy],
+    references: [users.id],
   }),
 }));

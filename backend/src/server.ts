@@ -22,6 +22,7 @@ import integrationRoutes from './routes/integrations';
 import analyticsAdminRoutes from './routes/analytics-admin';
 import analyticsRoutes from './routes/analytics';
 import reportRoutes from './routes/reports';
+import complianceTemplateRoutes from './routes/compliance-templates';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -147,6 +148,18 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
             name: 'notifications',
             description: 'Notification management - Manage notification preferences and history',
           },
+          {
+            name: 'Compliance',
+            description: 'Compliance reporting - Manage compliance templates and generate reports',
+          },
+          {
+            name: 'Reports',
+            description: 'Custom report builder - Create and execute custom reports',
+          },
+          {
+            name: 'Analytics',
+            description: 'Analytics and KPIs - Access system analytics and key performance indicators',
+          },
         ],
         components: {
           securitySchemes: {
@@ -271,6 +284,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(analyticsAdminRoutes, { prefix: '/api/v1' });
   await server.register(analyticsRoutes, { prefix: '/api/v1' });
   await server.register(reportRoutes, { prefix: '/api/v1' });
+  await server.register(complianceTemplateRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
