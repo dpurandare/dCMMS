@@ -298,6 +298,68 @@ After infrastructure is running:
 
 See `docs/` for detailed architecture and API specifications.
 
+## CI/CD Pipeline
+
+The project uses GitHub Actions for automated testing, security scanning, and deployments.
+
+### Automated Workflows
+
+**Backend CI/CD** (`.github/workflows/backend-ci.yml`)
+- Lint, format, and type checking
+- Unit and integration tests with PostgreSQL/Redis
+- Security scanning (npm audit, Snyk, Trivy)
+- Docker image builds and deployments
+- Auto-deploy to staging (develop) and production (main)
+
+**Frontend CI/CD** (`.github/workflows/frontend-ci.yml`)
+- Lint, format, and type checking
+- Unit tests and E2E tests (Playwright)
+- Lighthouse performance auditing
+- Accessibility testing (axe-core)
+- Bundle size checking
+- Docker image builds and deployments
+
+**Mobile CI/CD** (`.github/workflows/mobile-ci.yml`)
+- Flutter analyzer and format checking
+- Unit and integration tests
+- Android APK/AAB builds
+- iOS IPA builds
+- Deploy to Firebase App Distribution (beta)
+- Deploy to Play Store and App Store (production)
+
+**Code Quality** (`.github/workflows/code-quality.yml`)
+- CodeQL security analysis
+- SonarQube code quality checks
+- Dependency vulnerability scanning
+- Secret scanning (TruffleHog, Gitleaks)
+- License compliance checking
+- Docker image security scanning
+- Infrastructure as Code security (Checkov)
+
+**PR Automation** (`.github/workflows/pr-automation.yml`)
+- Auto-labeling based on changed files
+- PR size labeling (XS/S/M/L/XL)
+- Auto-assign reviewers by team
+- Conventional commit validation
+- Stale PR management
+- Dependabot auto-merge for minor/patch updates
+
+### Branch Strategy
+- `main` → Production deployments
+- `develop` → Staging deployments
+- `feature/**` → Feature branches
+- `fix/**` → Bug fix branches
+- `claude/**` → Automated changes
+
+### Required Checks
+- All tests must pass
+- Code coverage > 80%
+- No CRITICAL/HIGH security vulnerabilities
+- Lighthouse score > 90
+- Bundle size within limits
+
+See `docs/devops/ci-cd-pipeline.md` for complete documentation.
+
 ## Technology Stack
 
 ### Frontend

@@ -1,0 +1,180 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  # ==========================================
+  # AUTO-LABEL PR
+  # ==========================================
+  auto-label:
+    name: Auto-label PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/labeler@v4
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+
+  # ==========================================
+  # PR SIZE LABELING
+  # ==========================================
+  size-label:
+    name: Label PR by Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/XS'
+          xs_max_size: 10
+          s_label: 'size/S'
+          s_max_size: 100
+          m_label: 'size/M'
+          m_max_size: 500
+          l_label: 'size/L'
+          l_max_size: 1000
+          xl_label: 'size/XL'
+          fail_if_xl: false
+
+  # ==========================================
+  # PR DESCRIPTION VALIDATION
+  # ==========================================
+  validate-description:
+    name: Validate PR Description
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check PR description
+        uses: Vankka/pr-compliance-action@v1.1.0
+        with:
+          body-regex: '(?s).*(## Description|## Changes|## Summary).*'
+          body-regex-flags: 'gim'
+          failure-message: 'PR description must include a "Description", "Changes", or "Summary" section'
+
+  # ==========================================
+  # REQUIRE ISSUE REFERENCE
+  # ==========================================
+  require-issue:
+    name: Require Issue Reference
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.pull_request.labels.*.name, 'dependencies')"
+
+    steps:
+      - name: Check for issue reference
+        uses: hmarr/auto-approve-action@v3
+        if: |
+          !contains(github.event.pull_request.body, '#') &&
+          !contains(github.event.pull_request.body, 'fixes') &&
+          !contains(github.event.pull_request.body, 'closes')
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment if no issue
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ This PR does not reference an issue. Please link the related issue using "Fixes #123" or "Closes #123" in the PR description.'
+            })
+
+  # ==========================================
+  # AUTO-ASSIGN REVIEWERS
+  # ==========================================
+  auto-assign:
+    name: Auto-assign Reviewers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: kentaro-m/auto-assign-action@v1.2.5
+        with:
+          configuration-path: '.github/auto-assign.yml'
+
+  # ==========================================
+  # STALE PR CHECK
+  # ==========================================
+  stale-check:
+    name: Mark Stale PRs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/stale@v8
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-pr-message: 'This PR has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 7 days.'
+          close-pr-message: 'This PR was automatically closed due to inactivity.'
+          days-before-stale: 30
+          days-before-close: 7
+          stale-pr-label: 'stale'
+          exempt-pr-labels: 'keep-open,in-progress'
+
+  # ==========================================
+  # AUTO-MERGE DEPENDABOT
+  # ==========================================
+  auto-merge-dependabot:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve minor/patch updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.metadata.outputs.update-type == 'version-update:semver-minor' || steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================================
+  # PR CHECKLIST VALIDATION
+  # ==========================================
+  checklist-validation:
+    name: Validate PR Checklist
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR checklist
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: checklist-validator
+          token: ${{ secrets.GITHUB_TOKEN }}
+          inputs: '{"pr_number": "${{ github.event.pull_request.number }}"}'
+
+  # ==========================================
+  # CONVENTIONAL COMMITS CHECK
+  # ==========================================
+  conventional-commits:
+    name: Validate Conventional Commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: .commitlintrc.json

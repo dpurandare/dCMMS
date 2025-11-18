@@ -1,0 +1,391 @@
+name: Mobile CI/CD (Flutter)
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**', 'claude/**' ]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'mobile/**'
+
+env:
+  FLUTTER_VERSION: '3.16.x'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ==========================================
+  # LINT & FORMAT
+  # ==========================================
+  lint:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run Flutter analyzer
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Run Dart format check
+        working-directory: mobile
+        run: dart format --set-exit-if-changed .
+
+      - name: Run custom lint rules
+        working-directory: mobile
+        run: flutter pub run custom_lint
+
+  # ==========================================
+  # UNIT TESTS
+  # ==========================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run unit tests
+        working-directory: mobile
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./mobile/coverage/lcov.info
+          flags: mobile-unit
+          name: mobile-unit-tests
+
+  # ==========================================
+  # INTEGRATION TESTS
+  # ==========================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run integration tests (iOS Simulator)
+        working-directory: mobile
+        run: |
+          flutter emulators --launch apple_ios_simulator
+          flutter test integration_test/
+
+  # ==========================================
+  # BUILD ANDROID
+  # ==========================================
+  build-android:
+    name: Build Android APK/AAB
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build APK (Debug)
+        working-directory: mobile
+        run: flutter build apk --debug
+
+      - name: Build APK (Release)
+        working-directory: mobile
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        run: flutter build apk --release
+
+      - name: Build App Bundle (Release)
+        working-directory: mobile
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: flutter build appbundle --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: mobile/build/app/outputs/flutter-apk/*.apk
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          name: android-aab
+          path: mobile/build/app/outputs/bundle/release/*.aab
+
+  # ==========================================
+  # BUILD iOS
+  # ==========================================
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    needs: [lint, unit-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build iOS (Debug)
+        working-directory: mobile
+        run: flutter build ios --debug --no-codesign
+
+      - name: Build iOS (Release)
+        working-directory: mobile
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-build
+          path: mobile/build/ios/iphoneos/*.app
+
+  # ==========================================
+  # SECURITY SCANNING
+  # ==========================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run pub audit
+        working-directory: mobile
+        run: flutter pub audit
+
+      - name: Run OWASP dependency check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'dCMMS-Mobile'
+          path: 'mobile/'
+          format: 'ALL'
+
+      - name: Upload OWASP results
+        uses: actions/upload-artifact@v3
+        with:
+          name: owasp-report
+          path: dependency-check-report.*
+
+  # ==========================================
+  # DEPLOY TO FIREBASE APP DISTRIBUTION
+  # ==========================================
+  deploy-firebase:
+    name: Deploy to Firebase App Distribution
+    runs-on: ubuntu-latest
+    needs: [build-android]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: android-apk
+
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          groups: testers
+          file: app-release.apk
+          releaseNotes: |
+            Automated build from commit ${{ github.sha }}
+            Branch: ${{ github.ref_name }}
+
+  # ==========================================
+  # DEPLOY TO PLAY STORE (BETA)
+  # ==========================================
+  deploy-playstore-beta:
+    name: Deploy to Play Store (Beta)
+    runs-on: ubuntu-latest
+    needs: [build-android, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment:
+      name: playstore-beta
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download AAB artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: android-aab
+
+      - name: Upload to Play Store (Beta)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT }}
+          packageName: io.dcmms.mobile
+          releaseFiles: app-release.aab
+          track: beta
+          status: completed
+
+  # ==========================================
+  # DEPLOY TO PLAY STORE (PRODUCTION)
+  # ==========================================
+  deploy-playstore-production:
+    name: Deploy to Play Store (Production)
+    runs-on: ubuntu-latest
+    needs: [build-android, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: playstore-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download AAB artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: android-aab
+
+      - name: Upload to Play Store (Production)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT }}
+          packageName: io.dcmms.mobile
+          releaseFiles: app-release.aab
+          track: production
+          status: completed
+
+  # ==========================================
+  # DEPLOY TO APP STORE (TESTFLIGHT)
+  # ==========================================
+  deploy-testflight:
+    name: Deploy to TestFlight
+    runs-on: macos-latest
+    needs: [build-ios, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment:
+      name: testflight
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build and upload to TestFlight
+        working-directory: mobile
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+        run: |
+          cd ios
+          bundle exec fastlane beta
+
+  # ==========================================
+  # DEPLOY TO APP STORE (PRODUCTION)
+  # ==========================================
+  deploy-appstore:
+    name: Deploy to App Store
+    runs-on: macos-latest
+    needs: [build-ios, integration-tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: appstore-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build and upload to App Store
+        working-directory: mobile
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          FASTLANE_USER: ${{ secrets.FASTLANE_USER }}
+          FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
+        run: |
+          cd ios
+          bundle exec fastlane release
