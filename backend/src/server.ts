@@ -25,7 +25,6 @@ import reportRoutes from './routes/reports';
 import complianceTemplateRoutes from './routes/compliance-templates';
 import complianceReportRoutes from './routes/compliance-reports';
 import auditLogRoutes from './routes/audit-logs';
-import mlFeatureRoutes from './routes/ml-features';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -167,10 +166,6 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
             name: 'Audit',
             description: 'Audit logs - Tamper-proof compliance audit trail (admin-only)',
           },
-          {
-            name: 'ML',
-            description: 'Machine Learning - Feast feature store and ML model serving',
-          },
         ],
         components: {
           securitySchemes: {
@@ -298,7 +293,6 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(complianceTemplateRoutes, { prefix: '/api/v1' });
   await server.register(complianceReportRoutes, { prefix: '/api/v1' });
   await server.register(auditLogRoutes, { prefix: '/api/v1' });
-  await server.register(mlFeatureRoutes, { prefix: '/api/v1' });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
