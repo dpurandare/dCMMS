@@ -58,7 +58,7 @@ export class NotificationService {
    * Send notification based on event type and user preferences
    */
   async sendNotification(payload: NotificationPayload): Promise<void> {
-    const { tenantId, userId, eventType, data } = payload;
+    const { tenantId, userId, eventType, data, severity } = payload;
 
     this.fastify.log.info({ payload }, 'Sending notification');
 
@@ -83,6 +83,9 @@ export class NotificationService {
 
       // Get user preferences
       const preferences = await this.getUserPreferences(userId);
+
+      // Determine priority for batching
+      const priority = severity || this.getPriorityFromEventType(eventType);
 
       // Send notifications through enabled channels
       for (const rule of rules) {
@@ -128,21 +131,104 @@ export class NotificationService {
             ? this.renderTemplate(template.subject, data)
             : undefined;
 
-          // Send notification
-          await this.sendToChannel({
-            channel,
-            userId,
-            tenantId,
-            eventType,
-            recipient: this.getRecipient(user, channel),
-            subject,
-            body: rendered,
-            templateId: template.id,
-          });
+          // Check if batching is enabled and should be used
+          const shouldBatch =
+            pref &&
+            pref.enableBatching &&
+            (priority === 'low' || priority === 'medium') &&
+            channel === 'email'; // Only batch email notifications for now
+
+          if (shouldBatch) {
+            // Queue for batching
+            await this.queueForBatching({
+              tenantId,
+              userId,
+              eventType,
+              channel,
+              priority,
+              subject,
+              body: rendered,
+              templateId: template.id,
+              data,
+            });
+          } else {
+            // Send immediately
+            await this.sendToChannel({
+              channel,
+              userId,
+              tenantId,
+              eventType,
+              recipient: this.getRecipient(user, channel),
+              subject,
+              body: rendered,
+              templateId: template.id,
+            });
+          }
         }
       }
     } catch (error) {
       this.fastify.log.error({ error, payload }, 'Failed to send notification');
+      throw error;
+    }
+  }
+
+  /**
+   * Get priority from event type
+   */
+  private getPriorityFromEventType(eventType: NotificationEventType): 'critical' | 'high' | 'medium' | 'low' {
+    const priorityMap: Record<NotificationEventType, 'critical' | 'high' | 'medium' | 'low'> = {
+      alert_critical: 'critical',
+      alert_high: 'high',
+      alert_medium: 'medium',
+      work_order_overdue: 'high',
+      work_order_assigned: 'medium',
+      work_order_completed: 'low',
+      alert_acknowledged: 'low',
+      alert_resolved: 'low',
+      asset_down: 'high',
+      maintenance_due: 'medium',
+    };
+
+    return priorityMap[eventType] || 'medium';
+  }
+
+  /**
+   * Queue notification for batching
+   */
+  private async queueForBatching(params: {
+    tenantId: string;
+    userId: string;
+    eventType: NotificationEventType;
+    channel: NotificationChannel;
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    subject?: string;
+    body: string;
+    templateId: string;
+    data: Record<string, any>;
+  }): Promise<void> {
+    try {
+      const { createNotificationBatchingService } = await import('./notification-batching.service');
+      const batchingService = createNotificationBatchingService(this.fastify);
+
+      await batchingService.queueNotification({
+        tenantId: params.tenantId,
+        userId: params.userId,
+        eventType: params.eventType,
+        channel: params.channel,
+        priority: params.priority,
+        subject: params.subject,
+        body: params.body,
+        templateId: params.templateId,
+        data: params.data,
+      });
+
+      this.fastify.log.info(
+        { userId: params.userId, eventType: params.eventType },
+        'Notification queued for batching'
+      );
+    } catch (error) {
+      this.fastify.log.error({ error }, 'Failed to queue notification for batching');
+      // Fall back to immediate send
       throw error;
     }
   }

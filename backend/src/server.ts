@@ -273,5 +273,20 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
     });
   });
 
+  // ==========================================
+  // NOTIFICATION BATCHING SCHEDULER
+  // ==========================================
+
+  // Start notification batching service
+  const { createNotificationBatchingService } = await import('./services/notification-batching.service');
+  const batchingService = createNotificationBatchingService(server);
+  batchingService.start();
+
+  // Cleanup on server close
+  server.addHook('onClose', async () => {
+    server.log.info('Shutting down notification batching service');
+    batchingService.stop();
+  });
+
   return server;
 }

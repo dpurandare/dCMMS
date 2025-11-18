@@ -274,6 +274,8 @@ export const notificationPreferences = pgTable('notification_preferences', {
   isEnabled: boolean('is_enabled').notNull().default(true),
   quietHoursStart: varchar('quiet_hours_start', { length: 5 }),
   quietHoursEnd: varchar('quiet_hours_end', { length: 5 }),
+  enableBatching: boolean('enable_batching').notNull().default(true),
+  batchIntervalMinutes: integer('batch_interval_minutes').notNull().default(15),
   metadata: text('metadata').default('{}'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -311,6 +313,23 @@ export const deviceTokens = pgTable('device_tokens', {
   lastUsedAt: timestamp('last_used_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationQueue = pgTable('notification_queue', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: notificationEventTypeEnum('event_type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  priority: varchar('priority', { length: 50 }).notNull().default('medium'),
+  subject: varchar('subject', { length: 500 }),
+  body: text('body').notNull(),
+  templateId: uuid('template_id'),
+  data: text('data').default('{}'),
+  batchKey: varchar('batch_key', { length: 255 }).notNull(),
+  isBatched: boolean('is_batched').notNull().default(false),
+  batchedAt: timestamp('batched_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
 export const webhooks = pgTable('webhooks', {
@@ -496,6 +515,17 @@ export const notificationHistoryRelations = relations(notificationHistory, ({ on
 export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
   user: one(users, {
     fields: [deviceTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notificationQueueRelations = relations(notificationQueue, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationQueue.tenantId],
+    references: [tenants.id],
+  }),
+  user: one(users, {
+    fields: [notificationQueue.userId],
     references: [users.id],
   }),
 }));
