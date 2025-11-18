@@ -1,0 +1,29 @@
+# Feast Feature Store
+feast[redis]==0.38.0
+
+# Database connectors
+psycopg2-binary==2.9.9
+clickhouse-driver==0.2.7
+
+# Data processing
+pandas==2.2.0
+pyarrow==15.0.0  # For Parquet support
+numpy==1.26.3
+
+# MLflow Model Registry
+mlflow==2.10.2
+
+# Metaflow
+metaflow==2.11.9
+
+# ML Libraries
+scikit-learn==1.4.0
+xgboost==2.0.3
+lightgbm==4.3.0
+
+# Hyperparameter tuning
+optuna==3.5.0
+
+# Utilities
+python-dotenv==1.0.1
+pydantic==2.6.1
