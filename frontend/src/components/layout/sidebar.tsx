@@ -11,6 +11,7 @@ import {
   Bell,
   BarChart3,
   FileText,
+  ScrollText,
   Settings,
   HelpCircle,
   Book,
@@ -46,6 +47,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Alerts', href: '/alerts', icon: Bell, badge: 8, badgeVariant: 'destructive' },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Compliance', href: '/compliance-reports', icon: ScrollText },
 ];
 
 const secondaryNavItems: NavItem[] = [
