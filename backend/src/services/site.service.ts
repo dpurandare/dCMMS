@@ -20,6 +20,7 @@ export interface CreateSiteData {
   name: string;
   description?: string;
   type?: string;
+  energyType?: 'solar' | 'wind' | 'hydro' | 'biomass' | 'geothermal' | 'hybrid';
   address?: string;
   city?: string;
   state?: string;
@@ -36,6 +37,7 @@ export interface UpdateSiteData {
   name?: string;
   description?: string;
   type?: string;
+  energyType?: 'solar' | 'wind' | 'hydro' | 'biomass' | 'geothermal' | 'hybrid';
   address?: string;
   city?: string;
   state?: string;

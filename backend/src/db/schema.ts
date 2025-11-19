@@ -104,6 +104,15 @@ export const webhookDeliveryStatusEnum = pgEnum('webhook_delivery_status', [
   'invalid_response',
 ]);
 
+export const energyTypeEnum = pgEnum('energy_type', [
+  'solar',
+  'wind',
+  'hydro',
+  'biomass',
+  'geothermal',
+  'hybrid',
+]);
+
 // ==========================================
 // TABLES
 // ==========================================
@@ -143,6 +152,7 @@ export const sites = pgTable('sites', {
   siteId: varchar('site_id', { length: 100 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   type: varchar('type', { length: 50 }).notNull(),
+  energyType: energyTypeEnum('energy_type'), // Energy generation type (solar, wind, etc.)
   location: text('location').notNull(),
   capacityMw: decimal('capacity_mw', { precision: 10, scale: 2 }),
   commissionDate: timestamp('commission_date'),
