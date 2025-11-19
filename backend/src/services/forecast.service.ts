@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { generationForecasts, forecastAccuracyMetrics, weatherForecasts, assets, sites } from '../db/schema';
+import { generationForecasts, forecastAccuracyMetrics, weatherForecasts, assets, sites, windTurbineMetadata } from '../db/schema';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import axios from 'axios';
 
@@ -304,9 +304,106 @@ export class ForecastService {
    * Detect energy type (solar or wind) from site/asset metadata
    */
   private async detectEnergyType(siteId: string, assetId?: string): Promise<'solar' | 'wind'> {
-    // In a real implementation, check site/asset metadata
-    // For now, default to solar
-    return 'solar';
+    // Check asset metadata first (more specific)
+    if (assetId) {
+      const [asset] = await db
+        .select()
+        .from(assets)
+        .where(eq(assets.id, assetId));
+
+      if (asset) {
+        // Check if asset has wind turbine metadata
+        const [windTurbine] = await db
+          .select()
+          .from(windTurbineMetadata)
+          .where(eq(windTurbineMetadata.assetId, assetId));
+
+        if (windTurbine) {
+          return 'wind';
+        }
+
+        // Check asset metadata JSON
+        if (asset.metadata) {
+          try {
+            const metadata = typeof asset.metadata === 'string'
+              ? JSON.parse(asset.metadata)
+              : asset.metadata;
+            if (metadata.energyType) {
+              return metadata.energyType as 'solar' | 'wind';
+            }
+          } catch (e) {
+            // Invalid JSON, continue
+          }
+        }
+
+        // Infer from asset type
+        if (asset.type) {
+          const type = asset.type.toLowerCase();
+          if (type.includes('wind') || type.includes('turbine')) {
+            return 'wind';
+          }
+          if (type.includes('solar') || type.includes('panel') || type.includes('inverter')) {
+            return 'solar';
+          }
+        }
+      }
+    }
+
+    // Check site config
+    const [site] = await db
+      .select()
+      .from(sites)
+      .where(eq(sites.id, siteId));
+
+    if (site) {
+      // Check energyType field (preferred method)
+      if (site.energyType) {
+        return site.energyType as 'solar' | 'wind';
+      }
+
+      // Check site config JSON (legacy)
+      if (site.config) {
+        try {
+          const config = typeof site.config === 'string'
+            ? JSON.parse(site.config)
+            : site.config;
+          if (config.energyType) {
+            return config.energyType as 'solar' | 'wind';
+          }
+        } catch (e) {
+          // Invalid JSON, continue
+        }
+      }
+
+      // Infer from site type
+      if (site.type) {
+        const type = site.type.toLowerCase();
+        if (type.includes('wind')) {
+          return 'wind';
+        }
+        if (type.includes('solar')) {
+          return 'solar';
+        }
+      }
+
+      // Check if site has any wind turbines
+      const [windAsset] = await db
+        .select()
+        .from(assets)
+        .innerJoin(windTurbineMetadata, eq(assets.id, windTurbineMetadata.assetId))
+        .where(eq(assets.siteId, siteId))
+        .limit(1);
+
+      if (windAsset) {
+        return 'wind';
+      }
+    }
+
+    // Last resort: Throw error instead of defaulting to solar
+    throw new Error(
+      `Unable to determine energy type for site ${siteId}${assetId ? ` and asset ${assetId}` : ''}. ` +
+      `Please specify energyType parameter in the request, or update site/asset configuration with energyType.`
+    );
   }
 
   /**
@@ -361,12 +458,35 @@ export class ForecastService {
       let value = 0;
 
       if (energyType === 'solar') {
-        // Solar: Peak at noon, zero at night
+        // Solar: Peak at noon, zero at night with realistic daily pattern
         const hour = (new Date().getHours() + i) % 24;
-        value = Math.max(0, 10 * Math.sin((hour - 6) * Math.PI / 12));
+        const solarRadiation = Math.max(0, Math.sin((hour - 6) * Math.PI / 12));
+        // Add some cloud cover variation
+        const cloudFactor = 0.8 + Math.random() * 0.2;
+        value = 10 * solarRadiation * cloudFactor;
       } else {
-        // Wind: More random variation
-        value = 5 + Math.random() * 5;
+        // Wind: Weibull distribution for realistic wind patterns
+        // Typical parameters: k=2.0 (shape), lambda=8.0 (scale in m/s)
+        const windSpeed = this.weibullRandom(2.0, 8.0);
+
+        // Wind power curve: P = 0.5 * ρ * A * v³ * Cp
+        // Simplified cubic relationship with cut-in, rated, and cut-out speeds
+        const cutInSpeed = 3.0;  // m/s
+        const ratedSpeed = 12.5; // m/s
+        const cutOutSpeed = 25.0; // m/s
+        const ratedPower = 10.0; // MW
+
+        if (windSpeed < cutInSpeed || windSpeed > cutOutSpeed) {
+          value = 0;
+        } else if (windSpeed >= ratedSpeed) {
+          value = ratedPower;
+        } else {
+          // Cubic power curve between cut-in and rated
+          value = ratedPower * Math.pow((windSpeed - cutInSpeed) / (ratedSpeed - cutInSpeed), 3);
+        }
+
+        // Add some turbulence variation
+        value *= (0.95 + Math.random() * 0.1);
       }
 
       forecast.push(value);
@@ -386,6 +506,17 @@ export class ForecastService {
       model_accuracy_score: 0.85,
       training_data_end_date: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Generate random value from Weibull distribution
+   * Used for realistic wind speed modeling
+   */
+  private weibullRandom(k: number, lambda: number): number {
+    // k = shape parameter (2.0 is typical for wind)
+    // lambda = scale parameter (average wind speed)
+    const u = Math.random();
+    return lambda * Math.pow(-Math.log(1 - u), 1 / k);
   }
 
   /**
