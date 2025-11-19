@@ -1,8 +1,8 @@
-# dCMMS - Comprehensive Solar CMMS Platform
+# dCMMS - Comprehensive Non-Conventional Energy CMMS Platform
 
 <div align="center">
 
-**A production-ready, AI-powered Computerized Maintenance Management System for solar power plants**
+**A production-ready, AI-powered Computerized Maintenance Management System for non-conventional energy power plants**
 
 [![Release](https://img.shields.io/badge/Release-2.0%20(v0.3.0)-blue)](https://github.com/yourusername/dCMMS/releases)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/yourusername/dCMMS)
@@ -37,7 +37,7 @@
 
 ## Overview
 
-**dCMMS** is a comprehensive, production-ready Computerized Maintenance Management System (CMMS) designed specifically for utility-scale solar power plants. Built with enterprise-grade reliability, AI-powered predictive maintenance, and compliance automation, dCMMS enables proactive operations management for solar O&M teams.
+**dCMMS** is a comprehensive, production-ready Computerized Maintenance Management System (CMMS) designed specifically for utility-scale non-conventional energy power plants. Built with enterprise-grade reliability, AI-powered predictive maintenance, and compliance automation, dCMMS enables proactive operations management for non-conventional energy O&M teams.
 
 ### What Makes dCMMS Different?
 
@@ -50,7 +50,7 @@
 
 ### Industry Focus
 
-Designed for utility-scale solar plants (50+ MW), with specific support for:
+Designed for utility-scale non-conventional energy plants (50+ MW), with specific support for:
 - **India**: CEA/MNRE compliance reporting
 - **Global**: NERC, AEMO, NESO (planned for future releases)
 - **Languages**: English + Hindi (15+ languages planned)
@@ -872,7 +872,7 @@ For licensing inquiries, contact: licensing@dcmms.com
 
 <div align="center">
 
-**dCMMS** - Powering the future of solar O&M operations
+**dCMMS** - Powering the future of non-conventional energy O&M operations
 
 Made with ☀️ for the renewable energy industry
 

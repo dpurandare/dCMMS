@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-While dCMMS was designed for **non-conventional energy (Solar, Wind, BESS)**, the current implementation heavily emphasizes solar and lacks:
+While dCMMS was designed for **non-conventional energy (Solar, Wind, BESS)**, the current implementation lacks:
 
 1. **Wind-specific functionality**: No wind turbine models, algorithms, or features
 2. **Power forecasting models**: No ARIMA, SARIMA, LSTM, Prophet, or Transformer implementations for generation forecasting

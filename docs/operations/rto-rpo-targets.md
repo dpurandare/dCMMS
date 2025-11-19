@@ -20,7 +20,7 @@ These targets have been established based on:
 - Business impact analysis
 - Cost-benefit analysis
 - Technical feasibility
-- Industry best practices for IoT/solar monitoring platforms
+- Industry best practices for IoT/non-conventional energy monitoring platforms
 
 ---
 
@@ -89,7 +89,7 @@ These targets have been established based on:
 | < 24 hours | Daily + Incremental | Medium | Medium | ✅ |
 | < 1 week | Weekly | Low | Low | ❌ |
 
-**Selected:** 24-hour RPO acceptable for solar monitoring (telemetry data can be re-collected).
+**Selected:** 24-hour RPO acceptable for non-conventional energy monitoring (telemetry data can be re-collected).
 
 ---
 
