@@ -462,6 +462,224 @@ export const auditLogs = pgTable('audit_logs', {
 });
 
 // ==========================================
+// SPRINT 19: Weather & Forecasting Tables
+// ==========================================
+
+export const weatherForecasts = pgTable('weather_forecasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
+
+  // Forecast metadata
+  forecastTimestamp: timestamp('forecast_timestamp').notNull(),
+  fetchedAt: timestamp('fetched_at').notNull().defaultNow(),
+  source: varchar('source', { length: 50 }).notNull().default('openweathermap'),
+  forecastType: varchar('forecast_type', { length: 20 }).notNull(), // 'historical', 'current', 'forecast'
+
+  // Solar-specific weather data
+  irradiationWhM2: decimal('irradiation_wh_m2', { precision: 10, scale: 2 }),
+  ghiWhM2: decimal('ghi_wh_m2', { precision: 10, scale: 2 }),
+  dniWhM2: decimal('dni_wh_m2', { precision: 10, scale: 2 }),
+  dhiWhM2: decimal('dhi_wh_m2', { precision: 10, scale: 2 }),
+
+  // Wind-specific weather data
+  windSpeedMs: decimal('wind_speed_ms', { precision: 5, scale: 2 }),
+  windDirectionDeg: integer('wind_direction_deg'),
+  windGustMs: decimal('wind_gust_ms', { precision: 5, scale: 2 }),
+
+  // General weather data
+  temperatureC: decimal('temperature_c', { precision: 5, scale: 2 }),
+  humidityPercent: integer('humidity_percent'),
+  pressureHpa: decimal('pressure_hpa', { precision: 7, scale: 2 }),
+  cloudCoverPercent: integer('cloud_cover_percent'),
+  precipitationMm: decimal('precipitation_mm', { precision: 6, scale: 2 }),
+  snowMm: decimal('snow_mm', { precision: 6, scale: 2 }),
+  visibilityM: integer('visibility_m'),
+
+  // Air quality
+  airDensityKgM3: decimal('air_density_kg_m3', { precision: 6, scale: 4 }),
+  aqi: integer('aqi'),
+
+  // Weather description
+  weatherCondition: varchar('weather_condition', { length: 100 }),
+  weatherDescription: text('weather_description'),
+
+  // Raw API response
+  rawApiResponse: text('raw_api_response'), // JSON stored as text
+
+  // Metadata
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const generationForecasts = pgTable('generation_forecasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
+  assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'cascade' }),
+
+  // Forecast metadata
+  forecastTimestamp: timestamp('forecast_timestamp').notNull(),
+  forecastHorizonHours: integer('forecast_horizon_hours').notNull(),
+  generatedAt: timestamp('generated_at').notNull().defaultNow(),
+
+  // Model information
+  modelName: varchar('model_name', { length: 100 }).notNull(),
+  modelVersion: varchar('model_version', { length: 50 }).notNull(),
+  algorithm: varchar('algorithm', { length: 50 }).notNull(),
+
+  // Forecast values
+  predictedGenerationMw: decimal('predicted_generation_mw', { precision: 10, scale: 3 }).notNull(),
+  confidenceIntervalLowerMw: decimal('confidence_interval_lower_mw', { precision: 10, scale: 3 }),
+  confidenceIntervalUpperMw: decimal('confidence_interval_upper_mw', { precision: 10, scale: 3 }),
+  predictionStdDev: decimal('prediction_std_dev', { precision: 10, scale: 3 }),
+
+  // Actual generation (filled after forecast_timestamp)
+  actualGenerationMw: decimal('actual_generation_mw', { precision: 10, scale: 3 }),
+  errorMw: decimal('error_mw', { precision: 10, scale: 3 }),
+  absoluteErrorMw: decimal('absolute_error_mw', { precision: 10, scale: 3 }),
+  percentageError: decimal('percentage_error', { precision: 5, scale: 2 }),
+
+  // Weather inputs
+  weatherForecastId: uuid('weather_forecast_id').references(() => weatherForecasts.id, { onDelete: 'set null' }),
+
+  // Feature values (for explainability)
+  featureValues: text('feature_values'), // JSON stored as text
+
+  // Model metadata
+  modelAccuracyScore: decimal('model_accuracy_score', { precision: 5, scale: 4 }),
+  trainingDataEndDate: timestamp('training_data_end_date'),
+
+  // Status
+  isActive: boolean('is_active').notNull().default(true),
+  accuracyValidated: boolean('accuracy_validated').notNull().default(false),
+
+  // Metadata
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const forecastAccuracyMetrics = pgTable('forecast_accuracy_metrics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  modelName: varchar('model_name', { length: 100 }).notNull(),
+  modelVersion: varchar('model_version', { length: 50 }).notNull(),
+  siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
+
+  // Time period
+  periodStart: timestamp('period_start').notNull(),
+  periodEnd: timestamp('period_end').notNull(),
+  forecastHorizonHours: integer('forecast_horizon_hours').notNull(),
+
+  // Accuracy metrics
+  meanAbsoluteErrorMw: decimal('mean_absolute_error_mw', { precision: 10, scale: 3 }),
+  meanAbsolutePercentageError: decimal('mean_absolute_percentage_error', { precision: 5, scale: 2 }),
+  rootMeanSquaredErrorMw: decimal('root_mean_squared_error_mw', { precision: 10, scale: 3 }),
+  rSquared: decimal('r_squared', { precision: 5, scale: 4 }),
+  forecastSkillScore: decimal('forecast_skill_score', { precision: 5, scale: 4 }),
+
+  // Sample size
+  numForecasts: integer('num_forecasts').notNull(),
+  numValidated: integer('num_validated').notNull(),
+
+  // Metadata
+  calculatedAt: timestamp('calculated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const windTurbineMetadata = pgTable('wind_turbine_metadata', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  assetId: uuid('asset_id').notNull().unique().references(() => assets.id, { onDelete: 'cascade' }),
+
+  // Turbine specifications
+  manufacturer: varchar('manufacturer', { length: 100 }),
+  model: varchar('model', { length: 100 }),
+  ratedPowerMw: decimal('rated_power_mw', { precision: 6, scale: 3 }).notNull(),
+  rotorDiameterM: decimal('rotor_diameter_m', { precision: 6, scale: 2 }),
+  hubHeightM: decimal('hub_height_m', { precision: 6, scale: 2 }),
+  numberOfBlades: integer('number_of_blades').default(3),
+
+  // Power curve
+  cutInWindSpeedMs: decimal('cut_in_wind_speed_ms', { precision: 5, scale: 2 }),
+  ratedWindSpeedMs: decimal('rated_wind_speed_ms', { precision: 5, scale: 2 }),
+  cutOutWindSpeedMs: decimal('cut_out_wind_speed_ms', { precision: 5, scale: 2 }),
+  powerCurveData: text('power_curve_data'), // JSON stored as text
+
+  // Blade specifications
+  bladeLengthM: decimal('blade_length_m', { precision: 6, scale: 2 }),
+  bladeMaterial: varchar('blade_material', { length: 100 }),
+  bladeSerialNumbers: text('blade_serial_numbers'), // JSON array stored as text
+
+  // Gearbox
+  gearboxType: varchar('gearbox_type', { length: 50 }),
+  gearboxRatio: varchar('gearbox_ratio', { length: 20 }),
+  gearboxManufacturer: varchar('gearbox_manufacturer', { length: 100 }),
+
+  // Generator
+  generatorType: varchar('generator_type', { length: 50 }),
+  generatorRatedPowerMw: decimal('generator_rated_power_mw', { precision: 6, scale: 3 }),
+  generatorVoltageKv: decimal('generator_voltage_kv', { precision: 6, scale: 2 }),
+  generatorFrequencyHz: integer('generator_frequency_hz').default(50),
+
+  // Control system
+  controlSystemType: varchar('control_system_type', { length: 100 }),
+  yawSystemType: varchar('yaw_system_type', { length: 100 }),
+  pitchControlType: varchar('pitch_control_type', { length: 100 }),
+
+  // Performance
+  capacityFactor: decimal('capacity_factor', { precision: 5, scale: 4 }),
+  availabilityTarget: decimal('availability_target', { precision: 5, scale: 4 }),
+
+  // Operational limits
+  maxOperationalTempC: integer('max_operational_temp_c'),
+  minOperationalTempC: integer('min_operational_temp_c'),
+  maxWindSpeedSurvivalMs: decimal('max_wind_speed_survival_ms', { precision: 6, scale: 2 }),
+
+  // Installation
+  commissioningDate: timestamp('commissioning_date'),
+  warrantyEndDate: timestamp('warranty_end_date'),
+  expectedLifetimeYears: integer('expected_lifetime_years').default(25),
+
+  // Maintenance
+  lastMajorServiceDate: timestamp('last_major_service_date'),
+  nextMajorServiceDate: timestamp('next_major_service_date'),
+  serviceIntervalMonths: integer('service_interval_months').default(6),
+
+  // Metadata
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const windWorkOrderTemplates = pgTable('wind_work_order_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+
+  // Template metadata
+  templateName: varchar('template_name', { length: 200 }).notNull(),
+  templateCode: varchar('template_code', { length: 50 }).notNull(),
+  description: text('description'),
+
+  // Work order defaults
+  defaultPriority: varchar('default_priority', { length: 20 }).default('medium'),
+  defaultType: varchar('default_type', { length: 20 }).default('preventive'),
+  estimatedDurationHours: decimal('estimated_duration_hours', { precision: 6, scale: 2 }),
+
+  // Checklist and requirements
+  checklistItems: text('checklist_items'), // JSON stored as text
+  requiredSkills: text('required_skills'), // JSON stored as text
+  safetyRequirements: text('safety_requirements'), // JSON stored as text
+  typicalParts: text('typical_parts'), // JSON stored as text
+
+  // Frequency
+  frequencyDays: integer('frequency_days'),
+  frequencyDescription: varchar('frequency_description', { length: 200 }),
+
+  // Active status
+  isActive: boolean('is_active').notNull().default(true),
+
+  // Metadata
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ==========================================
 // RELATIONS
 // ==========================================
 
@@ -701,5 +919,49 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
     references: [users.id],
+  }),
+}));
+
+// Sprint 19: Weather & Forecasting Relations
+export const weatherForecastsRelations = relations(weatherForecasts, ({ one }) => ({
+  site: one(sites, {
+    fields: [weatherForecasts.siteId],
+    references: [sites.id],
+  }),
+}));
+
+export const generationForecastsRelations = relations(generationForecasts, ({ one }) => ({
+  site: one(sites, {
+    fields: [generationForecasts.siteId],
+    references: [sites.id],
+  }),
+  asset: one(assets, {
+    fields: [generationForecasts.assetId],
+    references: [assets.id],
+  }),
+  weatherForecast: one(weatherForecasts, {
+    fields: [generationForecasts.weatherForecastId],
+    references: [weatherForecasts.id],
+  }),
+}));
+
+export const forecastAccuracyMetricsRelations = relations(forecastAccuracyMetrics, ({ one }) => ({
+  site: one(sites, {
+    fields: [forecastAccuracyMetrics.siteId],
+    references: [sites.id],
+  }),
+}));
+
+export const windTurbineMetadataRelations = relations(windTurbineMetadata, ({ one }) => ({
+  asset: one(assets, {
+    fields: [windTurbineMetadata.assetId],
+    references: [assets.id],
+  }),
+}));
+
+export const windWorkOrderTemplatesRelations = relations(windWorkOrderTemplates, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [windWorkOrderTemplates.tenantId],
+    references: [tenants.id],
   }),
 }));

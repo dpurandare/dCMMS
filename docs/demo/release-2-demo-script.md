@@ -63,7 +63,7 @@ This demo showcases dCMMS Release 2 (v0.3.0), featuring 24 new specifications ac
 > "Good morning/afternoon everyone. Thank you for joining us for the dCMMS Release 2 demo. I'm [Name], and I'll be walking you through the exciting new capabilities we've built over the past 7 sprints."
 
 **Key Points:**
-- dCMMS is a comprehensive solar plant CMMS with mobile-first architecture
+- dCMMS is a comprehensive non-conventional energy plant CMMS with mobile-first architecture
 - Release 2 focuses on intelligence, automation, and production readiness
 - 24 new specifications spanning ML, analytics, compliance, and security
 
@@ -105,7 +105,7 @@ This demo showcases dCMMS Release 2 (v0.3.0), featuring 24 new specifications ac
 **Demo Action:** Login as Supervisor
 - Navigate to **Dashboard** → **Anomaly Detection** widget
 
-> "One of the biggest challenges in solar plant operations is detecting equipment issues before they cause failures. With Release 2, our ML models continuously analyze telemetry data to identify anomalies."
+> "One of the biggest challenges in non-conventional energy plant operations is detecting equipment issues before they cause failures. With Release 2, our ML models continuously analyze telemetry data to identify anomalies."
 
 **Show:**
 1. **Anomaly Detection Dashboard**
@@ -322,7 +322,7 @@ This demo showcases dCMMS Release 2 (v0.3.0), featuring 24 new specifications ac
 
 **Demo Action:** Navigate to **Compliance** → **Reports**
 
-> "In India, solar plants must submit quarterly reports to CEA and MNRE. Previously, this was a manual process taking 8-10 hours per quarter. Release 2 automates 80% of this work."
+> "In India, non-conventional energy plants must submit quarterly reports to CEA and MNRE. Previously, this was a manual process taking 8-10 hours per quarter. Release 2 automates 80% of this work."
 
 **Show:**
 1. **Compliance Reports List**

@@ -263,12 +263,12 @@ This document outlines the comprehensive training program for dCMMS Release 2, d
 ```
 [0:00 - 0:30] Introduction
 Hi, I'm [Name] from the dCMMS team. Welcome to dCMMS Release 2,
-the comprehensive solar plant CMMS platform. In this video, we'll
+the comprehensive non-conventional energy plant CMMS platform. In this video, we'll
 give you a quick tour of the system and show you how to get started.
 
 [0:30 - 2:00] What is dCMMS?
 dCMMS is a cloud-based Computerized Maintenance Management System
-specifically designed for solar power plants. It helps you...
+specifically designed for non-conventional energy power plants. It helps you...
 [Show benefits with icons/animations]
 - Manage work orders and maintenance
 - Monitor equipment health in real-time
@@ -567,7 +567,7 @@ User Guide: docs.dcmms.com/field-tech
 ✓ Keep app updated (check weekly)
 ✓ Charge tablet before shift
 
-dCMMS | Solar Plant CMMS | v0.3.0 | 2025
+dCMMS | Non-Conventional Energy Plant CMMS | v0.3.0 | 2025
 ```
 
 ---
@@ -680,7 +680,7 @@ const firstLoginTour = [
   {
     target: '#dashboard',
     title: 'Welcome to dCMMS! 👋',
-    text: 'This is your dashboard—your command center for monitoring and managing your solar plant. Let\'s take a quick tour!',
+    text: 'This is your dashboard—your command center for monitoring and managing your non-conventional energy plant. Let\'s take a quick tour!',
     attachTo: { element: '#dashboard', on: 'top' },
     buttons: [
       { text: 'Skip Tour', action: tour.cancel },

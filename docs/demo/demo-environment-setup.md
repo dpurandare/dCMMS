@@ -12,7 +12,7 @@
 The dCMMS demo environment is a fully functional instance pre-loaded with representative data for product demonstrations, customer trials, and training purposes.
 
 **Key Requirements:**
-- Realistic data representing typical 150 MW solar plant
+- Realistic data representing typical 150 MW non-conventional energy plant
 - Stable performance (API p95 <200ms)
 - Pre-seeded scenarios (anomalies, work orders, reports)
 - Automatic data refresh (weekly)

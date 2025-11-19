@@ -1,0 +1,423 @@
+import { db } from '../db';
+import { weatherForecasts } from '../db/schema';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import axios from 'axios';
+
+// ==========================================
+// Types & Interfaces
+// ==========================================
+
+export interface WeatherForecast {
+  id: string;
+  siteId: string;
+  forecastTimestamp: Date;
+  fetchedAt: Date;
+  source: string;
+  forecastType: 'historical' | 'current' | 'forecast';
+
+  // Solar-specific
+  irradiationWhM2?: number;
+  ghiWhM2?: number;
+  dniWhM2?: number;
+  dhiWhM2?: number;
+
+  // Wind-specific
+  windSpeedMs?: number;
+  windDirectionDeg?: number;
+  windGustMs?: number;
+
+  // General weather
+  temperatureC?: number;
+  humidityPercent?: number;
+  pressureHpa?: number;
+  cloudCoverPercent?: number;
+  precipitationMm?: number;
+  snowMm?: number;
+  visibilityM?: number;
+
+  // Air quality
+  airDensityKgM3?: number;
+  aqi?: number;
+
+  // Description
+  weatherCondition?: string;
+  weatherDescription?: string;
+
+  // Raw data
+  rawApiResponse?: any;
+}
+
+export interface OpenWeatherMapResponse {
+  dt: number;
+  main: {
+    temp: number;
+    feels_like: number;
+    temp_min: number;
+    temp_max: number;
+    pressure: number;
+    humidity: number;
+  };
+  weather: Array<{
+    id: number;
+    main: string;
+    description: string;
+    icon: string;
+  }>;
+  clouds: {
+    all: number;
+  };
+  wind: {
+    speed: number;
+    deg: number;
+    gust?: number;
+  };
+  visibility: number;
+  rain?: {
+    '1h'?: number;
+    '3h'?: number;
+  };
+  snow?: {
+    '1h'?: number;
+    '3h'?: number;
+  };
+}
+
+export interface SiteLocation {
+  siteId: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+}
+
+// ==========================================
+// Weather API Service
+// ==========================================
+
+export class WeatherAPIService {
+  private apiKey: string;
+  private baseUrl: string = 'https://api.openweathermap.org/data/2.5';
+  private solcastBaseUrl: string = 'https://api.solcast.com.au';
+
+  constructor() {
+    this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
+    if (!this.apiKey) {
+      console.warn('OPENWEATHERMAP_API_KEY not set - weather API will not work');
+    }
+  }
+
+  // ==========================================
+  // Public Methods
+  // ==========================================
+
+  /**
+   * Fetch current weather for a site
+   */
+  async fetchCurrentWeather(siteLocation: SiteLocation): Promise<WeatherForecast> {
+    const { latitude, longitude } = siteLocation;
+
+    try {
+      const response = await axios.get<OpenWeatherMapResponse>(
+        `${this.baseUrl}/weather`,
+        {
+          params: {
+            lat: latitude,
+            lon: longitude,
+            appid: this.apiKey,
+            units: 'metric', // Celsius, m/s
+          },
+        }
+      );
+
+      const weatherData = this.transformOpenWeatherMapResponse(
+        response.data,
+        siteLocation.siteId,
+        'current'
+      );
+
+      // Save to database
+      await this.saveWeatherForecast(weatherData);
+
+      return weatherData;
+    } catch (error) {
+      console.error('Error fetching current weather:', error);
+      throw new Error('Failed to fetch current weather');
+    }
+  }
+
+  /**
+   * Fetch 5-day / 3-hour forecast for a site
+   */
+  async fetchForecast(siteLocation: SiteLocation): Promise<WeatherForecast[]> {
+    const { latitude, longitude } = siteLocation;
+
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/forecast`,
+        {
+          params: {
+            lat: latitude,
+            lon: longitude,
+            appid: this.apiKey,
+            units: 'metric',
+          },
+        }
+      );
+
+      const forecasts: WeatherForecast[] = [];
+
+      for (const item of response.data.list) {
+        const weatherData = this.transformOpenWeatherMapResponse(
+          item,
+          siteLocation.siteId,
+          'forecast'
+        );
+        forecasts.push(weatherData);
+      }
+
+      // Save all forecasts to database
+      await this.saveWeatherForecasts(forecasts);
+
+      return forecasts;
+    } catch (error) {
+      console.error('Error fetching weather forecast:', error);
+      throw new Error('Failed to fetch weather forecast');
+    }
+  }
+
+  /**
+   * Fetch historical weather data for a site (requires OpenWeatherMap One Call API)
+   * Note: This requires a paid subscription to OpenWeatherMap
+   */
+  async fetchHistoricalWeather(
+    siteLocation: SiteLocation,
+    startDate: Date,
+    endDate: Date
+  ): Promise<WeatherForecast[]> {
+    // Implementation depends on OpenWeatherMap Historical API
+    // For now, return empty array
+    console.warn('Historical weather API not implemented - requires paid subscription');
+    return [];
+  }
+
+  /**
+   * Fetch solar irradiation forecast from Solcast (solar-specific)
+   * Note: Requires separate Solcast API key
+   */
+  async fetchSolarIrradiationForecast(
+    siteLocation: SiteLocation
+  ): Promise<WeatherForecast[]> {
+    const solcastApiKey = process.env.SOLCAST_API_KEY;
+
+    if (!solcastApiKey) {
+      console.warn('SOLCAST_API_KEY not set - solar irradiation forecast not available');
+      return [];
+    }
+
+    try {
+      const response = await axios.get(
+        `${this.solcastBaseUrl}/world_radiation/forecasts`,
+        {
+          params: {
+            latitude: siteLocation.latitude,
+            longitude: siteLocation.longitude,
+            hours: 168, // 7 days
+            format: 'json',
+          },
+          headers: {
+            'Authorization': `Bearer ${solcastApiKey}`,
+          },
+        }
+      );
+
+      const forecasts: WeatherForecast[] = response.data.forecasts.map((item: any) => ({
+        id: '', // Will be generated by database
+        siteId: siteLocation.siteId,
+        forecastTimestamp: new Date(item.period_end),
+        fetchedAt: new Date(),
+        source: 'solcast',
+        forecastType: 'forecast' as const,
+        ghiWhM2: item.ghi,
+        dniWhM2: item.dni,
+        dhiWhM2: item.dhi,
+        cloudCoverPercent: item.cloud_opacity,
+        rawApiResponse: item,
+      }));
+
+      // Save to database
+      await this.saveWeatherForecasts(forecasts);
+
+      return forecasts;
+    } catch (error) {
+      console.error('Error fetching solar irradiation forecast:', error);
+      throw new Error('Failed to fetch solar irradiation forecast');
+    }
+  }
+
+  /**
+   * Get stored weather forecasts for a site
+   */
+  async getWeatherForecasts(
+    siteId: string,
+    startDate: Date,
+    endDate: Date,
+    forecastType?: 'historical' | 'current' | 'forecast'
+  ): Promise<WeatherForecast[]> {
+    try {
+      const conditions = [
+        eq(weatherForecasts.siteId, siteId),
+        gte(weatherForecasts.forecastTimestamp, startDate),
+        lte(weatherForecasts.forecastTimestamp, endDate),
+      ];
+
+      if (forecastType) {
+        conditions.push(eq(weatherForecasts.forecastType, forecastType));
+      }
+
+      const results = await db
+        .select()
+        .from(weatherForecasts)
+        .where(and(...conditions))
+        .orderBy(desc(weatherForecasts.forecastTimestamp));
+
+      return results as WeatherForecast[];
+    } catch (error) {
+      console.error('Error getting weather forecasts:', error);
+      throw new Error('Failed to get weather forecasts');
+    }
+  }
+
+  /**
+   * Get latest weather forecast for a site
+   */
+  async getLatestWeatherForecast(siteId: string): Promise<WeatherForecast | null> {
+    try {
+      const results = await db
+        .select()
+        .from(weatherForecasts)
+        .where(eq(weatherForecasts.siteId, siteId))
+        .orderBy(desc(weatherForecasts.fetchedAt))
+        .limit(1);
+
+      return results.length > 0 ? (results[0] as WeatherForecast) : null;
+    } catch (error) {
+      console.error('Error getting latest weather forecast:', error);
+      throw new Error('Failed to get latest weather forecast');
+    }
+  }
+
+  // ==========================================
+  // Private Helper Methods
+  // ==========================================
+
+  /**
+   * Transform OpenWeatherMap API response to our internal format
+   */
+  private transformOpenWeatherMapResponse(
+    data: OpenWeatherMapResponse,
+    siteId: string,
+    forecastType: 'historical' | 'current' | 'forecast'
+  ): WeatherForecast {
+    // Calculate air density (ρ = P / (R * T))
+    // P = pressure in Pa, R = 287.05 J/(kg·K), T = temperature in Kelvin
+    const pressurePa = data.main.pressure * 100; // Convert hPa to Pa
+    const temperatureK = data.main.temp + 273.15; // Convert Celsius to Kelvin
+    const airDensityKgM3 = pressurePa / (287.05 * temperatureK);
+
+    return {
+      id: '', // Will be generated by database
+      siteId,
+      forecastTimestamp: new Date(data.dt * 1000),
+      fetchedAt: new Date(),
+      source: 'openweathermap',
+      forecastType,
+
+      // Wind data
+      windSpeedMs: data.wind.speed,
+      windDirectionDeg: data.wind.deg,
+      windGustMs: data.wind.gust,
+
+      // General weather
+      temperatureC: data.main.temp,
+      humidityPercent: data.main.humidity,
+      pressureHpa: data.main.pressure,
+      cloudCoverPercent: data.clouds.all,
+      precipitationMm: data.rain?.['1h'] || data.rain?.['3h'] || 0,
+      snowMm: data.snow?.['1h'] || data.snow?.['3h'] || 0,
+      visibilityM: data.visibility,
+
+      // Air quality
+      airDensityKgM3,
+
+      // Description
+      weatherCondition: data.weather[0]?.main,
+      weatherDescription: data.weather[0]?.description,
+
+      // Raw data for debugging
+      rawApiResponse: data,
+    };
+  }
+
+  /**
+   * Save a single weather forecast to database
+   */
+  private async saveWeatherForecast(weatherData: WeatherForecast): Promise<void> {
+    try {
+      await db.insert(weatherForecasts).values({
+        siteId: weatherData.siteId,
+        forecastTimestamp: weatherData.forecastTimestamp,
+        fetchedAt: weatherData.fetchedAt,
+        source: weatherData.source,
+        forecastType: weatherData.forecastType,
+
+        irradiationWhM2: weatherData.irradiationWhM2,
+        ghiWhM2: weatherData.ghiWhM2,
+        dniWhM2: weatherData.dniWhM2,
+        dhiWhM2: weatherData.dhiWhM2,
+
+        windSpeedMs: weatherData.windSpeedMs,
+        windDirectionDeg: weatherData.windDirectionDeg,
+        windGustMs: weatherData.windGustMs,
+
+        temperatureC: weatherData.temperatureC,
+        humidityPercent: weatherData.humidityPercent,
+        pressureHpa: weatherData.pressureHpa,
+        cloudCoverPercent: weatherData.cloudCoverPercent,
+        precipitationMm: weatherData.precipitationMm,
+        snowMm: weatherData.snowMm,
+        visibilityM: weatherData.visibilityM,
+
+        airDensityKgM3: weatherData.airDensityKgM3,
+        aqi: weatherData.aqi,
+
+        weatherCondition: weatherData.weatherCondition,
+        weatherDescription: weatherData.weatherDescription,
+
+        rawApiResponse: weatherData.rawApiResponse,
+      }).onConflictDoUpdate({
+        target: [weatherForecasts.siteId, weatherForecasts.forecastTimestamp, weatherForecasts.source],
+        set: {
+          fetchedAt: weatherData.fetchedAt,
+          windSpeedMs: weatherData.windSpeedMs,
+          windDirectionDeg: weatherData.windDirectionDeg,
+          temperatureC: weatherData.temperatureC,
+          updatedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error('Error saving weather forecast:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save multiple weather forecasts to database
+   */
+  private async saveWeatherForecasts(forecasts: WeatherForecast[]): Promise<void> {
+    for (const forecast of forecasts) {
+      await this.saveWeatherForecast(forecast);
+    }
+  }
+}
+
+// Export singleton instance
+export const weatherAPIService = new WeatherAPIService();
