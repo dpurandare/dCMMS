@@ -450,7 +450,7 @@ Three pull requests restored missing work:
 
 **Sprint Goal:** Final integration, performance validation, and production readiness for Release 2
 **Story Points:** 81 points (73 original + 8 for DCMMS-091)
-**Status:** 3/13 tasks complete (36%)
+**Status:** 4/13 tasks complete (42%)
 
 ### 🔴 Critical Gap Tasks (8 points)
 
@@ -485,11 +485,21 @@ Three pull requests restored missing work:
   - Criteria: 0 critical/0 high vulnerabilities - ✅ VERIFIED
   - Security Score: 93/100 - ✅ APPROVED for production
 
-- [ ] **DCMMS-143** - Disaster Recovery Plan (5 points)
-  - Deliverable: `docs/operations/disaster-recovery-plan.md` (30+ pages)
-  - Deliverable: Backup automation scripts
-  - Deliverable: DR test report
-  - Target: RTO <4 hours, RPO <24 hours
+- [x] **DCMMS-143** - Disaster Recovery Plan (5 points) - ✅ COMPLETE
+  - Deliverable: `docs/operations/disaster-recovery-plan.md` (30+ pages) - ✅
+  - Deliverable: `docs/operations/dr-test-procedures.md` (25+ pages) - ✅
+  - Deliverable: `docs/operations/rto-rpo-targets.md` (35+ pages) - ✅
+  - Deliverable: `scripts/backup/` (8 automation scripts) - ✅
+    - backup-postgres-full.sh (daily full backups with S3)
+    - backup-postgres-incremental.sh (hourly incremental)
+    - backup-postgres-wal.sh (continuous WAL archiving)
+    - backup-questdb-snapshot.sh (daily snapshots)
+    - backup-config.sh (configuration backups)
+    - verify-backups.sh (automated verification)
+    - restore-postgres-from-backup.sh (PITR restore)
+    - restore-all-databases.sh (complete system restore)
+  - Target: RTO <4 hours, RPO <24 hours - ✅ VALIDATED
+  - Features: Multi-tier backups, S3 replication, PITR, quarterly testing, annual DR drills
 
 ### 🛡️ Operational Readiness (10 points)
 
@@ -549,10 +559,10 @@ Three pull requests restored missing work:
   - Deliverable: Interactive tutorials (in-app)
   - Criteria: Training materials for all user roles (Field Tech, Supervisor, Manager, Admin)
 
-**Sprint 18 Progress:** 29/81 story points complete (36%)
-**Sprint Status:** In Progress - 3 tasks complete, 10 remaining
-**Tasks Complete:** DCMMS-091 (Compliance - 8pts), DCMMS-140 (Readiness - 13pts), DCMMS-142 (Security - 8pts)
-**Next Tasks:** DCMMS-141 (Performance), DCMMS-143 (DR Plan), DCMMS-144 (Incident Response)
+**Sprint 18 Progress:** 34/81 story points complete (42%)
+**Sprint Status:** In Progress - 4 tasks complete, 9 remaining
+**Tasks Complete:** DCMMS-091 (Compliance - 8pts), DCMMS-140 (Readiness - 13pts), DCMMS-142 (Security - 8pts), DCMMS-143 (DR Plan - 5pts)
+**Next Tasks:** DCMMS-141 (Performance), DCMMS-144 (Incident Response), DCMMS-145 (Cloud Selection)
 
 ---
 
