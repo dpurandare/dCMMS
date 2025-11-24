@@ -151,13 +151,13 @@ jobs:
         run: flutter build appbundle --release
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: android-apk
           path: mobile/build/app/outputs/flutter-apk/*.apk
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: android-aab
@@ -195,7 +195,7 @@ jobs:
         run: flutter build ios --release --no-codesign
 
       - name: Upload iOS build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: ios-build
           path: mobile/build/ios/iphoneos/*.app
@@ -233,7 +233,7 @@ jobs:
           format: 'ALL'
 
       - name: Upload OWASP results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: owasp-report
           path: dependency-check-report.*
