@@ -7,7 +7,8 @@ Welcome to the dCMMS (Distributed Computerized Maintenance Management System) us
 1. [Getting Started](#getting-started)
 2. [Managing Sites](#managing-sites)
 3. [Managing Assets](#managing-assets)
-4. [Managing Work Orders](#managing-work-orders)
+4. [Managing Compliance Reports](#managing-compliance-reports)
+5. [Managing Work Orders](#managing-work-orders)
 5. [Using the Mobile App](#using-the-mobile-app)
 6. [FAQ](#faq)
 7. [Troubleshooting](#troubleshooting)
@@ -53,6 +54,7 @@ Sites are physical locations where your assets are located (e.g., solar farms, w
    - **Name*** (required): e.g., "Solar Farm North"
    - **Code***: Unique identifier, e.g., "SF-NORTH-01"
    - **Description**: Brief description of the site
+   > **Note:** The dCMMS platform supports multiple energy types (Solar, Wind, Hydro, Biomass, Geothermal, Hybrid) for specialized forecasting. Currently, this is configured during backend setup or auto-detected.
    - **Address**: Physical address
    - **Coordinates**: Latitude and longitude (for mapping)
    - **Timezone**: Select the appropriate timezone
@@ -179,6 +181,38 @@ Common status changes:
 1. Navigate to the asset details page
 2. Click the **Delete** button
 3. Confirm the deletion
+
+---
+
+## Managing Compliance Reports
+
+Compliance reports help you meet regulatory requirements (CEA, MNRE) and track asset performance.
+
+### Generating a New Report
+
+1. Click **Reports** in the sidebar navigation
+2. Click the **Generate Report** button
+3. Fill in the report details:
+   - **Template**: Select the report type (e.g., CEA Compliance, MNRE Quarterly)
+   - **Date Range**: Select the period to cover
+   - **Site** (Optional): Filter by specific site
+4. Click **Generate**
+
+### Viewing and Downloading Reports
+
+1. Go to the **Reports** page
+2. You will see a list of generated reports with their status (Draft, Final, Submitted)
+3. Click the **Actions** menu (three dots) on a report to:
+   - **View Details**: See report metadata and preview
+   - **Download**: Download the report as PDF
+   - **Delete**: Remove the report (if not submitted)
+
+### Report Templates
+
+- **CEA Compliance**: Standard format for Central Electricity Authority reporting
+- **MNRE Quarterly**: Quarterly performance report for Ministry of New and Renewable Energy
+- **Asset Maintenance**: Summary of maintenance activities and asset health
+- **Performance Analysis**: Detailed generation and efficiency analysis
 
 ---
 
@@ -392,7 +426,7 @@ Status changes to `Cancelled`
 
 ## Using the Mobile App
 
-> **Coming Soon:** The mobile app is currently in development (Sprint 4). This section will be updated once available.
+> **Coming Soon:** The mobile app is currently in development. This section will be updated once available.
 
 ### Features (Planned)
 
@@ -432,13 +466,17 @@ A: dCMMS works best on modern browsers:
 
 **Q: Can I access dCMMS on my phone?**
 
-A: Yes! The web interface is mobile-responsive. A dedicated mobile app is coming in Sprint 4.
+A: Yes! The web interface is mobile-responsive. A dedicated mobile app is currently in development.
 
 **Q: How do I reset my password?**
 
 A: Click "Forgot Password?" on the login page and follow the instructions. (Feature implementation depends on your organization's identity provider)
 
-### Assets
+### Assets & Energy Types
+
+**Q: What energy types are supported?**
+
+A: dCMMS supports Solar, Wind, Hydro, Biomass, Geothermal, and Hybrid energy types. Each type uses specialized forecasting models (e.g., solar irradiance for solar, wind speed/density for wind) to ensure accurate generation predictions.
 
 **Q: Can I import assets from a spreadsheet?**
 
@@ -644,8 +682,8 @@ If you can't resolve an issue:
 
 ## Version Information
 
-**Guide Version:** 1.0
-**dCMMS Version:** MVP (Post-Sprint 4)
-**Last Updated:** December 2025
+**Guide Version:** 1.1
+**dCMMS Version:** MVP
+**Last Updated:** November 2025
 
 For the latest version of this guide, visit: https://docs.dcmms.com

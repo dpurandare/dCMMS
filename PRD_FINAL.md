@@ -357,7 +357,7 @@ Device → Edge Collector → EMQX (MQTT) → Kafka Raw → Flink Real-Time Proc
 - OLTP & Analytics: PostgreSQL for transactions; Trino/ClickHouse/OpenSearch for analytics/BI.
 - Object Storage: S3-compatible (cloud S3 or MinIO); Iceberg tables for lakehouse ACID.
 - Frontend & Mobile: React (TypeScript); React Native or Flutter; PWA fallback.
-- ML/MLOps: Python (scikit-learn, PyTorch), MLflow registry, Feast feature store, KServe/Seldon/Triton for serving.
+- ML/MLOps: Python (scikit-learn, PyTorch), MLflow registry, Feast feature store, Metaflow pipelines, KServe/Seldon/Triton for serving.
 - Orchestration & IaC: Kubernetes, Terraform; operators for stateful services; CI/CD pipelines.
 
 ### 7.5 Integration & Open Standards
@@ -683,7 +683,7 @@ Continuous delivery: nightly builds, automated regression, staging deploy before
 - Set up development infrastructure per `specs/05_DEPLOYMENT_RUNBOOKS.md`
 - Establish testing framework per `specs/07_TESTING_STRATEGY.md`
 - Configure CI/CD pipeline with automated testing
-- Initialize feature store and MLOps infrastructure (for Release 2 readiness)
+- Initialize feature store and MLOps infrastructure (Completed in Sprint 12-14)
 
 ## 25. Cost Considerations
 

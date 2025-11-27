@@ -357,6 +357,65 @@ services:
     networks:
       - dcmms-network
 
+  # ==========================================
+  # APPLICATION - Backend API
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dcmms-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://dcmms_user:dcmms_password_dev@postgres:5432/dcmms
+      REDIS_URL: redis://:redis_password_dev@redis:6379
+      KAFKA_BROKERS: kafka:9092
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # APPLICATION - Frontend Web App
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dcmms-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - dcmms-network
+
+  # ==========================================
+  # APPLICATION - ML Inference Service
+  # ==========================================
+  ml-inference:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    container_name: dcmms-ml-inference
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - dcmms-network
+
 # ==========================================
 # VOLUMES
 # ==========================================

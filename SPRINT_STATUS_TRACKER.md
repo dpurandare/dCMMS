@@ -403,6 +403,28 @@ The following task numbers were planned but not implemented. These tasks were ei
 **Total Descoped:** 40 tasks (~40% of original plan)
 
 **Reason:** Agile development with stakeholder-driven prioritization led to scope adjustments. These gaps represent normal sprint planning evolution.
+- **Sprint 1-4 Gaps:** ERP integration deferred (DCMMS-038-041)
+- **Sprint 16-17 Gaps:** Hindi-only i18n decision (DCMMS-128-135)
+- **Other Gaps:** Task consolidation and transitional work
+
+**Detailed Analysis:** See `TASK_DISCREPANCIES.md` (consolidated into this document as of Nov 27, 2025).
+
+## Stakeholder Decisions Log
+
+**Source:** `STAKEHOLDER_DECISIONS.md` (consolidated Nov 27, 2025)
+
+| Decision Area | Decision | Impact/Rationale |
+|---------------|----------|------------------|
+| **Cloud Strategy** | **Cloud-Agnostic** | Support AWS/Azure/GCP via K8s/Terraform. No vendor lock-in. |
+| **Compliance** | **India Only (CEA/MNRE)** | Deferred NERC/AEMO/NESO to Release 3+. Accelerates Release 1. |
+| **ERP Integration** | **Postponed** | Deferred to Release 3+. Focus on core CMMS features first. |
+| **IdP Strategy** | **Flexible Adapter** | Start with Auth0, support Azure AD/Keycloak via adapter pattern. |
+| **Mobile Security** | **No MDM Required** | Use app-level security (biometric, encryption) instead of MDM. |
+| **SCADA** | **Multi-Protocol** | Support OPC-UA, Modbus, IEC 61850, DNP3 from start. |
+| **Notifications** | **Acquire as Needed** | Use free tiers for dev. No pre-existing contracts. |
+| **Deployment** | **Phased Rollout** | Pilot sites first, then gradual expansion. |
+| **UI Strategy** | **High-Fidelity First** | Detailed mockups before code. Added time to Sprint 0. |
+| **Training** | **Interactive + Docs** | In-app tutorials + comprehensive documentation. |
 
 ---
 
@@ -432,7 +454,7 @@ Three pull requests restored missing work:
 
 ## Verification Report
 
-**Detailed verification:** See `/tmp/detailed_verification.txt` (generated Nov 19, 2025)
+**Detailed verification:** The detailed `SPRINT_VERIFICATION_REPORT.md` has been consolidated into this document as of Nov 27, 2025.
 
 **Verification Method:**
 1. Git commit history analysis (`git log --grep="DCMMS"`)
