@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-package-lock.json
+# package-lock.json
 
 # Build output
 dist/
@@ -32,7 +32,7 @@ coverage/
 .DS_Store
 
 # Drizzle
-drizzle/
+# drizzle/
 
 # Temporary files
 *.tmp

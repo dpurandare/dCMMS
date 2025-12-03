@@ -19,27 +19,32 @@
  *   });
  */
 
-import Handlebars from 'handlebars';
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
-import WebhookService from './webhook.service';
+import Handlebars from "handlebars";
+import { Pool } from "pg";
+import { randomUUID } from "crypto";
+import WebhookService from "./webhook.service";
 
 // ==========================================
 // Types
 // ==========================================
 
-export type NotificationChannel = 'email' | 'sms' | 'push' | 'webhook' | 'slack';
+export type NotificationChannel =
+  | "email"
+  | "sms"
+  | "push"
+  | "webhook"
+  | "slack";
 export type NotificationEventType =
-  | 'work_order_assigned'
-  | 'work_order_overdue'
-  | 'work_order_completed'
-  | 'alert_critical'
-  | 'alert_high'
-  | 'alert_medium'
-  | 'alert_acknowledged'
-  | 'alert_resolved'
-  | 'asset_down'
-  | 'maintenance_due';
+  | "work_order_assigned"
+  | "work_order_overdue"
+  | "work_order_completed"
+  | "alert_critical"
+  | "alert_high"
+  | "alert_medium"
+  | "alert_acknowledged"
+  | "alert_resolved"
+  | "asset_down"
+  | "maintenance_due";
 
 export interface NotificationTemplate {
   id: string;
@@ -62,10 +67,10 @@ export interface NotificationRule {
   trigger_conditions: Record<string, any>;
   template_code: string;
   channels: string[];
-  recipient_type: 'user' | 'role' | 'dynamic';
+  recipient_type: "user" | "role" | "dynamic";
   recipient_ids?: string[];
   recipient_dynamic?: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority: "low" | "medium" | "high" | "critical";
   rate_limit_count: number;
   rate_limit_period_seconds: number;
   escalation_enabled: boolean;
@@ -77,9 +82,9 @@ export interface NotificationRequest {
   tenantId: string;
   templateCode: string;
   userId: string;
-  channels: ('email' | 'sms' | 'push')[];
+  channels: ("email" | "sms" | "push")[];
   variables: Record<string, any>;
-  priority?: 'low' | 'medium' | 'high' | 'critical';
+  priority?: "low" | "medium" | "high" | "critical";
   scheduledAt?: Date;
   metadata?: Record<string, any>;
   ruleId?: string;
@@ -121,31 +126,34 @@ export class NotificationService {
    */
   private registerHandlebarsHelpers() {
     // Date formatting helper
-    Handlebars.registerHelper('formatDate', (date: string | Date, format: string) => {
-      const d = new Date(date);
-      if (format === 'short') {
-        return d.toLocaleDateString();
-      } else if (format === 'long') {
-        return d.toLocaleString();
-      }
-      return d.toISOString();
-    });
+    Handlebars.registerHelper(
+      "formatDate",
+      (date: string | Date, format: string) => {
+        const d = new Date(date);
+        if (format === "short") {
+          return d.toLocaleDateString();
+        } else if (format === "long") {
+          return d.toLocaleString();
+        }
+        return d.toISOString();
+      },
+    );
 
     // Currency formatting helper
-    Handlebars.registerHelper('formatCurrency', (value: number) => {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
+    Handlebars.registerHelper("formatCurrency", (value: number) => {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
       }).format(value);
     });
 
     // Uppercase helper
-    Handlebars.registerHelper('uppercase', (str: string) => {
-      return str ? str.toUpperCase() : '';
+    Handlebars.registerHelper("uppercase", (str: string) => {
+      return str ? str.toUpperCase() : "";
     });
 
     // Conditional helper
-    Handlebars.registerHelper('eq', (a: any, b: any) => {
+    Handlebars.registerHelper("eq", (a: any, b: any) => {
       return a === b;
     });
   }
@@ -160,15 +168,21 @@ export class NotificationService {
       userId,
       channels,
       variables,
-      priority = 'medium',
+      priority = "medium",
       scheduledAt = new Date(),
       metadata,
       ruleId,
     } = request;
 
     // Validate inputs
-    if (!tenantId || !templateCode || !userId || !channels || channels.length === 0) {
-      throw new Error('Missing required notification parameters');
+    if (
+      !tenantId ||
+      !templateCode ||
+      !userId ||
+      !channels ||
+      channels.length === 0
+    ) {
+      throw new Error("Missing required notification parameters");
     }
 
     // Get template
@@ -187,12 +201,14 @@ export class NotificationService {
       if (allowed) {
         allowedChannels.push(channel);
       } else {
-        console.warn(`Rate limit exceeded for user ${userId} on channel ${channel}`);
+        console.warn(
+          `Rate limit exceeded for user ${userId} on channel ${channel}`,
+        );
       }
     }
 
     if (allowedChannels.length === 0) {
-      throw new Error('All channels rate limited');
+      throw new Error("All channels rate limited");
     }
 
     // Queue notifications for each allowed channel
@@ -200,7 +216,11 @@ export class NotificationService {
 
     for (const channel of allowedChannels) {
       // Render template
-      const { subject, body } = await this.renderTemplate(template, variables, channel);
+      const { subject, body } = await this.renderTemplate(
+        template,
+        variables,
+        channel,
+      );
 
       // Queue notification
       const notificationId = await this.queueNotification({
@@ -231,7 +251,7 @@ export class NotificationService {
       variables,
       metadata,
     }).catch((error) => {
-      console.error('Error triggering webhooks:', error);
+      console.error("Error triggering webhooks:", error);
     });
 
     return notificationIds;
@@ -240,11 +260,14 @@ export class NotificationService {
   /**
    * Get notification template from database (with caching)
    */
-  private async getTemplate(tenantId: string, code: string): Promise<NotificationTemplate | null> {
+  private async getTemplate(
+    tenantId: string,
+    code: string,
+  ): Promise<NotificationTemplate | null> {
     const result = await this.db.query(
       `SELECT * FROM notification_templates
        WHERE tenant_id = $1 AND code = $2 AND enabled = true`,
-      [tenantId, code]
+      [tenantId, code],
     );
 
     if (result.rows.length === 0) {
@@ -257,12 +280,17 @@ export class NotificationService {
   /**
    * Validate that all required template variables are provided
    */
-  private validateTemplateVariables(template: NotificationTemplate, variables: Record<string, any>) {
+  private validateTemplateVariables(
+    template: NotificationTemplate,
+    variables: Record<string, any>,
+  ) {
     const requiredVars = template.variables || [];
     const missingVars = requiredVars.filter((v: string) => !(v in variables));
 
     if (missingVars.length > 0) {
-      throw new Error(`Missing required template variables: ${missingVars.join(', ')}`);
+      throw new Error(
+        `Missing required template variables: ${missingVars.join(", ")}`,
+      );
     }
   }
 
@@ -272,29 +300,34 @@ export class NotificationService {
   private async renderTemplate(
     template: NotificationTemplate,
     variables: Record<string, any>,
-    channel: string
+    channel: string,
   ): Promise<{ subject?: string; body: string }> {
     // Compile templates (use cache if available)
     const subjectCacheKey = `${template.id}:subject`;
     const bodyCacheKey = `${template.id}:body:${channel}`;
 
     let subjectTemplate: Handlebars.TemplateDelegate | undefined;
-    let bodyTemplate: Handlebars.TemplateDelegate;
 
     // Subject (email only)
     if (template.subject) {
       if (!this.templateCache.has(subjectCacheKey)) {
-        this.templateCache.set(subjectCacheKey, Handlebars.compile(template.subject));
+        this.templateCache.set(
+          subjectCacheKey,
+          Handlebars.compile(template.subject),
+        );
       }
       subjectTemplate = this.templateCache.get(subjectCacheKey);
     }
 
     // Body
     if (!this.templateCache.has(bodyCacheKey)) {
-      const bodySource = channel === 'email' && template.body_html ? template.body_html : template.body_text;
+      const bodySource =
+        channel === "email" && template.body_html
+          ? template.body_html
+          : template.body_text;
       this.templateCache.set(bodyCacheKey, Handlebars.compile(bodySource));
     }
-    bodyTemplate = this.templateCache.get(bodyCacheKey)!;
+    const bodyTemplate = this.templateCache.get(bodyCacheKey)!;
 
     // Render
     const subject = subjectTemplate ? subjectTemplate(variables) : undefined;
@@ -337,10 +370,10 @@ export class NotificationService {
         params.body,
         JSON.stringify(params.variables),
         params.priority,
-        'pending',
+        "pending",
         params.scheduledAt,
         params.metadata ? JSON.stringify(params.metadata) : null,
-      ]
+      ],
     );
 
     return id;
@@ -349,7 +382,11 @@ export class NotificationService {
   /**
    * Check if user has exceeded rate limit for channel
    */
-  private async checkRateLimit(tenantId: string, userId: string, channel: string): Promise<boolean> {
+  private async checkRateLimit(
+    tenantId: string,
+    userId: string,
+    channel: string,
+  ): Promise<boolean> {
     // Get default rate limit (can be customized per user/tenant)
     const rateLimit = 10; // Max 10 notifications
     const periodSeconds = 60; // Per 60 seconds
@@ -363,10 +400,10 @@ export class NotificationService {
        FROM notification_rate_limits
        WHERE tenant_id = $1 AND user_id = $2 AND channel = $3
          AND window_end > $4`,
-      [tenantId, userId, channel, windowStart]
+      [tenantId, userId, channel, windowStart],
     );
 
-    const currentCount = parseInt(result.rows[0]?.count || '0');
+    const currentCount = parseInt(result.rows[0]?.count || "0");
 
     return currentCount < rateLimit;
   }
@@ -374,7 +411,11 @@ export class NotificationService {
   /**
    * Increment rate limit counter
    */
-  private async incrementRateLimit(tenantId: string, userId: string, channel: string) {
+  private async incrementRateLimit(
+    tenantId: string,
+    userId: string,
+    channel: string,
+  ) {
     const windowSize = 60; // 60 seconds
     const windowStart = new Date();
     windowStart.setSeconds(0, 0); // Align to minute boundary
@@ -388,14 +429,16 @@ export class NotificationService {
        DO UPDATE SET
          notification_count = notification_rate_limits.notification_count + 1,
          updated_at = NOW()`,
-      [tenantId, userId, channel, windowStart, windowEnd]
+      [tenantId, userId, channel, windowStart, windowEnd],
     );
   }
 
   /**
    * Get pending notifications from queue (for worker to process)
    */
-  async getPendingNotifications(limit: number = 100): Promise<QueuedNotification[]> {
+  async getPendingNotifications(
+    limit: number = 100,
+  ): Promise<QueuedNotification[]> {
     const result = await this.db.query(
       `SELECT * FROM notification_queue
        WHERE status = 'pending'
@@ -409,7 +452,7 @@ export class NotificationService {
          END,
          scheduled_at
        LIMIT $1`,
-      [limit]
+      [limit],
     );
 
     return result.rows;
@@ -423,30 +466,33 @@ export class NotificationService {
       `UPDATE notification_queue
        SET status = 'processing', updated_at = NOW()
        WHERE id = $1`,
-      [notificationId]
+      [notificationId],
     );
   }
 
   /**
    * Mark notification as sent
    */
-  async markAsSent(notificationId: string, providerMessageId?: string): Promise<void> {
+  async markAsSent(
+    notificationId: string,
+    providerMessageId?: string,
+  ): Promise<void> {
     await this.db.query(
       `UPDATE notification_queue
        SET status = 'sent', sent_at = NOW(), updated_at = NOW()
        WHERE id = $1`,
-      [notificationId]
+      [notificationId],
     );
 
     // Record in history
     const notification = await this.db.query(
       `SELECT * FROM notification_queue WHERE id = $1`,
-      [notificationId]
+      [notificationId],
     );
 
     if (notification.rows.length > 0) {
       const n = notification.rows[0];
-      await this.recordHistory(n, 'sent', providerMessageId);
+      await this.recordHistory(n, "sent", providerMessageId);
     }
   }
 
@@ -471,12 +517,12 @@ export class NotificationService {
          updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
-      [notificationId, error]
+      [notificationId, error],
     );
 
     if (result.rows.length > 0) {
       const n = result.rows[0];
-      await this.recordHistory(n, 'failed', undefined, error);
+      await this.recordHistory(n, "failed", undefined, error);
     }
   }
 
@@ -487,12 +533,12 @@ export class NotificationService {
     notification: QueuedNotification,
     status: string,
     providerMessageId?: string,
-    errorMessage?: string
+    errorMessage?: string,
   ): Promise<void> {
     // Get user details
     const userResult = await this.db.query(
       `SELECT email, phone FROM users WHERE id = $1`,
-      [notification.user_id]
+      [notification.user_id],
     );
 
     const user = userResult.rows[0];
@@ -517,18 +563,22 @@ export class NotificationService {
         providerMessageId,
         errorMessage,
         notification.metadata ? JSON.stringify(notification.metadata) : null,
-      ]
+      ],
     );
   }
 
   /**
    * Evaluate notification rules for an event
    */
-  async evaluateRules(tenantId: string, eventType: string, eventData: Record<string, any>): Promise<NotificationRule[]> {
+  async evaluateRules(
+    tenantId: string,
+    eventType: string,
+    eventData: Record<string, any>,
+  ): Promise<NotificationRule[]> {
     const result = await this.db.query(
       `SELECT * FROM notification_rules
        WHERE tenant_id = $1 AND enabled = true`,
-      [tenantId]
+      [tenantId],
     );
 
     const matchingRules: NotificationRule[] = [];
@@ -545,7 +595,11 @@ export class NotificationService {
   /**
    * Check if rule conditions match the event
    */
-  private ruleMatches(rule: NotificationRule, eventType: string, eventData: Record<string, any>): boolean {
+  private ruleMatches(
+    rule: NotificationRule,
+    eventType: string,
+    eventData: Record<string, any>,
+  ): boolean {
     const conditions = rule.trigger_conditions;
 
     // Check event type
@@ -581,37 +635,40 @@ export class NotificationService {
   /**
    * Resolve dynamic recipients (e.g., "asset_owner", "wo_assignee")
    */
-  async resolveDynamicRecipients(recipientType: string, eventData: Record<string, any>): Promise<string[]> {
+  async resolveDynamicRecipients(
+    recipientType: string,
+    eventData: Record<string, any>,
+  ): Promise<string[]> {
     const userIds: string[] = [];
 
-    if (recipientType === 'asset_owner') {
+    if (recipientType === "asset_owner") {
       // Get asset owner from assets table
       if (eventData.asset_id) {
         const result = await this.db.query(
           `SELECT owner_id FROM assets WHERE id = $1`,
-          [eventData.asset_id]
+          [eventData.asset_id],
         );
         if (result.rows[0]?.owner_id) {
           userIds.push(result.rows[0].owner_id);
         }
       }
-    } else if (recipientType === 'wo_assignee') {
+    } else if (recipientType === "wo_assignee") {
       // Get work order assignee
       if (eventData.work_order_id) {
         const result = await this.db.query(
           `SELECT assigned_to FROM work_orders WHERE id = $1`,
-          [eventData.work_order_id]
+          [eventData.work_order_id],
         );
         if (result.rows[0]?.assigned_to) {
           userIds.push(result.rows[0].assigned_to);
         }
       }
-    } else if (recipientType === 'supervisor') {
+    } else if (recipientType === "supervisor") {
       // Get user's supervisor
       if (eventData.user_id) {
         const result = await this.db.query(
           `SELECT supervisor_id FROM users WHERE id = $1`,
-          [eventData.user_id]
+          [eventData.user_id],
         );
         if (result.rows[0]?.supervisor_id) {
           userIds.push(result.rows[0].supervisor_id);
@@ -628,7 +685,7 @@ export class NotificationService {
   private async triggerWebhooksAsync(
     tenantId: string,
     eventType: string,
-    eventData: Record<string, any>
+    eventData: Record<string, any>,
   ): Promise<void> {
     try {
       await this.webhookService.triggerWebhooks(tenantId, eventType, eventData);
@@ -639,10 +696,12 @@ export class NotificationService {
   }
 }
 
-import { FastifyInstance } from 'fastify';
-import { pool } from '../db';
+import { FastifyInstance } from "fastify";
+import { pool } from "../db";
 
-export function createNotificationService(fastify: FastifyInstance): NotificationService {
+export function createNotificationService(
+  fastify: FastifyInstance,
+): NotificationService {
   return new NotificationService(pool);
 }
 
