@@ -187,9 +187,9 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
         siteId: body.siteId,
         assetId: body.assetId,
         assignedTo: body.assignedTo,
-        scheduledStartDate: body.scheduledStartDate ? new Date(body.scheduledStartDate) : undefined,
         scheduledEndDate: body.scheduledEndDate ? new Date(body.scheduledEndDate) : undefined,
-        estimatedHours: body.estimatedHours,
+        estimatedHours: body.estimatedHours?.toString(),
+        createdBy: user.id,
       });
 
       return reply.status(201).send(workOrder);
@@ -262,8 +262,8 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       if (body.priority !== undefined) updates.priority = body.priority;
       if (body.status !== undefined) updates.status = body.status;
       if (body.assignedTo !== undefined) updates.assignedTo = body.assignedTo;
-      if (body.estimatedHours !== undefined) updates.estimatedHours = body.estimatedHours;
-      if (body.actualHours !== undefined) updates.actualHours = body.actualHours;
+      if (body.estimatedHours !== undefined) updates.estimatedHours = body.estimatedHours.toString();
+      if (body.actualHours !== undefined) updates.actualHours = body.actualHours.toString();
 
       if (body.scheduledStartDate) updates.scheduledStartDate = new Date(body.scheduledStartDate);
       if (body.scheduledEndDate) updates.scheduledEndDate = new Date(body.scheduledEndDate);

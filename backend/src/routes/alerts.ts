@@ -28,6 +28,12 @@ const createAlertSchema = z.object({
   metadata: z.record(z.any()).optional(),
 });
 
+const suppressAlertSchema = z.object({
+  userId: z.string().uuid(),
+  reason: z.string(),
+  durationMinutes: z.number().optional(),
+});
+
 export default async function alertRoutes(fastify: FastifyInstance) {
   // Initialize alert notification handler
   const alertNotificationHandler = createAlertNotificationHandler(fastify);
@@ -419,61 +425,63 @@ export default async function alertRoutes(fastify: FastifyInstance) {
   // Suppress alert (temporarily disable notifications)
   fastify.post<{
     Params: { alertId: string };
-    Body: {
-      userId: z.string().uuid();
-      reason: z.string();
-      durationMinutes: z.number().optional();
-    };
-  }>('/alerts/:alertId/suppress', async (request, reply) => {
-    try {
-      const { alertId } = request.params;
-      const { userId, reason, durationMinutes = 60 } = request.body;
+    Body: z.infer<typeof suppressAlertSchema>;
+  }>('/alerts/:alertId/suppress',
+    {
+      schema: {
+        body: suppressAlertSchema,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { alertId } = request.params;
+        const { userId, reason, durationMinutes = 60 } = request.body;
 
-      // Get alert
-      const alert = await db.query.alerts.findFirst({
-        where: eq(alerts.id, alertId),
-      });
+        // Get alert
+        const alert = await db.query.alerts.findFirst({
+          where: eq(alerts.id, alertId),
+        });
 
-      if (!alert) {
-        return reply.status(404).send({
-          error: 'Alert not found',
+        if (!alert) {
+          return reply.status(404).send({
+            error: 'Alert not found',
+          });
+        }
+
+        // Calculate suppression end time
+        const suppressedUntil = new Date();
+        suppressedUntil.setMinutes(suppressedUntil.getMinutes() + durationMinutes);
+
+        // Update alert
+        const [updated] = await db
+          .update(alerts)
+          .set({
+            status: 'suppressed',
+            metadata: JSON.stringify({
+              ...JSON.parse(alert.metadata || '{}'),
+              suppressed_by: userId,
+              suppression_reason: reason,
+              suppressed_at: new Date().toISOString(),
+              suppressed_until: suppressedUntil.toISOString(),
+            }),
+            updatedAt: new Date(),
+          })
+          .where(eq(alerts.id, alertId))
+          .returning();
+
+        fastify.log.info({ alertId, userId, durationMinutes }, 'Alert suppressed');
+
+        return reply.send({
+          alert: updated,
+          message: `Alert suppressed for ${durationMinutes} minutes`,
+        });
+      } catch (error) {
+        fastify.log.error({ error }, 'Failed to suppress alert');
+        return reply.status(500).send({
+          error: 'Failed to suppress alert',
         });
       }
-
-      // Calculate suppression end time
-      const suppressedUntil = new Date();
-      suppressedUntil.setMinutes(suppressedUntil.getMinutes() + durationMinutes);
-
-      // Update alert
-      const [updated] = await db
-        .update(alerts)
-        .set({
-          status: 'suppressed',
-          metadata: JSON.stringify({
-            ...JSON.parse(alert.metadata || '{}'),
-            suppressed_by: userId,
-            suppression_reason: reason,
-            suppressed_at: new Date().toISOString(),
-            suppressed_until: suppressedUntil.toISOString(),
-          }),
-          updatedAt: new Date(),
-        })
-        .where(eq(alerts.id, alertId))
-        .returning();
-
-      fastify.log.info({ alertId, userId, durationMinutes }, 'Alert suppressed');
-
-      return reply.send({
-        alert: updated,
-        message: `Alert suppressed for ${durationMinutes} minutes`,
-      });
-    } catch (error) {
-      fastify.log.error({ error }, 'Failed to suppress alert');
-      return reply.status(500).send({
-        error: 'Failed to suppress alert',
-      });
-    }
-  });
+    });
 
   // Get alert statistics
   fastify.get<{

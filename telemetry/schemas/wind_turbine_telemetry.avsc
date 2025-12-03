@@ -1,0 +1,31 @@
+{
+  "type": "record",
+  "name": "WindTurbineTelemetry",
+  "namespace": "com.dcmms.telemetry",
+  "doc": "Telemetry data from wind turbine assets",
+  "fields": [
+    { "name": "asset_id", "type": "string", "doc": "UUID of the wind turbine asset" },
+    { "name": "timestamp", "type": "long", "doc": "Unix timestamp in milliseconds" },
+    
+    { "name": "wind_speed_ms", "type": ["null", "double"], "default": null, "doc": "Wind speed in m/s" },
+    { "name": "wind_direction_deg", "type": ["null", "double"], "default": null, "doc": "Wind direction in degrees (0-360)" },
+    { "name": "power_output_kw", "type": ["null", "double"], "default": null, "doc": "Active power output in kW" },
+    
+    { "name": "rotor_speed_rpm", "type": ["null", "double"], "default": null, "doc": "Rotor speed in RPM" },
+    { "name": "generator_speed_rpm", "type": ["null", "double"], "default": null, "doc": "Generator speed in RPM" },
+    
+    { "name": "nacelle_position_deg", "type": ["null", "double"], "default": null, "doc": "Nacelle yaw position in degrees" },
+    { "name": "blade_pitch_angle_deg", "type": ["null", "double"], "default": null, "doc": "Average blade pitch angle in degrees" },
+    
+    { "name": "ambient_temperature_c", "type": ["null", "double"], "default": null, "doc": "Ambient air temperature in Celsius" },
+    { "name": "nacelle_temperature_c", "type": ["null", "double"], "default": null, "doc": "Temperature inside nacelle in Celsius" },
+    { "name": "gearbox_oil_temperature_c", "type": ["null", "double"], "default": null, "doc": "Gearbox oil temperature in Celsius" },
+    { "name": "generator_bearing_temperature_c", "type": ["null", "double"], "default": null, "doc": "Generator bearing temperature in Celsius" },
+    
+    { "name": "grid_voltage_kv", "type": ["null", "double"], "default": null, "doc": "Grid voltage in kV" },
+    { "name": "grid_frequency_hz", "type": ["null", "double"], "default": null, "doc": "Grid frequency in Hz" },
+    
+    { "name": "availability_status", "type": "int", "default": 1, "doc": "1=Available, 0=Unavailable" },
+    { "name": "alarm_codes", "type": ["null", { "type": "array", "items": "string" }], "default": null, "doc": "List of active alarm codes" }
+  ]
+}

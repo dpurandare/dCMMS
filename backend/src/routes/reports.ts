@@ -75,8 +75,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
-        const userId = request.user?.id;
+        const tenantId = (request.user as any)?.tenantId;
+        const userId = (request.user as any)?.id;
 
         if (!tenantId || !userId) {
           return reply.status(401).send({
@@ -140,8 +140,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
-        const userId = request.user?.id;
+        const tenantId = (request.user as any)?.tenantId;
+        const userId = (request.user as any)?.id;
 
         if (!tenantId || !userId) {
           return reply.status(401).send({
@@ -187,7 +187,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
+        const tenantId = (request.user as any)?.tenantId;
         const { id } = request.params;
 
         if (!tenantId) {
@@ -240,7 +240,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
+        const tenantId = (request.user as any)?.tenantId;
         const { id } = request.params;
         const { format, limit } = request.body;
 

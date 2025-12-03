@@ -1,4 +1,3 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import {
   Budget,
   CreateBudgetRequest,
@@ -13,15 +12,12 @@ import {
 } from '../models/cost.models';
 import { CostCalculationService } from './cost-calculation.service';
 
-@Injectable()
 export class BudgetManagementService {
-  private readonly logger = new Logger(BudgetManagementService.name);
-
   // In-memory storage (in production, use database)
   private budgets: Map<string, Budget> = new Map();
   private budgetAlerts: Map<string, BudgetAlert> = new Map();
 
-  constructor(private readonly costService: CostCalculationService) {}
+  constructor(private readonly costService: CostCalculationService) { }
 
   // ===== Budget CRUD =====
 
@@ -29,21 +25,21 @@ export class BudgetManagementService {
    * Create a budget
    */
   async createBudget(request: CreateBudgetRequest): Promise<Budget> {
-    this.logger.log(
+    console.log(
       `Creating budget: Site ${request.siteId}, ` +
-        `Period ${request.budgetPeriod} (${request.periodStart.toISOString().split('T')[0]} to ${request.periodEnd.toISOString().split('T')[0]}), ` +
-        `Category ${request.category}, ` +
-        `Amount $${request.allocatedAmount}`
+      `Period ${request.budgetPeriod} (${request.periodStart.toISOString().split('T')[0]} to ${request.periodEnd.toISOString().split('T')[0]}), ` +
+      `Category ${request.category}, ` +
+      `Amount $${request.allocatedAmount}`
     );
 
     // Validate date range
     if (request.periodStart >= request.periodEnd) {
-      throw new BadRequestException('periodStart must be before periodEnd');
+      throw new Error('periodStart must be before periodEnd');
     }
 
     // Validate amount
     if (request.allocatedAmount <= 0) {
-      throw new BadRequestException('allocatedAmount must be positive');
+      throw new Error('allocatedAmount must be positive');
     }
 
     const budgetId = `budget_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -71,7 +67,7 @@ export class BudgetManagementService {
 
     this.budgets.set(budgetId, budget);
 
-    this.logger.log(`Budget ${budgetId} created`);
+    console.log(`Budget ${budgetId} created`);
 
     return budget;
   }
@@ -113,7 +109,7 @@ export class BudgetManagementService {
     const budget = this.budgets.get(budgetId);
 
     if (!budget) {
-      throw new NotFoundException(`Budget ${budgetId} not found`);
+      throw new Error(`Budget ${budgetId} not found`);
     }
 
     // Refresh calculated fields
@@ -129,19 +125,19 @@ export class BudgetManagementService {
     budgetId: string,
     request: UpdateBudgetRequest
   ): Promise<Budget> {
-    this.logger.log(`Updating budget: ${budgetId}`);
+    console.log(`Updating budget: ${budgetId}`);
 
     const budget = await this.getBudget(budgetId);
 
     if (request.allocatedAmount !== undefined) {
       if (request.allocatedAmount <= 0) {
-        throw new BadRequestException('allocatedAmount must be positive');
+        throw new Error('allocatedAmount must be positive');
       }
 
       const oldAmount = budget.allocatedAmount;
       budget.allocatedAmount = request.allocatedAmount;
 
-      this.logger.log(
+      console.log(
         `Budget ${budgetId} allocated amount updated: $${oldAmount} → $${request.allocatedAmount}`
       );
     }
@@ -168,7 +164,7 @@ export class BudgetManagementService {
 
     this.budgets.delete(budgetId);
 
-    this.logger.log(`Budget ${budgetId} deleted by ${deletedBy}`);
+    console.log(`Budget ${budgetId} deleted by ${deletedBy}`);
   }
 
   // ===== Budget Spending =====
@@ -241,7 +237,7 @@ export class BudgetManagementService {
     category: CostCategory,
     amount: number
   ): Promise<void> {
-    this.logger.log(
+    console.log(
       `Updating budget spending: Site ${siteId}, Category ${category}, Amount $${amount}`
     );
 
@@ -271,7 +267,7 @@ export class BudgetManagementService {
 
       this.budgets.set(budget.id, budget);
 
-      this.logger.log(
+      console.log(
         `Budget ${budget.id} updated: Spent $${budget.spentAmount} / $${budget.allocatedAmount} (${budget.spentPercentage.toFixed(1)}%)`
       );
 
@@ -385,7 +381,7 @@ export class BudgetManagementService {
 
     this.budgetAlerts.set(alertId, alert);
 
-    this.logger.warn(
+    console.warn(
       `[BUDGET ALERT] ${alertType.toUpperCase()}: ${message} (Budget ${budget.id})`
     );
 
@@ -418,7 +414,7 @@ export class BudgetManagementService {
     const alert = this.budgetAlerts.get(alertId);
 
     if (!alert) {
-      throw new NotFoundException(`Budget alert ${alertId} not found`);
+      throw new Error(`Budget alert ${alertId} not found`);
     }
 
     alert.acknowledged = true;
@@ -427,7 +423,7 @@ export class BudgetManagementService {
 
     this.budgetAlerts.set(alertId, alert);
 
-    this.logger.log(`Budget alert ${alertId} acknowledged by ${acknowledgedBy}`);
+    console.log(`Budget alert ${alertId} acknowledged by ${acknowledgedBy}`);
 
     return alert;
   }
@@ -480,7 +476,7 @@ export class BudgetManagementService {
    */
   private async sendBudgetAlertEmail(alert: BudgetAlert): Promise<void> {
     // TODO: Integrate with email service
-    this.logger.log(
+    console.log(
       `[EMAIL] Budget alert: ${alert.alertType.toUpperCase()} - ${alert.message}`
     );
 

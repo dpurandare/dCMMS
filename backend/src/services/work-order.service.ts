@@ -32,7 +32,8 @@ export interface CreateWorkOrderData {
   assignedTo?: string;
   scheduledStartDate?: Date;
   scheduledEndDate?: Date;
-  estimatedHours?: number;
+  estimatedHours?: string;
+  createdBy: string;
 }
 
 export interface UpdateWorkOrderData {
@@ -46,8 +47,8 @@ export interface UpdateWorkOrderData {
   scheduledEndDate?: Date;
   actualStartDate?: Date;
   actualEndDate?: Date;
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: string;
+  actualHours?: string;
 }
 
 export class WorkOrderService {
@@ -132,7 +133,7 @@ export class WorkOrderService {
     const total = Number(countResult?.count || 0);
 
     // Get paginated results
-    const orderByColumn = workOrders[sortBy as keyof typeof workOrders] || workOrders.createdAt;
+    const orderByColumn = (workOrders[sortBy as keyof typeof workOrders] as any) || workOrders.createdAt;
     const orderFn = sortOrder === 'asc' ? asc : desc;
 
     const results = await db
@@ -173,7 +174,7 @@ export class WorkOrderService {
       .select()
       .from(workOrderTasks)
       .where(eq(workOrderTasks.workOrderId, id))
-      .orderBy(asc(workOrderTasks.sequence));
+      .orderBy(asc(workOrderTasks.taskOrder));
 
     return {
       ...workOrder,
@@ -190,6 +191,7 @@ export class WorkOrderService {
       .values({
         ...data,
         status: data.status || 'draft',
+        createdBy: data.createdBy,
       })
       .returning();
 

@@ -25,7 +25,12 @@
     "db:push": "drizzle-kit push:pg",
     "db:seed": "tsx src/db/seed.ts"
   },
-  "keywords": ["cmms", "fastify", "typescript", "drizzle"],
+  "keywords": [
+    "cmms",
+    "fastify",
+    "typescript",
+    "drizzle"
+  ],
   "author": "dCMMS Team",
   "license": "UNLICENSED",
   "dependencies": {
@@ -36,8 +41,10 @@
     "@fastify/rate-limit": "^9.1.0",
     "@fastify/swagger": "^8.14.0",
     "@fastify/swagger-ui": "^3.0.0",
+    "@types/cron": "^2.0.1",
     "axios": "^1.6.5",
     "bcrypt": "^5.1.1",
+    "cron": "^4.3.5",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.0",
     "fastify": "^4.26.0",
@@ -48,6 +55,7 @@
     "pg": "^8.11.3",
     "pino": "^8.19.0",
     "pino-pretty": "^10.3.1",
+    "svix": "^1.81.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

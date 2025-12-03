@@ -66,8 +66,9 @@ Designed for utility-scale non-conventional energy plants (50+ MW), with specifi
 #### ML-Powered Predictive Maintenance
 - **Anomaly Detection**: Real-time equipment anomaly detection with 92-96% accuracy
 - **Predictive Maintenance**: Health scoring and Remaining Useful Life (RUL) estimation
-- **Energy Forecasting**: 7-day generation forecasts with 96.8% accuracy
+- **Energy Forecasting**: 7-day generation forecasts with 96.8% accuracy (Solar & Wind)
 - **Automatic Work Order Creation**: ML-recommended maintenance with human-in-the-loop approval
+- **Wind Energy Support**: Specialized asset models, power curve analysis, and telemetry for wind turbines
 
 #### Advanced Analytics & Dashboards
 - **Custom Dashboard Builder**: No-code drag-and-drop dashboard creation
@@ -223,26 +224,26 @@ For detailed architecture diagrams, see [`media/ARCHITECTURE_DIAGRAMS_V2.md`](./
 
 #### Implementation Progress
 
-| Sprint | Focus Area | Tasks | Status |
-|--------|-----------|-------|--------|
-| **Sprint 0** | Foundation Setup | 9 | ✅ 100% |
-| **Sprint 1-4** | MVP Backend & Frontend | 16 | ✅ 100% |
-| **Sprint 5** | MVP Integration & Testing | 4 | ✅ 100% |
-| **Sprint 6** | Telemetry Pipeline | 8 | ✅ 100% |
-| **Sprint 7** | Telemetry Optimization | 6 | ✅ 100% |
-| **Sprint 8** | Alerting & Notifications | 8 | ✅ 100% |
-| **Sprint 9** | Multi-Channel Notifications | 8 | ✅ 100% |
-| **Sprint 10** | Analytics & Reporting | 4 | ✅ 100% |
-| **Sprint 11** | Compliance & Audit | 4 | ✅ 100% |
-| **Sprint 12** | ML Infrastructure | 6 | ✅ 100% |
-| **Sprint 13** | Feature Engineering & Training | 6 | ✅ 100% |
-| **Sprint 14** | Model Serving & Explainability | 4 | ✅ 100% |
-| **Sprint 15** | Predictive Maintenance Integration | 5 | ✅ 100% |
-| **Sprint 16** | Cost & Budget Management | 4 | ✅ 100% |
-| **Sprint 17** | ML Model Cards & Documentation | 2 | ✅ 100% |
-| **Sprint 18** | Release 2 Production Readiness | 13 | ✅ 100% |
-| **Sprint 19** | Forecasting & Wind Energy | 5/8 | 🔄 68% |
-| **Total** | **19 Sprints (42 weeks)** | **107** | **✅ 93%** |
+| Sprint         | Focus Area                         | Tasks   | Status    |
+| -------------- | ---------------------------------- | ------- | --------- |
+| **Sprint 0**   | Foundation Setup                   | 9       | ✅ 100%    |
+| **Sprint 1-4** | MVP Backend & Frontend             | 16      | ✅ 100%    |
+| **Sprint 5**   | MVP Integration & Testing          | 4       | ✅ 100%    |
+| **Sprint 6**   | Telemetry Pipeline                 | 8       | ✅ 100%    |
+| **Sprint 7**   | Telemetry Optimization             | 6       | ✅ 100%    |
+| **Sprint 8**   | Alerting & Notifications           | 8       | ✅ 100%    |
+| **Sprint 9**   | Multi-Channel Notifications        | 8       | ✅ 100%    |
+| **Sprint 10**  | Analytics & Reporting              | 4       | ✅ 100%    |
+| **Sprint 11**  | Compliance & Audit                 | 4       | ✅ 100%    |
+| **Sprint 12**  | ML Infrastructure                  | 6       | ✅ 100%    |
+| **Sprint 13**  | Feature Engineering & Training     | 6       | ✅ 100%    |
+| **Sprint 14**  | Model Serving & Explainability     | 4       | ✅ 100%    |
+| **Sprint 15**  | Predictive Maintenance Integration | 5       | ✅ 100%    |
+| **Sprint 16**  | Cost & Budget Management           | 4       | ✅ 100%    |
+| **Sprint 17**  | ML Model Cards & Documentation     | 2       | ✅ 100%    |
+| **Sprint 18**  | Release 2 Production Readiness     | 13      | ✅ 100%    |
+| **Sprint 19**  | Forecasting & Wind Energy          | 8       | ✅ 100%    |
+| **Total**      | **19 Sprints (42 weeks)**          | **107** | **✅ 93%** |
 
 **Deferred:** DCMMS-145 (Cloud Provider Selection - 3 pts) - AWS selected by default
 
@@ -364,9 +365,13 @@ npm run dev
 # Frontend running on http://localhost:3000
 ```
 
-**Default Login:**
-- Email: `admin@dcmms.local`
-- Password: `admin123`
+**Default Login Credentials:**
+
+| Role           | Email                    | Password       |
+| -------------- | ------------------------ | -------------- |
+| **Admin**      | `admin@example.com`      | `Password123!` |
+| **Manager**    | `manager@example.com`    | `Password123!` |
+| **Technician** | `technician@example.com` | `Password123!` |
 
 ### ML Services Setup (Optional - Release 2 Features)
 
@@ -529,18 +534,18 @@ All specifications are in [`specs/`](./specs/) directory:
 
 ### Validated Performance Targets (Sprint 18 Testing)
 
-| Metric | Target | Achieved | Status |
-|--------|--------|----------|--------|
-| **API Response Time (p95)** | <200ms | 145ms | ✅ 27% better |
-| **API Response Time (p99)** | <500ms | 380ms | ✅ 24% better |
-| **Error Rate** | <1% | 0.3% | ✅ 3x better |
-| **Telemetry Throughput** | 72K events/sec | 72K+ | ✅ Validated |
-| **Concurrent Users** | 150+ | 200+ | ✅ 33% better |
-| **ML Inference (p95)** | <500ms | 350ms | ✅ 30% better |
-| **Database Query (p95)** | <50ms | 35ms | ✅ 30% better |
-| **Frontend LCP** | <2.5s | 1.8s | ✅ 28% better |
-| **Frontend FID** | <100ms | 45ms | ✅ 55% better |
-| **Uptime SLA** | 99.9% | 99.95% | ✅ Better |
+| Metric                      | Target         | Achieved | Status       |
+| --------------------------- | -------------- | -------- | ------------ |
+| **API Response Time (p95)** | <200ms         | 145ms    | ✅ 27% better |
+| **API Response Time (p99)** | <500ms         | 380ms    | ✅ 24% better |
+| **Error Rate**              | <1%            | 0.3%     | ✅ 3x better  |
+| **Telemetry Throughput**    | 72K events/sec | 72K+     | ✅ Validated  |
+| **Concurrent Users**        | 150+           | 200+     | ✅ 33% better |
+| **ML Inference (p95)**      | <500ms         | 350ms    | ✅ 30% better |
+| **Database Query (p95)**    | <50ms          | 35ms     | ✅ 30% better |
+| **Frontend LCP**            | <2.5s          | 1.8s     | ✅ 28% better |
+| **Frontend FID**            | <100ms         | 45ms     | ✅ 55% better |
+| **Uptime SLA**              | 99.9%          | 99.95%   | ✅ Better     |
 
 **Test Tools:** k6 (load testing), Lighthouse (frontend performance), Prometheus (metrics)
 
@@ -559,15 +564,15 @@ For detailed performance test report, see [`docs/testing/final-performance-test-
 
 #### Security Audit Results (Sprint 18)
 
-| Category | Score | Status |
-|----------|-------|--------|
-| **Authentication** | 95/100 | ✅ Excellent |
-| **Authorization** | 92/100 | ✅ Excellent |
-| **Data Protection** | 94/100 | ✅ Excellent |
-| **Network Security** | 90/100 | ✅ Good |
-| **Logging & Monitoring** | 93/100 | ✅ Excellent |
+| Category                     | Score  | Status      |
+| ---------------------------- | ------ | ----------- |
+| **Authentication**           | 95/100 | ✅ Excellent |
+| **Authorization**            | 92/100 | ✅ Excellent |
+| **Data Protection**          | 94/100 | ✅ Excellent |
+| **Network Security**         | 90/100 | ✅ Good      |
+| **Logging & Monitoring**     | 93/100 | ✅ Excellent |
 | **Vulnerability Management** | 95/100 | ✅ Excellent |
-| **Compliance** | 90/100 | ✅ Good |
+| **Compliance**               | 90/100 | ✅ Good      |
 
 **Vulnerability Scan Results:**
 - ✅ **0 Critical** vulnerabilities

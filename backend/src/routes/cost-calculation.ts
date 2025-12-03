@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import { CostCalculationService } from '../services/cost-calculation.service';
 import {
   CreateCostRecordRequest,
@@ -7,777 +7,617 @@ import {
   CreateEquipmentRateRequest,
   CostCalculationInput,
 } from '../models/cost.models';
-import { authenticateToken } from '../middleware/auth';
 
-const router = Router();
-const costService = new CostCalculationService();
+const costCalculationRoutes: FastifyPluginAsync = async (server) => {
+  const costService = new CostCalculationService();
 
-/**
- * @swagger
- * tags:
- *   name: Cost Management
- *   description: Work order cost tracking and calculation
- */
+  // POST /api/v1/work-orders/:id/costs
+  server.post(
+    '/:id/costs',
+    {
+      schema: {
+        summary: 'Add a cost record to a work order',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['category', 'description', 'amount', 'createdBy'],
+          properties: {
+            category: { type: 'string', enum: ['labor', 'parts', 'equipment', 'other'] },
+            description: { type: 'string' },
+            amount: { type: 'number' },
+            currency: { type: 'string', default: 'USD' },
+            laborHours: { type: 'number' },
+            technicianId: { type: 'string' },
+            partId: { type: 'string' },
+            partQuantity: { type: 'number' },
+            equipmentType: { type: 'string' },
+            equipmentHours: { type: 'number' },
+            createdBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { id: workOrderId } = request.params as { id: string };
+        const body = request.body as any;
 
-// ===== Cost Records =====
+        const reqData: CreateCostRecordRequest = {
+          workOrderId,
+          ...body,
+        };
 
-/**
- * @swagger
- * /api/v1/work-orders/{id}/costs:
- *   post:
- *     summary: Add a cost record to a work order
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Work order ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - category
- *               - description
- *               - amount
- *               - createdBy
- *             properties:
- *               category:
- *                 type: string
- *                 enum: [labor, parts, equipment, other]
- *               description:
- *                 type: string
- *               amount:
- *                 type: number
- *               currency:
- *                 type: string
- *                 default: USD
- *               laborHours:
- *                 type: number
- *               technicianId:
- *                 type: string
- *               partId:
- *                 type: string
- *               partQuantity:
- *                 type: number
- *               equipmentType:
- *                 type: string
- *               equipmentHours:
- *                 type: number
- *               createdBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Cost record added successfully
- *       400:
- *         description: Invalid request (negative amount, etc.)
- */
-router.post('/:id/costs', authenticateToken, async (req, res) => {
-  try {
-    const { id: workOrderId } = req.params;
+        const costRecord = await costService.addCostRecord(reqData);
 
-    const request: CreateCostRecordRequest = {
-      workOrderId,
-      ...req.body,
-    };
+        return {
+          message: 'Cost record added successfully',
+          costRecord,
+        };
+      } catch (error: any) {
+        request.log.error(error);
 
-    const costRecord = await costService.addCostRecord(request);
+        if (error.message.includes('negative')) {
+          return reply.status(400).send({ error: error.message });
+        }
 
-    res.json({
-      message: 'Cost record added successfully',
-      costRecord,
-    });
-  } catch (error) {
-    console.error('Add cost record error:', error);
-
-    if (error.message.includes('negative')) {
-      return res.status(400).json({ error: error.message });
+        return reply.status(500).send({
+          error: 'Failed to add cost record',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    res.status(500).json({
-      error: 'Failed to add cost record',
-      details: error.message,
-    });
-  }
-});
+  // GET /api/v1/work-orders/:id/costs
+  server.get(
+    '/:id/costs',
+    {
+      schema: {
+        summary: 'Get all cost records for a work order',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { id: workOrderId } = request.params as { id: string };
 
-/**
- * @swagger
- * /api/v1/work-orders/{id}/costs:
- *   get:
- *     summary: Get all cost records for a work order
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Work order ID
- *     responses:
- *       200:
- *         description: List of cost records
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 workOrderId:
- *                   type: string
- *                 count:
- *                   type: integer
- *                 costs:
- *                   type: array
- *                   items:
- *                     type: object
- */
-router.get('/:id/costs', authenticateToken, async (req, res) => {
-  try {
-    const { id: workOrderId } = req.params;
+        const costs = await costService.getCostRecords(workOrderId);
 
-    const costs = await costService.getCostRecords(workOrderId);
-
-    res.json({
-      workOrderId,
-      count: costs.length,
-      costs,
-    });
-  } catch (error) {
-    console.error('Get cost records error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost records',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/work-orders/{workOrderId}/costs/{costId}:
- *   patch:
- *     summary: Update a cost record (manual entries only)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workOrderId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: costId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - updatedBy
- *             properties:
- *               description:
- *                 type: string
- *               amount:
- *                 type: number
- *               updatedBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Cost record updated
- *       400:
- *         description: Cannot update auto-calculated costs
- *       404:
- *         description: Cost record not found
- */
-router.patch('/:workOrderId/costs/:costId', authenticateToken, async (req, res) => {
-  try {
-    const { costId } = req.params;
-
-    const request: UpdateCostRecordRequest = req.body;
-
-    const costRecord = await costService.updateCostRecord(costId, request);
-
-    res.json({
-      message: 'Cost record updated successfully',
-      costRecord,
-    });
-  } catch (error) {
-    console.error('Update cost record error:', error);
-
-    if (error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message });
+        return {
+          workOrderId,
+          count: costs.length,
+          costs,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost records',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    if (error.message.includes('auto-calculated') || error.message.includes('negative')) {
-      return res.status(400).json({ error: error.message });
+  // PATCH /api/v1/work-orders/:workOrderId/costs/:costId
+  server.patch(
+    '/:workOrderId/costs/:costId',
+    {
+      schema: {
+        summary: 'Update a cost record (manual entries only)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            workOrderId: { type: 'string' },
+            costId: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['updatedBy'],
+          properties: {
+            description: { type: 'string' },
+            amount: { type: 'number' },
+            updatedBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { costId } = request.params as { costId: string };
+        const reqData: UpdateCostRecordRequest = request.body as any;
+
+        const costRecord = await costService.updateCostRecord(costId, reqData);
+
+        return {
+          message: 'Cost record updated successfully',
+          costRecord,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+
+        if (error.message.includes('not found')) {
+          return reply.status(404).send({ error: error.message });
+        }
+
+        if (error.message.includes('auto-calculated') || error.message.includes('negative')) {
+          return reply.status(400).send({ error: error.message });
+        }
+
+        return reply.status(500).send({
+          error: 'Failed to update cost record',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    res.status(500).json({
-      error: 'Failed to update cost record',
-      details: error.message,
-    });
-  }
-});
+  // DELETE /api/v1/work-orders/:workOrderId/costs/:costId
+  server.delete(
+    '/:workOrderId/costs/:costId',
+    {
+      schema: {
+        summary: 'Delete a cost record (manual entries only)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            workOrderId: { type: 'string' },
+            costId: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['deletedBy'],
+          properties: {
+            deletedBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { costId } = request.params as { costId: string };
+        const { deletedBy } = request.body as any;
 
-/**
- * @swagger
- * /api/v1/work-orders/{workOrderId}/costs/{costId}:
- *   delete:
- *     summary: Delete a cost record (manual entries only)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workOrderId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: costId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - deletedBy
- *             properties:
- *               deletedBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Cost record deleted
- *       400:
- *         description: Cannot delete auto-calculated costs
- *       404:
- *         description: Cost record not found
- */
-router.delete('/:workOrderId/costs/:costId', authenticateToken, async (req, res) => {
-  try {
-    const { costId } = req.params;
-    const { deletedBy } = req.body;
+        if (!deletedBy) {
+          return reply.status(400).send({ error: 'deletedBy is required' });
+        }
 
-    if (!deletedBy) {
-      return res.status(400).json({ error: 'deletedBy is required' });
+        await costService.deleteCostRecord(costId, deletedBy);
+
+        return {
+          message: 'Cost record deleted successfully',
+        };
+      } catch (error: any) {
+        request.log.error(error);
+
+        if (error.message.includes('not found')) {
+          return reply.status(404).send({ error: error.message });
+        }
+
+        if (error.message.includes('auto-calculated')) {
+          return reply.status(400).send({ error: error.message });
+        }
+
+        return reply.status(500).send({
+          error: 'Failed to delete cost record',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    await costService.deleteCostRecord(costId, deletedBy);
+  // POST /api/v1/work-orders/:id/costs/auto-calculate
+  server.post(
+    '/:id/costs/auto-calculate',
+    {
+      schema: {
+        summary: 'Auto-calculate costs (labor, parts, equipment)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['calculatedBy'],
+          properties: {
+            laborRecords: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  hours: { type: 'number' },
+                  technicianRole: { type: 'string' },
+                  isOvertime: { type: 'boolean' },
+                },
+              },
+            },
+            partsConsumed: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  partId: { type: 'string' },
+                  quantity: { type: 'number' },
+                  unitPrice: { type: 'number' },
+                },
+              },
+            },
+            equipmentUsage: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  equipmentType: { type: 'string' },
+                  hours: { type: 'number' },
+                },
+              },
+            },
+            calculatedBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { id: workOrderId } = request.params as { id: string };
+        const body = request.body as any;
+        const { calculatedBy, ...input } = body;
 
-    res.json({
-      message: 'Cost record deleted successfully',
-    });
-  } catch (error) {
-    console.error('Delete cost record error:', error);
+        if (!calculatedBy) {
+          return reply.status(400).send({ error: 'calculatedBy is required' });
+        }
 
-    if (error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message });
+        const result = await costService.autoCalculateCosts(
+          workOrderId,
+          input as CostCalculationInput,
+          calculatedBy
+        );
+
+        return {
+          message: 'Costs auto-calculated successfully',
+          ...result,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to auto-calculate costs',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    if (error.message.includes('auto-calculated')) {
-      return res.status(400).json({ error: error.message });
+  // GET /api/v1/work-orders/:id/cost-summary
+  server.get(
+    '/:id/cost-summary',
+    {
+      schema: {
+        summary: 'Get cost summary (breakdown by category)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { id: workOrderId } = request.params as { id: string };
+
+        const summary = await costService.getCostSummary(workOrderId);
+
+        return summary;
+      } catch (error: any) {
+        request.log.error(error);
+
+        if (error.message.includes('not found')) {
+          return reply.status(404).send({ error: error.message });
+        }
+
+        return reply.status(500).send({
+          error: 'Failed to get cost summary',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    res.status(500).json({
-      error: 'Failed to delete cost record',
-      details: error.message,
-    });
-  }
-});
+  // POST /api/v1/costs/labor-rates
+  server.post(
+    '/labor-rates',
+    {
+      schema: {
+        summary: 'Create a labor rate',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['role', 'hourlyRate', 'createdBy'],
+          properties: {
+            role: { type: 'string' },
+            hourlyRate: { type: 'number' },
+            overtimeMultiplier: { type: 'number', default: 1.5 },
+            currency: { type: 'string', default: 'USD' },
+            createdBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const reqData: CreateLaborRateRequest = request.body as any;
 
-// ===== Auto Cost Calculation =====
+        const laborRate = await costService.createLaborRate(reqData);
 
-/**
- * @swagger
- * /api/v1/work-orders/{id}/costs/auto-calculate:
- *   post:
- *     summary: Auto-calculate costs (labor, parts, equipment)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Work order ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               laborRecords:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     hours:
- *                       type: number
- *                     technicianRole:
- *                       type: string
- *                     isOvertime:
- *                       type: boolean
- *               partsConsumed:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     partId:
- *                       type: string
- *                     quantity:
- *                       type: number
- *                     unitPrice:
- *                       type: number
- *               equipmentUsage:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     equipmentType:
- *                       type: string
- *                     hours:
- *                       type: number
- *               calculatedBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Costs auto-calculated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 laborCost:
- *                   type: number
- *                 partsCost:
- *                   type: number
- *                 equipmentCost:
- *                   type: number
- *                 otherCost:
- *                   type: number
- *                 totalCost:
- *                   type: number
- *                 breakdown:
- *                   type: array
- */
-router.post('/:id/costs/auto-calculate', authenticateToken, async (req, res) => {
-  try {
-    const { id: workOrderId } = req.params;
-    const { calculatedBy, ...input } = req.body;
-
-    if (!calculatedBy) {
-      return res.status(400).json({ error: 'calculatedBy is required' });
+        return {
+          message: 'Labor rate created successfully',
+          laborRate,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to create labor rate',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const result = await costService.autoCalculateCosts(
-      workOrderId,
-      input as CostCalculationInput,
-      calculatedBy
-    );
+  // GET /api/v1/costs/labor-rates
+  server.get(
+    '/labor-rates',
+    {
+      schema: {
+        summary: 'Get all labor rates',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            includeExpired: { type: 'boolean', default: false },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { includeExpired } = request.query as any;
 
-    res.json({
-      message: 'Costs auto-calculated successfully',
-      ...result,
-    });
-  } catch (error) {
-    console.error('Auto-calculate costs error:', error);
-    res.status(500).json({
-      error: 'Failed to auto-calculate costs',
-      details: error.message,
-    });
-  }
-});
+        const rates = await costService.getLaborRates(includeExpired === true || includeExpired === 'true');
 
-// ===== Cost Summary =====
-
-/**
- * @swagger
- * /api/v1/work-orders/{id}/cost-summary:
- *   get:
- *     summary: Get cost summary (breakdown by category)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Work order ID
- *     responses:
- *       200:
- *         description: Cost summary
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 workOrderId:
- *                   type: string
- *                 totalCost:
- *                   type: number
- *                 currency:
- *                   type: string
- *                 breakdown:
- *                   type: object
- *                   properties:
- *                     labor:
- *                       type: object
- *                     parts:
- *                       type: object
- *                     equipment:
- *                       type: object
- *                     other:
- *                       type: object
- *                 autoCalculatedCost:
- *                   type: number
- *                 manualCost:
- *                   type: number
- *       404:
- *         description: No cost records found
- */
-router.get('/:id/cost-summary', authenticateToken, async (req, res) => {
-  try {
-    const { id: workOrderId } = req.params;
-
-    const summary = await costService.getCostSummary(workOrderId);
-
-    res.json(summary);
-  } catch (error) {
-    console.error('Get cost summary error:', error);
-
-    if (error.message.includes('not found')) {
-      return res.status(404).json({ error: error.message });
+        return {
+          count: rates.length,
+          rates,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get labor rates',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    res.status(500).json({
-      error: 'Failed to get cost summary',
-      details: error.message,
-    });
-  }
-});
+  // PUT /api/v1/costs/labor-rates/:role
+  server.put(
+    '/labor-rates/:role',
+    {
+      schema: {
+        summary: 'Update labor rate (creates new version)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            role: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['hourlyRate', 'updatedBy'],
+          properties: {
+            hourlyRate: { type: 'number' },
+            updatedBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { role } = request.params as { role: string };
+        const { hourlyRate, updatedBy } = request.body as any;
 
-// ===== Labor Rates =====
+        if (!hourlyRate || !updatedBy) {
+          return reply.status(400).send({
+            error: 'hourlyRate and updatedBy are required',
+          });
+        }
 
-/**
- * @swagger
- * /api/v1/costs/labor-rates:
- *   post:
- *     summary: Create a labor rate
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - role
- *               - hourlyRate
- *               - createdBy
- *             properties:
- *               role:
- *                 type: string
- *               hourlyRate:
- *                 type: number
- *               overtimeMultiplier:
- *                 type: number
- *                 default: 1.5
- *               currency:
- *                 type: string
- *                 default: USD
- *               createdBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Labor rate created
- */
-router.post('/labor-rates', authenticateToken, async (req, res) => {
-  try {
-    const request: CreateLaborRateRequest = req.body;
+        const laborRate = await costService.updateLaborRate(role, hourlyRate, updatedBy);
 
-    const laborRate = await costService.createLaborRate(request);
-
-    res.json({
-      message: 'Labor rate created successfully',
-      laborRate,
-    });
-  } catch (error) {
-    console.error('Create labor rate error:', error);
-    res.status(500).json({
-      error: 'Failed to create labor rate',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/costs/labor-rates:
- *   get:
- *     summary: Get all labor rates
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: includeExpired
- *         schema:
- *           type: boolean
- *           default: false
- *     responses:
- *       200:
- *         description: List of labor rates
- */
-router.get('/labor-rates', authenticateToken, async (req, res) => {
-  try {
-    const { includeExpired } = req.query;
-
-    const rates = await costService.getLaborRates(includeExpired === 'true');
-
-    res.json({
-      count: rates.length,
-      rates,
-    });
-  } catch (error) {
-    console.error('Get labor rates error:', error);
-    res.status(500).json({
-      error: 'Failed to get labor rates',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/costs/labor-rates/{role}:
- *   put:
- *     summary: Update labor rate (creates new version)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: role
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - hourlyRate
- *               - updatedBy
- *             properties:
- *               hourlyRate:
- *                 type: number
- *               updatedBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Labor rate updated
- */
-router.put('/labor-rates/:role', authenticateToken, async (req, res) => {
-  try {
-    const { role } = req.params;
-    const { hourlyRate, updatedBy } = req.body;
-
-    if (!hourlyRate || !updatedBy) {
-      return res.status(400).json({
-        error: 'hourlyRate and updatedBy are required',
-      });
+        return {
+          message: 'Labor rate updated successfully',
+          laborRate,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to update labor rate',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const laborRate = await costService.updateLaborRate(role, hourlyRate, updatedBy);
+  // POST /api/v1/costs/equipment-rates
+  server.post(
+    '/equipment-rates',
+    {
+      schema: {
+        summary: 'Create an equipment rate',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['equipmentType', 'hourlyRate', 'createdBy'],
+          properties: {
+            equipmentType: { type: 'string' },
+            hourlyRate: { type: 'number' },
+            currency: { type: 'string', default: 'USD' },
+            createdBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const reqData: CreateEquipmentRateRequest = request.body as any;
 
-    res.json({
-      message: 'Labor rate updated successfully',
-      laborRate,
-    });
-  } catch (error) {
-    console.error('Update labor rate error:', error);
-    res.status(500).json({
-      error: 'Failed to update labor rate',
-      details: error.message,
-    });
-  }
-});
+        const equipmentRate = await costService.createEquipmentRate(reqData);
 
-// ===== Equipment Rates =====
-
-/**
- * @swagger
- * /api/v1/costs/equipment-rates:
- *   post:
- *     summary: Create an equipment rate
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - equipmentType
- *               - hourlyRate
- *               - createdBy
- *             properties:
- *               equipmentType:
- *                 type: string
- *               hourlyRate:
- *                 type: number
- *               currency:
- *                 type: string
- *                 default: USD
- *               createdBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Equipment rate created
- */
-router.post('/equipment-rates', authenticateToken, async (req, res) => {
-  try {
-    const request: CreateEquipmentRateRequest = req.body;
-
-    const equipmentRate = await costService.createEquipmentRate(request);
-
-    res.json({
-      message: 'Equipment rate created successfully',
-      equipmentRate,
-    });
-  } catch (error) {
-    console.error('Create equipment rate error:', error);
-    res.status(500).json({
-      error: 'Failed to create equipment rate',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/costs/equipment-rates:
- *   get:
- *     summary: Get all equipment rates
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: includeExpired
- *         schema:
- *           type: boolean
- *           default: false
- *     responses:
- *       200:
- *         description: List of equipment rates
- */
-router.get('/equipment-rates', authenticateToken, async (req, res) => {
-  try {
-    const { includeExpired } = req.query;
-
-    const rates = await costService.getEquipmentRates(includeExpired === 'true');
-
-    res.json({
-      count: rates.length,
-      rates,
-    });
-  } catch (error) {
-    console.error('Get equipment rates error:', error);
-    res.status(500).json({
-      error: 'Failed to get equipment rates',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/costs/equipment-rates/{equipmentType}:
- *   put:
- *     summary: Update equipment rate (creates new version)
- *     tags: [Cost Management]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: equipmentType
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - hourlyRate
- *               - updatedBy
- *             properties:
- *               hourlyRate:
- *                 type: number
- *               updatedBy:
- *                 type: string
- *     responses:
- *       200:
- *         description: Equipment rate updated
- */
-router.put('/equipment-rates/:equipmentType', authenticateToken, async (req, res) => {
-  try {
-    const { equipmentType } = req.params;
-    const { hourlyRate, updatedBy } = req.body;
-
-    if (!hourlyRate || !updatedBy) {
-      return res.status(400).json({
-        error: 'hourlyRate and updatedBy are required',
-      });
+        return {
+          message: 'Equipment rate created successfully',
+          equipmentRate,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to create equipment rate',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const equipmentRate = await costService.updateEquipmentRate(
-      equipmentType,
-      hourlyRate,
-      updatedBy
-    );
+  // GET /api/v1/costs/equipment-rates
+  server.get(
+    '/equipment-rates',
+    {
+      schema: {
+        summary: 'Get all equipment rates',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            includeExpired: { type: 'boolean', default: false },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { includeExpired } = request.query as any;
 
-    res.json({
-      message: 'Equipment rate updated successfully',
-      equipmentRate,
-    });
-  } catch (error) {
-    console.error('Update equipment rate error:', error);
-    res.status(500).json({
-      error: 'Failed to update equipment rate',
-      details: error.message,
-    });
-  }
-});
+        const rates = await costService.getEquipmentRates(includeExpired === true || includeExpired === 'true');
 
-export default router;
+        return {
+          count: rates.length,
+          rates,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get equipment rates',
+          details: error.message,
+        });
+      }
+    }
+  );
+
+  // PUT /api/v1/costs/equipment-rates/:equipmentType
+  server.put(
+    '/equipment-rates/:equipmentType',
+    {
+      schema: {
+        summary: 'Update equipment rate (creates new version)',
+        tags: ['Cost Management'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            equipmentType: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['hourlyRate', 'updatedBy'],
+          properties: {
+            hourlyRate: { type: 'number' },
+            updatedBy: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { equipmentType } = request.params as { equipmentType: string };
+        const { hourlyRate, updatedBy } = request.body as any;
+
+        if (!hourlyRate || !updatedBy) {
+          return reply.status(400).send({
+            error: 'hourlyRate and updatedBy are required',
+          });
+        }
+
+        const equipmentRate = await costService.updateEquipmentRate(
+          equipmentType,
+          hourlyRate,
+          updatedBy
+        );
+
+        return {
+          message: 'Equipment rate updated successfully',
+          equipmentRate,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to update equipment rate',
+          details: error.message,
+        });
+      }
+    }
+  );
+};
+
+export default costCalculationRoutes;

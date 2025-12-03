@@ -21,12 +21,25 @@
 
 import Handlebars from 'handlebars';
 import { Pool } from 'pg';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import WebhookService from './webhook.service';
 
 // ==========================================
 // Types
 // ==========================================
+
+export type NotificationChannel = 'email' | 'sms' | 'push' | 'webhook' | 'slack';
+export type NotificationEventType =
+  | 'work_order_assigned'
+  | 'work_order_overdue'
+  | 'work_order_completed'
+  | 'alert_critical'
+  | 'alert_high'
+  | 'alert_medium'
+  | 'alert_acknowledged'
+  | 'alert_resolved'
+  | 'asset_down'
+  | 'maintenance_due';
 
 export interface NotificationTemplate {
   id: string;
@@ -306,7 +319,7 @@ export class NotificationService {
     ruleId?: string;
     variables: Record<string, any>;
   }): Promise<string> {
-    const id = uuidv4();
+    const id = randomUUID();
 
     await this.db.query(
       `INSERT INTO notification_queue
@@ -463,7 +476,7 @@ export class NotificationService {
 
     if (result.rows.length > 0) {
       const n = result.rows[0];
-      await this.recordHistory(n, 'failed', null, error);
+      await this.recordHistory(n, 'failed', undefined, error);
     }
   }
 
@@ -624,6 +637,13 @@ export class NotificationService {
       console.error(`Webhook trigger failed for event ${eventType}:`, error);
     }
   }
+}
+
+import { FastifyInstance } from 'fastify';
+import { pool } from '../db';
+
+export function createNotificationService(fastify: FastifyInstance): NotificationService {
+  return new NotificationService(pool);
 }
 
 export default NotificationService;

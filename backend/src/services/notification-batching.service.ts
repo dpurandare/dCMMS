@@ -192,7 +192,7 @@ export class NotificationBatchingService {
       subject: string | null;
       body: string;
       templateId: string | null;
-      data: string;
+      data: string | null;
       batchKey: string;
       isBatched: boolean;
       batchedAt: Date | null;
@@ -284,7 +284,7 @@ export class NotificationBatchingService {
     notifications: Array<{
       subject: string | null;
       body: string;
-      data: string;
+      data: string | null;
       createdAt: Date;
     }>
   ): string {

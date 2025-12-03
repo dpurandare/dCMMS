@@ -75,7 +75,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           },
         };
       } catch (error) {
-        request.log.error('Login error:', error);
+        request.log.error({ err: error }, 'Login error');
         return reply.status(500).send({
           statusCode: 500,
           error: 'Internal Server Error',
@@ -134,7 +134,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         return tokens;
       } catch (error) {
-        request.log.error('Token refresh error:', error);
+        request.log.error({ err: error }, 'Token refresh error');
         return reply.status(401).send({
           statusCode: 401,
           error: 'Unauthorized',

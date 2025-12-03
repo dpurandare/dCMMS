@@ -16,7 +16,7 @@
  */
 
 import { Pool } from 'pg';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import EmailService from './email.service';
 
 // ==========================================
@@ -239,7 +239,7 @@ export class NotificationBatchService {
     }
 
     // Mark items as batched
-    const batchId = uuidv4();
+    const batchId = randomUUID();
     const itemIds = items.map((item) => item.id);
 
     await this.db.query('SELECT mark_batch_items_sent($1, $2)', [itemIds, batchId]);

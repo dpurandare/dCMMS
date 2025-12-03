@@ -253,7 +253,7 @@ export class AssetHealthScoringService {
         format: 'JSONEachRow',
       });
 
-      const data = await result.json<{ total_anomalies: number }>();
+      const data = await result.json<any[]>();
       const anomalyCount = data[0]?.total_anomalies || 0;
 
       // Scoring logic:
@@ -330,17 +330,17 @@ export class AssetHealthScoringService {
         eq(workOrders.type, 'preventive'),
         eq(workOrders.status, 'completed')
       ),
-      orderBy: (workOrders, { desc }) => [desc(workOrders.completedAt)],
+      orderBy: (workOrders, { desc }) => [desc(workOrders.actualEnd)],
     });
 
-    if (!recentMaintenance || !recentMaintenance.completedAt) {
+    if (!recentMaintenance || !recentMaintenance.actualEnd) {
       // No maintenance history = lower score
       return [60, 999];
     }
 
     const now = new Date();
     const daysSince = Math.floor(
-      (now.getTime() - recentMaintenance.completedAt.getTime()) / (24 * 60 * 60 * 1000)
+      (now.getTime() - recentMaintenance.actualEnd.getTime()) / (24 * 60 * 60 * 1000)
     );
 
     // Scoring logic:

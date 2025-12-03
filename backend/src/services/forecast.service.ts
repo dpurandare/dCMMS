@@ -139,7 +139,18 @@ export class ForecastService {
       };
 
       const [saved] = await db.insert(generationForecasts).values(forecast as any).returning();
-      savedForecasts.push(saved as GenerationForecast);
+      savedForecasts.push({
+        ...saved,
+        predictedGenerationMw: parseFloat(saved.predictedGenerationMw.toString()),
+        confidenceIntervalLowerMw: saved.confidenceIntervalLowerMw ? parseFloat(saved.confidenceIntervalLowerMw.toString()) : undefined,
+        confidenceIntervalUpperMw: saved.confidenceIntervalUpperMw ? parseFloat(saved.confidenceIntervalUpperMw.toString()) : undefined,
+        predictionStdDev: saved.predictionStdDev ? parseFloat(saved.predictionStdDev.toString()) : undefined,
+        actualGenerationMw: saved.actualGenerationMw ? parseFloat(saved.actualGenerationMw.toString()) : undefined,
+        errorMw: saved.errorMw ? parseFloat(saved.errorMw.toString()) : undefined,
+        absoluteErrorMw: saved.absoluteErrorMw ? parseFloat(saved.absoluteErrorMw.toString()) : undefined,
+        percentageError: saved.percentageError ? parseFloat(saved.percentageError.toString()) : undefined,
+        modelAccuracyScore: saved.modelAccuracyScore ? parseFloat(saved.modelAccuracyScore.toString()) : undefined,
+      } as GenerationForecast);
     }
 
     // Mark old forecasts for the same timestamp as inactive
@@ -182,7 +193,18 @@ export class ForecastService {
       .where(and(...conditions))
       .orderBy(desc(generationForecasts.forecastTimestamp));
 
-    return results as GenerationForecast[];
+    return results.map(f => ({
+      ...f,
+      predictedGenerationMw: parseFloat(f.predictedGenerationMw.toString()),
+      confidenceIntervalLowerMw: f.confidenceIntervalLowerMw ? parseFloat(f.confidenceIntervalLowerMw.toString()) : undefined,
+      confidenceIntervalUpperMw: f.confidenceIntervalUpperMw ? parseFloat(f.confidenceIntervalUpperMw.toString()) : undefined,
+      predictionStdDev: f.predictionStdDev ? parseFloat(f.predictionStdDev.toString()) : undefined,
+      actualGenerationMw: f.actualGenerationMw ? parseFloat(f.actualGenerationMw.toString()) : undefined,
+      errorMw: f.errorMw ? parseFloat(f.errorMw.toString()) : undefined,
+      absoluteErrorMw: f.absoluteErrorMw ? parseFloat(f.absoluteErrorMw.toString()) : undefined,
+      percentageError: f.percentageError ? parseFloat(f.percentageError.toString()) : undefined,
+      modelAccuracyScore: f.modelAccuracyScore ? parseFloat(f.modelAccuracyScore.toString()) : undefined,
+    })) as GenerationForecast[];
   }
 
   /**
@@ -213,10 +235,10 @@ export class ForecastService {
     await db
       .update(generationForecasts)
       .set({
-        actualGenerationMw: actual,
-        errorMw: error,
-        absoluteErrorMw: absoluteError,
-        percentageError,
+        actualGenerationMw: actual.toString(),
+        errorMw: error.toString(),
+        absoluteErrorMw: absoluteError.toString(),
+        percentageError: percentageError.toString(),
         accuracyValidated: true,
         updatedAt: new Date(),
       })
@@ -293,7 +315,15 @@ export class ForecastService {
     };
 
     const [saved] = await db.insert(forecastAccuracyMetrics).values(metrics as any).returning();
-    return saved as ForecastAccuracyMetric;
+
+    return {
+      ...saved,
+      meanAbsoluteErrorMw: saved.meanAbsoluteErrorMw ? parseFloat(saved.meanAbsoluteErrorMw.toString()) : undefined,
+      meanAbsolutePercentageError: saved.meanAbsolutePercentageError ? parseFloat(saved.meanAbsolutePercentageError.toString()) : undefined,
+      rootMeanSquaredErrorMw: saved.rootMeanSquaredErrorMw ? parseFloat(saved.rootMeanSquaredErrorMw.toString()) : undefined,
+      rSquared: saved.rSquared ? parseFloat(saved.rSquared.toString()) : undefined,
+      forecastSkillScore: saved.forecastSkillScore ? parseFloat(saved.forecastSkillScore.toString()) : undefined,
+    } as ForecastAccuracyMetric;
   }
 
   // ==========================================

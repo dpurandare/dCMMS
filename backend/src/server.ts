@@ -195,7 +195,6 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
         docExpansion: 'list',
         deepLinking: true,
         filter: true,
-        showRequestDuration: true,
         tryItOutEnabled: true,
         persistAuthorization: true,
       },

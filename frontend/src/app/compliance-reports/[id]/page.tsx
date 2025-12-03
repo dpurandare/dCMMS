@@ -89,9 +89,8 @@ export default function ComplianceReportDetailsPage() {
   const handleDownload = () => {
     if (!report) return;
 
-    const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${
-      report.downloadUrl
-    }`;
+    const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${report.downloadUrl
+      }`;
     const link = document.createElement('a');
     link.href = fullUrl;
     link.download = `${report.reportId}.${report.format}`;
@@ -112,7 +111,7 @@ export default function ComplianceReportDetailsPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout title="Compliance Report">
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -122,18 +121,18 @@ export default function ComplianceReportDetailsPage() {
 
   if (error || !report) {
     return (
-      <DashboardLayout>
+      <DashboardLayout title="Report Not Found">
         <div className="space-y-6">
           <PageHeader
             title="Report Not Found"
             description="The requested compliance report could not be found"
-            icon={FileText}
-          >
-            <Button onClick={() => router.push('/compliance-reports')} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Reports
-            </Button>
-          </PageHeader>
+            actions={
+              <Button onClick={() => router.push('/compliance-reports')} variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Reports
+              </Button>
+            }
+          />
           <Card className="p-8">
             <div className="text-center">
               <p className="text-red-600 mb-4">{error || 'Report not found'}</p>
@@ -148,24 +147,24 @@ export default function ComplianceReportDetailsPage() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Compliance Report Details">
       <div className="space-y-6">
         <PageHeader
           title={`Compliance Report: ${report.reportId.substring(0, 12)}...`}
           description={`${report.templateId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`}
-          icon={FileText}
-        >
-          <div className="flex gap-2">
-            <Button onClick={() => router.push('/compliance-reports')} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <Button onClick={handleDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </div>
-        </PageHeader>
+          actions={
+            <div className="flex gap-2">
+              <Button onClick={() => router.push('/compliance-reports')} variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <Button onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          }
+        />
 
         {/* Report Metadata */}
         <div className="grid gap-6 md:grid-cols-2">

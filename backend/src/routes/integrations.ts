@@ -129,8 +129,8 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         },
         webhook: oauthResult.incomingWebhook
           ? {
-              channel: oauthResult.incomingWebhook.channel,
-            }
+            channel: oauthResult.incomingWebhook.channel,
+          }
           : null,
       });
     } catch (error) {
@@ -205,8 +205,8 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         },
         webhook: installation.incomingWebhookUrl
           ? {
-              channel: installation.incomingWebhookChannel,
-            }
+            channel: installation.incomingWebhookChannel,
+          }
           : null,
       });
     } catch (error) {
@@ -258,7 +258,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
           // Handle button clicks
           if (actions && actions.length > 0) {
             for (const action of actions) {
-              await this.handleSlackAction(action, user, response_url);
+              await handleSlackAction(action, user, response_url);
             }
           }
           break;

@@ -108,12 +108,12 @@ export class ClickHouseETLService {
 
       // Transform to ClickHouse format
       const rows = orders.map((wo) => {
-        const durationHours = wo.completedAt && wo.actualStart
-          ? (wo.completedAt.getTime() - wo.actualStart.getTime()) / (1000 * 60 * 60)
+        const durationHours = wo.actualEnd && wo.actualStart
+          ? (wo.actualEnd.getTime() - wo.actualStart.getTime()) / (1000 * 60 * 60)
           : null;
 
-        const mttrHours = wo.completedAt && wo.createdAt && wo.type === 'corrective'
-          ? (wo.completedAt.getTime() - wo.createdAt.getTime()) / (1000 * 60 * 60)
+        const mttrHours = wo.actualEnd && wo.createdAt && wo.type === 'corrective'
+          ? (wo.actualEnd.getTime() - wo.createdAt.getTime()) / (1000 * 60 * 60)
           : null;
 
         return {
@@ -129,10 +129,10 @@ export class ClickHouseETLService {
           scheduled_start: wo.scheduledStart,
           scheduled_end: wo.scheduledEnd,
           actual_start: wo.actualStart,
-          completed_at: wo.completedAt,
+          completed_at: wo.actualEnd, // Mapping actualEnd to completed_at in ClickHouse
           duration_hours: durationHours,
           mttr_hours: mttrHours,
-          cost: wo.estimatedCost || 0,
+          cost: 0, // Estimated cost not available in schema
           parts_count: 0, // TODO: Count from parts table
           tasks_count: 0, // TODO: Count from tasks table
           tasks_completed: 0, // TODO: Count completed tasks
@@ -264,8 +264,8 @@ export class ClickHouseETLService {
           asset_id: alert.assetId,
           severity: alert.severity,
           status: alert.status,
-          alarm_type: alert.type || 'general',
-          message: alert.message,
+          alarm_type: 'general',
+          message: alert.title,
           created_at: alert.createdAt,
           acknowledged_at: alert.acknowledgedAt,
           resolved_at: alert.resolvedAt,
@@ -332,7 +332,7 @@ export class ClickHouseETLService {
         format: 'JSONEachRow',
       });
 
-      const rows = await result.json();
+      const rows = await result.json<any[]>();
 
       if (rows.length === 0) {
         this.fastify.log.info('No KPI data to snapshot');

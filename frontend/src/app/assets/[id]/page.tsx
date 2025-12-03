@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { PageHeader } from '@/components/ui/page-header';
+import { CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AssetStatusBadge } from '@/components/assets/asset-status-badge';
+import { CardSkeleton } from '@/components/ui/card-skeleton';
+import { Package } from 'lucide-react';
 
 interface Asset {
   id: string;
@@ -28,6 +36,11 @@ interface Asset {
   children: any[];
   createdAt: string;
   updatedAt: string;
+  assetType?: string; // Add optional property if needed or fix usage
+  site?: { name: string };
+  installDate?: string;
+  parentAsset?: { name: string };
+  tags?: string[];
 }
 
 export default function AssetDetailPage({ params }: { params: { id: string } }) {
@@ -36,6 +49,7 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -61,7 +75,7 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
 
   const handleDelete = async () => {
     try {
-      await api.assets.delete(assetId);
+      await api.assets.delete(params.id);
       router.push('/assets');
     } catch (err) {
       console.error('Failed to delete asset:', err);
@@ -128,7 +142,7 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/assets/${assetId}/edit`)}>
+            <Button variant="outline" onClick={() => router.push(`/assets/${params.id}/edit`)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </Button>

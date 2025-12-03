@@ -9,7 +9,7 @@
  *   0 * * * * cd /path/to/backend && node dist/scripts/process-notification-digests.js
  *
  *   # Every 15 minutes (more responsive)
- *   */15 * * * * cd /path/to/backend && node dist/scripts/process-notification-digests.js
+ *   0,15,30,45 * * * * cd /path/to/backend && node dist/scripts/process-notification-digests.js
  */
 
 import { Pool } from 'pg';

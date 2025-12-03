@@ -147,3 +147,4 @@ tramp
 # Temporary files
 *.tmp
 *.temp
+venv/

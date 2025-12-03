@@ -58,7 +58,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         // Get tenant ID from authenticated user
-        const tenantId = request.user?.tenantId;
+        const tenantId = (request.user as any)?.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -113,7 +113,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
+        const tenantId = (request.user as any)?.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -184,7 +184,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = request.user?.tenantId;
+        const tenantId = (request.user as any)?.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({

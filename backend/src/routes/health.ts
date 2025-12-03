@@ -28,7 +28,7 @@ const healthRoutes: FastifyPluginAsync = async (server) => {
         await pool.query('SELECT 1');
         dbStatus = 'connected';
       } catch (error) {
-        request.log.error('Database health check failed:', error);
+        request.log.error({ err: error }, 'Database health check failed');
       }
 
       return {

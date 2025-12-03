@@ -49,7 +49,7 @@ export class AlertNotificationHandler {
           asset: true,
           tenant: true,
         },
-      });
+      }) as any; // Cast to any to avoid complex type inference issues with Drizzle relations
 
       if (!alert) {
         this.fastify.log.warn({ alertId: alertEvent.alertId }, 'Alert not found in database');
@@ -88,9 +88,10 @@ export class AlertNotificationHandler {
           await this.notificationService.sendNotification({
             tenantId: alert.tenantId,
             userId: user.id,
-            eventType,
-            data: notificationData,
-            severity: alertEvent.severity,
+            templateCode: eventType, // Mapping eventType to templateCode
+            channels: ['email', 'push'], // Default channels
+            variables: notificationData,
+            priority: alertEvent.severity === 'critical' ? 'critical' : 'medium',
           });
 
           this.fastify.log.info(
@@ -107,7 +108,7 @@ export class AlertNotificationHandler {
 
       // Send webhooks
       try {
-        await this.webhookService.sendWebhook(alert.tenantId, eventType, {
+        await this.webhookService.triggerWebhooks(alert.tenantId, eventType, {
           alert: {
             id: alertEvent.alertId,
             title: alertEvent.title,
@@ -162,7 +163,7 @@ export class AlertNotificationHandler {
           asset: true,
           acknowledgedByUser: true,
         },
-      });
+      }) as any;
 
       if (!alert || !alert.acknowledgedByUser) {
         return;
@@ -188,8 +189,9 @@ export class AlertNotificationHandler {
           await this.notificationService.sendNotification({
             tenantId: alert.tenantId,
             userId: user.id,
-            eventType: 'alert_acknowledged',
-            data: notificationData,
+            templateCode: 'alert_acknowledged',
+            channels: ['email', 'push'],
+            variables: notificationData,
           });
         } catch (error) {
           this.fastify.log.error({ error, userId: user.id }, 'Failed to send ack notification');
@@ -223,7 +225,7 @@ export class AlertNotificationHandler {
           asset: true,
           resolvedByUser: true,
         },
-      });
+      }) as any;
 
       if (!alert || !alert.resolvedByUser) {
         return;
@@ -249,8 +251,9 @@ export class AlertNotificationHandler {
           await this.notificationService.sendNotification({
             tenantId: alert.tenantId,
             userId: user.id,
-            eventType: 'alert_resolved',
-            data: notificationData,
+            templateCode: 'alert_resolved',
+            channels: ['email', 'push'],
+            variables: notificationData,
           });
         } catch (error) {
           this.fastify.log.error({ error, userId: user.id }, 'Failed to send resolved notification');
@@ -352,13 +355,14 @@ export class AlertNotificationHandler {
             await this.notificationService.sendNotification({
               tenantId,
               userId: admin.id,
-              eventType: 'alert_critical',
-              data: {
+              templateCode: 'alert_critical',
+              channels: ['email', 'sms', 'push'],
+              variables: {
                 ...notificationData,
                 escalated: true,
                 escalation_reason: 'Alert not acknowledged within 30 minutes',
               },
-              severity: 'critical',
+              priority: 'critical',
             });
 
             this.fastify.log.info(

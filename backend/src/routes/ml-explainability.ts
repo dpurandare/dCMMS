@@ -1,285 +1,127 @@
-import { Router } from 'express';
-import { MLExplainabilityService, ExplanationRequest } from '../services/ml-explainability.service';
-import { authenticateToken } from '../middleware/auth';
+import { FastifyPluginAsync } from 'fastify';
+import { MLExplainabilityService } from '../services/ml-explainability.service';
 
-const router = Router();
-const explainabilityService = new MLExplainabilityService();
+const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
+  const explainabilityService = new MLExplainabilityService();
 
-/**
- * @swagger
- * tags:
- *   name: ML Explainability
- *   description: Model explainability and SHAP endpoints
- */
+  // POST /api/v1/ml-explainability/explain
+  server.post(
+    '/explain',
+    {
+      schema: {
+        summary: 'Generate explanation for a prediction',
+        tags: ['ML Explainability'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['modelName', 'assetId'],
+          properties: {
+            modelName: { type: 'string' },
+            assetId: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { modelName, assetId } = request.body as { modelName: string; assetId: string };
 
-/**
- * @swagger
- * /api/v1/ml/explain:
- *   post:
- *     summary: Get SHAP explanation for asset prediction
- *     tags: [ML Explainability]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - modelName
- *               - assetId
- *             properties:
- *               modelName:
- *                 type: string
- *                 example: "predictive_maintenance"
- *               assetId:
- *                 type: string
- *                 example: "asset_123"
- *               topN:
- *                 type: integer
- *                 example: 10
- *                 description: Number of top features to return
- *     responses:
- *       200:
- *         description: SHAP explanation
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 assetId:
- *                   type: string
- *                 prediction:
- *                   type: integer
- *                 probability:
- *                   type: number
- *                 baseValue:
- *                   type: number
- *                   description: Model's base prediction value
- *                 topFeatures:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       feature:
- *                         type: string
- *                       value:
- *                         type: number
- *                       shapValue:
- *                         type: number
- *                         description: SHAP contribution to prediction
- *                       absShap:
- *                         type: number
- *                 modelName:
- *                   type: string
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                 latencyMs:
- *                   type: number
- *       400:
- *         description: Invalid request
- *       503:
- *         description: Explainer service unavailable
- */
-router.post('/explain', authenticateToken, async (req, res) => {
-  try {
-    const request: ExplanationRequest = {
-      modelName: req.body.modelName,
-      assetId: req.body.assetId,
-      topN: req.body.topN || 10,
-    };
+        const explanation = await explainabilityService.getExplanation(modelName, assetId);
+        const recommendation = explainabilityService.getRecommendation(explanation);
 
-    if (!request.modelName) {
-      return res.status(400).json({
-        error: 'modelName is required',
-      });
+        return {
+          explanation,
+          recommendation,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: error.message || 'Failed to generate explanation',
+        });
+      }
     }
+  );
 
-    if (!request.assetId) {
-      return res.status(400).json({
-        error: 'assetId is required',
-      });
+  // GET /api/v1/ml-explainability/explain/waterfall/:assetId
+  server.get(
+    '/explain/waterfall/:assetId',
+    {
+      schema: {
+        summary: 'Get waterfall chart data',
+        tags: ['ML Explainability'],
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            assetId: { type: 'string' },
+          },
+        },
+        querystring: {
+          type: 'object',
+          properties: {
+            modelName: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { assetId } = request.params as { assetId: string };
+        const { modelName = 'default-model' } = request.query as { modelName?: string };
+
+        const waterfallData = await explainabilityService.getWaterfallData(modelName, assetId);
+
+        return waterfallData;
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: error.message || 'Failed to get waterfall data',
+        });
+      }
     }
+  );
 
-    const explanation = await explainabilityService.explainPrediction(request);
+  // POST /api/v1/ml-explainability/explain/feature-importance
+  server.post(
+    '/explain/feature-importance',
+    {
+      schema: {
+        summary: 'Get global feature importance',
+        tags: ['ML Explainability'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['modelName'],
+          properties: {
+            modelName: { type: 'string' },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { modelName, startDate, endDate } = request.body as { modelName: string; startDate?: string; endDate?: string };
 
-    // Add recommendation
-    const recommendation = explainabilityService.getRecommendation(explanation);
+        const importance = await explainabilityService.getFeatureImportance(
+          modelName,
+          startDate ? new Date(startDate) : undefined,
+          endDate ? new Date(endDate) : undefined
+        );
 
-    res.json({
-      ...explanation,
-      recommendation,
-    });
-  } catch (error) {
-    console.error('Explanation error:', error);
-    res.status(error.status || 500).json({
-      error: error.message || 'Failed to generate explanation',
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/ml/explain/waterfall/{assetId}:
- *   get:
- *     summary: Get waterfall plot data for visualization
- *     tags: [ML Explainability]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: assetId
- *         required: true
- *         schema:
- *           type: string
- *         description: Asset ID
- *       - in: query
- *         name: modelName
- *         required: true
- *         schema:
- *           type: string
- *         description: Model name
- *     responses:
- *       200:
- *         description: Waterfall plot data
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 assetId:
- *                   type: string
- *                 baseValue:
- *                   type: number
- *                 features:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       feature:
- *                         type: string
- *                       value:
- *                         type: number
- *                       shapValue:
- *                         type: number
- *                 finalValue:
- *                   type: number
- *       400:
- *         description: Invalid request
- *       503:
- *         description: Explainer service unavailable
- */
-router.get('/explain/waterfall/:assetId', authenticateToken, async (req, res) => {
-  try {
-    const { assetId } = req.params;
-    const modelName = req.query.modelName as string;
-
-    if (!modelName) {
-      return res.status(400).json({
-        error: 'modelName query parameter is required',
-      });
+        return importance;
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: error.message || 'Failed to get feature importance',
+        });
+      }
     }
+  );
+};
 
-    const waterfallData = await explainabilityService.getWaterfallData(modelName, assetId);
-
-    res.json(waterfallData);
-  } catch (error) {
-    console.error('Waterfall error:', error);
-    res.status(error.status || 500).json({
-      error: error.message || 'Failed to get waterfall data',
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/ml/explain/feature-importance:
- *   post:
- *     summary: Get feature importance summary across multiple assets
- *     tags: [ML Explainability]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - modelName
- *               - assetIds
- *             properties:
- *               modelName:
- *                 type: string
- *               assetIds:
- *                 type: array
- *                 items:
- *                   type: string
- *               topN:
- *                 type: integer
- *                 default: 10
- *     responses:
- *       200:
- *         description: Feature importance summary
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 topFeatures:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       feature:
- *                         type: string
- *                       meanAbsShap:
- *                         type: number
- *                 numSamples:
- *                   type: integer
- *                 modelName:
- *                   type: string
- *       400:
- *         description: Invalid request
- */
-router.post('/explain/feature-importance', authenticateToken, async (req, res) => {
-  try {
-    const { modelName, assetIds, topN } = req.body;
-
-    if (!modelName) {
-      return res.status(400).json({
-        error: 'modelName is required',
-      });
-    }
-
-    if (!assetIds || !Array.isArray(assetIds) || assetIds.length === 0) {
-      return res.status(400).json({
-        error: 'assetIds must be a non-empty array',
-      });
-    }
-
-    // Limit to reasonable number
-    if (assetIds.length > 100) {
-      return res.status(400).json({
-        error: 'Maximum 100 assets allowed for feature importance',
-      });
-    }
-
-    const importance = await explainabilityService.getFeatureImportance(
-      modelName,
-      assetIds,
-      topN || 10
-    );
-
-    res.json(importance);
-  } catch (error) {
-    console.error('Feature importance error:', error);
-    res.status(error.status || 500).json({
-      error: error.message || 'Failed to get feature importance',
-    });
-  }
-});
-
-export default router;
+export default mlExplainabilityRoutes;

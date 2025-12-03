@@ -15,7 +15,7 @@
 
 import crypto from 'crypto';
 import axios, { AxiosError } from 'axios';
-import { db } from '../db';
+import { db, pool } from '../db';
 
 // ==========================================
 // Types
@@ -62,6 +62,11 @@ export class WebhookService {
     this.timeout = parseInt(process.env.WEBHOOK_TIMEOUT_MS || '10000');
     this.maxRetries = parseInt(process.env.WEBHOOK_MAX_RETRIES || '3');
   }
+
+  /**
+   * Trigger webhooks for an event
+   */
+
 
   /**
    * Send webhook notification
@@ -278,7 +283,7 @@ export class WebhookService {
    * Get webhooks for event type
    */
   private async getWebhooksForEvent(tenantId: string, eventType: string): Promise<WebhookConfig[]> {
-    const result = await db.query(`
+    const result = await pool.query(`
       SELECT
         w.id,
         w.url,
@@ -313,7 +318,7 @@ export class WebhookService {
     status: string = 'pending',
     errorMessage?: string
   ): Promise<string> {
-    const result = await db.query(`
+    const result = await pool.query(`
       INSERT INTO webhook_deliveries (
         webhook_id,
         event_type,
@@ -386,7 +391,7 @@ export class WebhookService {
 
     values.push(deliveryId);
 
-    await db.query(`
+    await pool.query(`
       UPDATE webhook_deliveries
       SET ${fields.join(', ')}
       WHERE id = $${paramCount}
@@ -406,7 +411,7 @@ export class WebhookService {
     const delaySeconds = Math.pow(2, attemptNumber); // 2, 4, 8 seconds
     const nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
 
-    await db.query(`
+    await pool.query(`
       UPDATE webhook_deliveries
       SET
         status = 'retrying',
@@ -448,7 +453,7 @@ export class WebhookService {
    * (Called by background worker)
    */
   async processRetries(): Promise<void> {
-    const result = await db.query(`
+    const result = await pool.query(`
       SELECT
         wd.id AS delivery_id,
         wd.webhook_id,
@@ -494,6 +499,12 @@ export class WebhookService {
       await this.sendWebhook(webhook, payload, row.attempt_number + 1);
     }
   }
+}
+
+import { FastifyInstance } from 'fastify';
+
+export function createWebhookService(fastify: FastifyInstance): WebhookService {
+  return new WebhookService();
 }
 
 export default WebhookService;

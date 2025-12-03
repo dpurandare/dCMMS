@@ -157,7 +157,7 @@ export class ReportBuilderService {
         format: 'JSONEachRow',
       });
 
-      const data = await result.json();
+      const data = (await result.json()) as any[];
 
       this.fastify.log.info(
         { rows: data.length, datasource: definition.datasource },

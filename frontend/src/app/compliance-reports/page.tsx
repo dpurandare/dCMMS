@@ -99,9 +99,8 @@ export default function ComplianceReportsPage() {
   };
 
   const handleDownload = (report: ComplianceReport) => {
-    const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${
-      report.downloadUrl
-    }`;
+    const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${report.downloadUrl
+      }`;
     const link = document.createElement('a');
     link.href = fullUrl;
     link.download = `${report.reportId}.${report.format}`;
@@ -146,18 +145,18 @@ export default function ComplianceReportsPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Compliance Reports">
       <div className="space-y-6">
         <PageHeader
           title="Compliance Reports"
           description="Generate and manage compliance reports for regulatory requirements"
-          icon={FileText}
-        >
-          <Button onClick={() => setShowGenerator(!showGenerator)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {showGenerator ? 'Hide Generator' : 'Generate Report'}
-          </Button>
-        </PageHeader>
+          actions={
+            <Button onClick={() => setShowGenerator(!showGenerator)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {showGenerator ? 'Hide Generator' : 'Generate Report'}
+            </Button>
+          }
+        />
 
         {/* Report Generator (collapsible) */}
         {showGenerator && (
@@ -244,12 +243,12 @@ export default function ComplianceReportsPage() {
                   : 'Generate your first compliance report to get started'
               }
               action={
-                !showGenerator ? (
-                  <Button onClick={() => setShowGenerator(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Generate Report
-                  </Button>
-                ) : undefined
+                !showGenerator
+                  ? {
+                    label: 'Generate Report',
+                    onClick: () => setShowGenerator(true),
+                  }
+                  : undefined
               }
             />
           ) : (

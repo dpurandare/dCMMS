@@ -55,7 +55,7 @@ export class TokenService {
       const decoded = server.jwt.verify(refreshToken);
 
       // Check if it's a refresh token
-      if (decoded.type !== 'refresh') {
+      if ((decoded as any).type !== 'refresh') {
         throw new Error('Invalid token type');
       }
 

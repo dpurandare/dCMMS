@@ -43,8 +43,7 @@ export const modelPerformanceJob = new CronJob(
 
           const metrics = await performanceService.calculateMetrics(
             modelName,
-            startDate,
-            endDate
+            30
           );
 
           console.log(`[CRON] Metrics calculated for ${modelName}:`);
@@ -64,8 +63,8 @@ export const modelPerformanceJob = new CronJob(
             }
           }
         } catch (error) {
-          if (error.message.includes('Not enough')) {
-            console.log(`[CRON] ${error.message} for ${modelName}`);
+          if ((error as any).message.includes('Not enough')) {
+            console.log(`[CRON] ${(error as any).message} for ${modelName}`);
           } else {
             console.error(`[CRON] Failed to calculate metrics for ${modelName}:`, error);
           }
@@ -114,11 +113,11 @@ export async function runModelPerformanceNow() {
 
   // Calculate metrics
   try {
-    const metrics = await performanceService.calculateMetrics('predictive_maintenance');
+    const metrics = await performanceService.calculateMetrics('predictive_maintenance', 30);
     console.log('[CRON] Metrics:', metrics);
     return metrics;
   } catch (error) {
-    console.log('[CRON] Could not calculate metrics:', error.message);
+    console.log('[CRON] Could not calculate metrics:', (error as any).message);
     return null;
   }
 }

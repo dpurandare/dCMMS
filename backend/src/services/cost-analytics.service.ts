@@ -1,4 +1,3 @@
-import { Injectable, Logger } from '@nestjs/common';
 import {
   CostAnalyticsQuery,
   CostAnalyticsResult,
@@ -6,22 +5,20 @@ import {
   CostBySite,
   CostByWOType,
   CostExportOptions,
+  Currency,
 } from '../models/cost.models';
 import { CostCalculationService } from './cost-calculation.service';
 
-@Injectable()
 export class CostAnalyticsService {
-  private readonly logger = new Logger(CostAnalyticsService.name);
-
-  constructor(private readonly costService: CostCalculationService) {}
+  constructor(private readonly costService: CostCalculationService) { }
 
   /**
    * Get aggregate cost analytics
    */
   async getCostAnalytics(query: CostAnalyticsQuery): Promise<CostAnalyticsResult> {
-    this.logger.log(
+    console.log(
       `Generating cost analytics: ${query.startDate.toISOString().split('T')[0]} to ${query.endDate.toISOString().split('T')[0]}, ` +
-        `GroupBy: ${query.groupBy}`
+      `GroupBy: ${query.groupBy}`
     );
 
     // Get all cost records in the date range
@@ -41,7 +38,7 @@ export class CostAnalyticsService {
     startDate?: Date,
     endDate?: Date
   ): Promise<CostTrend[]> {
-    this.logger.log('Generating cost trends');
+    console.log('Generating cost trends');
 
     // Mock data for demonstration
     const trends: CostTrend[] = [];
@@ -74,7 +71,7 @@ export class CostAnalyticsService {
    * Get cost breakdown by site
    */
   async getCostBySite(startDate: Date, endDate: Date): Promise<CostBySite[]> {
-    this.logger.log('Generating cost by site');
+    console.log('Generating cost by site');
 
     // Mock data
     const sites = ['Site A', 'Site B', 'Site C', 'Site D'];
@@ -104,7 +101,7 @@ export class CostAnalyticsService {
     startDate?: Date,
     endDate?: Date
   ): Promise<CostByWOType[]> {
-    this.logger.log('Generating cost by WO type');
+    console.log('Generating cost by WO type');
 
     // Mock data
     const woTypes = [
@@ -131,7 +128,7 @@ export class CostAnalyticsService {
     query: CostAnalyticsQuery,
     options: CostExportOptions
   ): Promise<{ data: string; mimeType: string; filename: string }> {
-    this.logger.log(`Exporting cost data as ${options.format}`);
+    console.log(`Exporting cost data as ${options.format}`);
 
     const analytics = await this.getCostAnalytics(query);
 
@@ -167,7 +164,7 @@ export class CostAnalyticsService {
       woCountChangePercentage: number;
     };
   }> {
-    this.logger.log('Calculating cost variance');
+    console.log('Calculating cost variance');
 
     // Mock data
     const currentPeriod = {
@@ -213,7 +210,7 @@ export class CostAnalyticsService {
     avgCostPerWO: number;
     lastMaintenanceDate: Date;
   }>> {
-    this.logger.log('Generating cost per asset');
+    console.log('Generating cost per asset');
 
     // Mock data
     const assets = [];
@@ -249,7 +246,7 @@ export class CostAnalyticsService {
     other: { amount: number; percentage: number };
     total: number;
   }> {
-    this.logger.log('Generating cost breakdown');
+    console.log('Generating cost breakdown');
 
     // Mock data
     const labor = Math.random() * 30000 + 15000;
@@ -293,7 +290,7 @@ export class CostAnalyticsService {
       averageCostPerWO: totalCost / woCount,
       costPerAsset: totalCost / 50, // Assume 50 assets
       costVariance: (Math.random() - 0.5) * 20, // -10% to +10%
-      currency: 'USD',
+      currency: Currency.USD,
 
       categoryBreakdown: {
         labor: {
@@ -450,7 +447,7 @@ export class CostAnalyticsService {
     options: CostExportOptions
   ): { data: string; mimeType: string; filename: string } {
     // In production, use a PDF library like pdfkit or puppeteer
-    this.logger.warn('PDF export not fully implemented - returning placeholder');
+    console.warn('PDF export not fully implemented - returning placeholder');
 
     return {
       data: 'PDF export would generate a formatted PDF report here',
@@ -468,7 +465,7 @@ export class CostAnalyticsService {
     options: CostExportOptions
   ): { data: string; mimeType: string; filename: string } {
     // In production, use a library like exceljs
-    this.logger.warn('Excel export not fully implemented - returning placeholder');
+    console.warn('Excel export not fully implemented - returning placeholder');
 
     return {
       data: 'Excel export would generate an XLSX file here',

@@ -456,7 +456,20 @@ export class WeatherAPIService {
         .where(and(...conditions))
         .orderBy(desc(weatherForecasts.forecastTimestamp));
 
-      return results as WeatherForecast[];
+      return results.map(r => ({
+        ...r,
+        irradiationWhM2: r.irradiationWhM2 ? Number(r.irradiationWhM2) : undefined,
+        ghiWhM2: r.ghiWhM2 ? Number(r.ghiWhM2) : undefined,
+        dniWhM2: r.dniWhM2 ? Number(r.dniWhM2) : undefined,
+        dhiWhM2: r.dhiWhM2 ? Number(r.dhiWhM2) : undefined,
+        windSpeedMs: r.windSpeedMs ? Number(r.windSpeedMs) : undefined,
+        windGustMs: r.windGustMs ? Number(r.windGustMs) : undefined,
+        temperatureC: r.temperatureC ? Number(r.temperatureC) : undefined,
+        pressureHpa: r.pressureHpa ? Number(r.pressureHpa) : undefined,
+        precipitationMm: r.precipitationMm ? Number(r.precipitationMm) : undefined,
+        snowMm: r.snowMm ? Number(r.snowMm) : undefined,
+        airDensityKgM3: r.airDensityKgM3 ? Number(r.airDensityKgM3) : undefined,
+      })) as WeatherForecast[];
     } catch (error) {
       console.error('Error getting weather forecasts:', error);
       throw new Error('Failed to get weather forecasts');
@@ -475,7 +488,23 @@ export class WeatherAPIService {
         .orderBy(desc(weatherForecasts.fetchedAt))
         .limit(1);
 
-      return results.length > 0 ? (results[0] as WeatherForecast) : null;
+      if (results.length === 0) return null;
+
+      const r = results[0];
+      return {
+        ...r,
+        irradiationWhM2: r.irradiationWhM2 ? Number(r.irradiationWhM2) : undefined,
+        ghiWhM2: r.ghiWhM2 ? Number(r.ghiWhM2) : undefined,
+        dniWhM2: r.dniWhM2 ? Number(r.dniWhM2) : undefined,
+        dhiWhM2: r.dhiWhM2 ? Number(r.dhiWhM2) : undefined,
+        windSpeedMs: r.windSpeedMs ? Number(r.windSpeedMs) : undefined,
+        windGustMs: r.windGustMs ? Number(r.windGustMs) : undefined,
+        temperatureC: r.temperatureC ? Number(r.temperatureC) : undefined,
+        pressureHpa: r.pressureHpa ? Number(r.pressureHpa) : undefined,
+        precipitationMm: r.precipitationMm ? Number(r.precipitationMm) : undefined,
+        snowMm: r.snowMm ? Number(r.snowMm) : undefined,
+        airDensityKgM3: r.airDensityKgM3 ? Number(r.airDensityKgM3) : undefined,
+      } as WeatherForecast;
     } catch (error) {
       console.error('Error getting latest weather forecast:', error);
       throw new Error('Failed to get latest weather forecast');
@@ -546,25 +575,25 @@ export class WeatherAPIService {
         source: weatherData.source,
         forecastType: weatherData.forecastType,
 
-        irradiationWhM2: weatherData.irradiationWhM2,
-        ghiWhM2: weatherData.ghiWhM2,
-        dniWhM2: weatherData.dniWhM2,
-        dhiWhM2: weatherData.dhiWhM2,
+        irradiationWhM2: weatherData.irradiationWhM2?.toString(),
+        ghiWhM2: weatherData.ghiWhM2?.toString(),
+        dniWhM2: weatherData.dniWhM2?.toString(),
+        dhiWhM2: weatherData.dhiWhM2?.toString(),
 
-        windSpeedMs: weatherData.windSpeedMs,
-        windDirectionDeg: weatherData.windDirectionDeg,
-        windGustMs: weatherData.windGustMs,
+        windSpeedMs: weatherData.windSpeedMs?.toString(),
+        windDirectionDeg: weatherData.windDirectionDeg, // integer
+        windGustMs: weatherData.windGustMs?.toString(),
 
-        temperatureC: weatherData.temperatureC,
-        humidityPercent: weatherData.humidityPercent,
-        pressureHpa: weatherData.pressureHpa,
-        cloudCoverPercent: weatherData.cloudCoverPercent,
-        precipitationMm: weatherData.precipitationMm,
-        snowMm: weatherData.snowMm,
-        visibilityM: weatherData.visibilityM,
+        temperatureC: weatherData.temperatureC?.toString(),
+        humidityPercent: weatherData.humidityPercent, // integer
+        pressureHpa: weatherData.pressureHpa?.toString(),
+        cloudCoverPercent: weatherData.cloudCoverPercent, // integer
+        precipitationMm: weatherData.precipitationMm?.toString(),
+        snowMm: weatherData.snowMm?.toString(),
+        visibilityM: weatherData.visibilityM, // integer
 
-        airDensityKgM3: weatherData.airDensityKgM3,
-        aqi: weatherData.aqi,
+        airDensityKgM3: weatherData.airDensityKgM3?.toString(),
+        aqi: weatherData.aqi, // integer
 
         weatherCondition: weatherData.weatherCondition,
         weatherDescription: weatherData.weatherDescription,
@@ -574,9 +603,9 @@ export class WeatherAPIService {
         target: [weatherForecasts.siteId, weatherForecasts.forecastTimestamp, weatherForecasts.source],
         set: {
           fetchedAt: weatherData.fetchedAt,
-          windSpeedMs: weatherData.windSpeedMs,
+          windSpeedMs: weatherData.windSpeedMs?.toString(),
           windDirectionDeg: weatherData.windDirectionDeg,
-          temperatureC: weatherData.temperatureC,
+          temperatureC: weatherData.temperatureC?.toString(),
           updatedAt: new Date(),
         },
       });

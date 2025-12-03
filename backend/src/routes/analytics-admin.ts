@@ -40,7 +40,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
       try {
         const { full } = request.body;
 
-        fastify.log.info({ full, userId: request.user?.id }, 'ETL sync triggered manually');
+        fastify.log.info({ full, userId: (request.user as any)?.id }, 'ETL sync triggered manually');
 
         // Trigger sync asynchronously
         etlScheduler.triggerSync(full).catch((error) => {
@@ -79,7 +79,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
         const targetDate = date ? new Date(date) : undefined;
 
         fastify.log.info(
-          { date: targetDate, userId: request.user?.id },
+          { date: targetDate, userId: (request.user as any)?.id },
           'KPI calculation triggered manually'
         );
 
@@ -186,7 +186,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
         try {
           const { query } = request.body;
 
-          fastify.log.info({ query, userId: request.user?.id }, 'Executing custom ClickHouse query');
+          fastify.log.info({ query, userId: (request.user as any)?.id }, 'Executing custom ClickHouse query');
 
           // Create temporary ClickHouse client
           const { createClient } = await import('@clickhouse/client');
@@ -208,7 +208,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
 
           return reply.send({
             success: true,
-            rows: data.length,
+            rows: (data as any[]).length,
             data,
           });
         } catch (error: any) {

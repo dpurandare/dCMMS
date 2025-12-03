@@ -166,7 +166,7 @@ export const assets = pgTable('assets', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
-  parentAssetId: uuid('parent_asset_id').references(() => assets.id, { onDelete: 'set null' }),
+  parentAssetId: uuid('parent_asset_id'),
   assetId: varchar('asset_id', { length: 100 }).notNull(),
   name: varchar('name', { length: 255 }).notNull(),
   type: varchar('type', { length: 100 }).notNull(),

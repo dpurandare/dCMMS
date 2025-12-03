@@ -442,8 +442,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       await notificationService.sendNotification({
         tenantId: 'default-tenant-id', // TODO: Get from auth context
         userId,
-        eventType: eventType as any,
-        data,
+        templateCode: eventType,
+        variables: data,
+        channels: ['email', 'push'], // Default channels for test
       });
 
       return reply.send({
@@ -474,17 +475,17 @@ function getDefaultPreferences() {
     | 'asset_down'
     | 'maintenance_due'
   > = [
-    'work_order_assigned',
-    'work_order_overdue',
-    'work_order_completed',
-    'alert_critical',
-    'alert_high',
-    'alert_medium',
-    'alert_acknowledged',
-    'alert_resolved',
-    'asset_down',
-    'maintenance_due',
-  ];
+      'work_order_assigned',
+      'work_order_overdue',
+      'work_order_completed',
+      'alert_critical',
+      'alert_high',
+      'alert_medium',
+      'alert_acknowledged',
+      'alert_resolved',
+      'asset_down',
+      'maintenance_due',
+    ];
 
   const channels: Array<'email' | 'sms' | 'push'> = ['email', 'sms', 'push'];
 

@@ -1,4 +1,3 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ModelPerformanceService } from './model-performance.service';
 
 export interface ApprovalRequest {
@@ -36,9 +35,8 @@ export interface WorkOrderApproval {
   feedback?: string;
 }
 
-@Injectable()
 export class WorkOrderApprovalService {
-  private readonly logger = new Logger(WorkOrderApprovalService.name);
+  private readonly logger = console;
   private readonly performanceService: ModelPerformanceService;
 
   // In-memory storage (in production, use database)
@@ -64,13 +62,13 @@ export class WorkOrderApprovalService {
     const workOrder = await this.getWorkOrder(request.workOrderId);
 
     if (!workOrder) {
-      throw new NotFoundException(`Work order ${request.workOrderId} not found`);
+      throw new Error(`Work order ${request.workOrderId} not found`);
     }
 
     // Check if already approved or rejected
     const existing = this.approvals.get(request.workOrderId);
     if (existing && existing.status !== 'pending') {
-      throw new BadRequestException(
+      throw new Error(
         `Work order already ${existing.status}`
       );
     }
@@ -110,13 +108,13 @@ export class WorkOrderApprovalService {
     const workOrder = await this.getWorkOrder(request.workOrderId);
 
     if (!workOrder) {
-      throw new NotFoundException(`Work order ${request.workOrderId} not found`);
+      throw new Error(`Work order ${request.workOrderId} not found`);
     }
 
     // Check if already approved or rejected
     const existing = this.approvals.get(request.workOrderId);
     if (existing && existing.status !== 'pending') {
-      throw new BadRequestException(
+      throw new Error(
         `Work order already ${existing.status}`
       );
     }
@@ -179,8 +177,8 @@ export class WorkOrderApprovalService {
         approved++;
       } catch (error) {
         failed++;
-        errors.push(`${workOrderId}: ${error.message}`);
-        this.logger.error(`Failed to approve ${workOrderId}: ${error.message}`);
+        errors.push(`${workOrderId}: ${(error as any).message}`);
+        this.logger.error(`Failed to approve ${workOrderId}: ${(error as any).message}`);
       }
     }
 
@@ -291,7 +289,7 @@ export class WorkOrderApprovalService {
 
       this.logger.log(`Ground truth recorded for WO ${workOrderId}`);
     } catch (error) {
-      this.logger.error(`Failed to record ground truth: ${error.message}`);
+      this.logger.error(`Failed to record ground truth: ${(error as any).message}`);
       // Don't throw - this is a non-critical operation
     }
   }

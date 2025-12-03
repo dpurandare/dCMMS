@@ -61,9 +61,9 @@ export class ComplianceTemplateService {
       const templates = await db.query.complianceReportTemplates.findMany({
         where: reportType
           ? and(
-              eq(complianceReportTemplates.reportType, reportType),
-              eq(complianceReportTemplates.isActive, true)
-            )
+            eq(complianceReportTemplates.reportType, reportType),
+            eq(complianceReportTemplates.isActive, true)
+          )
           : eq(complianceReportTemplates.isActive, true),
         orderBy: (complianceReportTemplates, { asc }) => [asc(complianceReportTemplates.name)],
       });
@@ -426,7 +426,7 @@ export class ComplianceTemplateService {
         format: 'JSONEachRow',
       });
 
-      const data = await result.json();
+      const data = await result.json<any[]>();
 
       return data;
     } catch (error) {

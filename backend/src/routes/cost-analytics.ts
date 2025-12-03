@@ -1,624 +1,397 @@
-import { Router } from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import { CostAnalyticsService } from '../services/cost-analytics.service';
 import { CostAnalyticsQuery, CostExportOptions } from '../models/cost.models';
-import { authenticateToken } from '../middleware/auth';
 
-const router = Router();
-const analyticsService = new CostAnalyticsService(null); // Pass cost service in production
+import { CostCalculationService } from '../services/cost-calculation.service';
 
-/**
- * @swagger
- * tags:
- *   name: Cost Analytics
- *   description: Cost analytics and reporting
- */
+const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
+  const costService = new CostCalculationService();
+  const analyticsService = new CostAnalyticsService(costService);
 
-/**
- * @swagger
- * /api/v1/analytics/costs:
- *   get:
- *     summary: Get aggregate cost analytics
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: startDate
- *         required: true
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         required: true
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: groupBy
- *         required: true
- *         schema:
- *           type: string
- *           enum: [site, asset, wo_type, category, month]
- *       - in: query
- *         name: categories
- *         schema:
- *           type: string
- *           description: Comma-separated list of categories
- *       - in: query
- *         name: woTypes
- *         schema:
- *           type: string
- *           description: Comma-separated list of WO types
- *     responses:
- *       200:
- *         description: Cost analytics
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 totalCost:
- *                   type: number
- *                 averageCostPerWO:
- *                   type: number
- *                 costPerAsset:
- *                   type: number
- *                 costVariance:
- *                   type: number
- *                 categoryBreakdown:
- *                   type: object
- *                 trends:
- *                   type: array
- *                 groups:
- *                   type: array
- *                 comparison:
- *                   type: object
- *       400:
- *         description: Invalid request
- */
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, startDate, endDate, groupBy, categories, woTypes } = req.query;
+  // GET /api/v1/analytics/costs
+  server.get(
+    '/',
+    {
+      schema: {
+        summary: 'Get aggregate cost analytics',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['startDate', 'endDate', 'groupBy'],
+          properties: {
+            siteId: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+            groupBy: { type: 'string', enum: ['site', 'asset', 'wo_type', 'category', 'month'] },
+            categories: { type: 'string' },
+            woTypes: { type: 'string' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, startDate, endDate, groupBy, categories, woTypes } = request.query as any;
 
-    if (!startDate || !endDate || !groupBy) {
-      return res.status(400).json({
-        error: 'startDate, endDate, and groupBy are required',
-      });
+        if (!startDate || !endDate || !groupBy) {
+          return reply.status(400).send({
+            error: 'startDate, endDate, and groupBy are required',
+          });
+        }
+
+        const query: CostAnalyticsQuery = {
+          siteId: siteId as string,
+          startDate: new Date(startDate as string),
+          endDate: new Date(endDate as string),
+          groupBy: groupBy as any,
+          categories: categories ? (categories as string).split(',') as any[] : undefined,
+          woTypes: woTypes ? (woTypes as string).split(',') : undefined,
+        };
+
+        const analytics = await analyticsService.getCostAnalytics(query);
+
+        return analytics;
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost analytics',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const query: CostAnalyticsQuery = {
-      siteId: siteId as string,
-      startDate: new Date(startDate as string),
-      endDate: new Date(endDate as string),
-      groupBy: groupBy as any,
-      categories: categories ? (categories as string).split(',') as any[] : undefined,
-      woTypes: woTypes ? (woTypes as string).split(',') : undefined,
-    };
+  // GET /api/v1/analytics/costs/trends
+  server.get(
+    '/trends',
+    {
+      schema: {
+        summary: 'Get cost trends over time (monthly aggregates)',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            siteId: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, startDate, endDate } = request.query as any;
 
-    const analytics = await analyticsService.getCostAnalytics(query);
+        const trends = await analyticsService.getCostTrends(
+          siteId as string,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined
+        );
 
-    res.json(analytics);
-  } catch (error) {
-    console.error('Get cost analytics error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost analytics',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/trends:
- *   get:
- *     summary: Get cost trends over time (monthly aggregates)
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost trends
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   month:
- *                     type: string
- *                   totalCost:
- *                     type: number
- *                   laborCost:
- *                     type: number
- *                   partsCost:
- *                     type: number
- *                   equipmentCost:
- *                     type: number
- *                   otherCost:
- *                     type: number
- *                   woCount:
- *                     type: integer
- *                   avgCostPerWO:
- *                     type: number
- */
-router.get('/trends', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, startDate, endDate } = req.query;
-
-    const trends = await analyticsService.getCostTrends(
-      siteId as string,
-      startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
-    );
-
-    res.json({
-      count: trends.length,
-      trends,
-    });
-  } catch (error) {
-    console.error('Get cost trends error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost trends',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/by-site:
- *   get:
- *     summary: Get cost breakdown by site
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: startDate
- *         required: true
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         required: true
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost by site
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   siteId:
- *                     type: string
- *                   siteName:
- *                     type: string
- *                   totalCost:
- *                     type: number
- *                   woCount:
- *                     type: integer
- *                   avgCostPerWO:
- *                     type: number
- */
-router.get('/by-site', authenticateToken, async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-
-    if (!startDate || !endDate) {
-      return res.status(400).json({
-        error: 'startDate and endDate are required',
-      });
+        return {
+          count: trends.length,
+          trends,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost trends',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const costBySite = await analyticsService.getCostBySite(
-      new Date(startDate as string),
-      new Date(endDate as string)
-    );
+  // GET /api/v1/analytics/costs/by-site
+  server.get(
+    '/by-site',
+    {
+      schema: {
+        summary: 'Get cost breakdown by site',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          required: ['startDate', 'endDate'],
+          properties: {
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { startDate, endDate } = request.query as any;
 
-    res.json({
-      count: costBySite.length,
-      sites: costBySite,
-    });
-  } catch (error) {
-    console.error('Get cost by site error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost by site',
-      details: error.message,
-    });
-  }
-});
+        if (!startDate || !endDate) {
+          return reply.status(400).send({
+            error: 'startDate and endDate are required',
+          });
+        }
 
-/**
- * @swagger
- * /api/v1/analytics/costs/by-wo-type:
- *   get:
- *     summary: Get cost breakdown by work order type
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost by WO type
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   woType:
- *                     type: string
- *                   totalCost:
- *                     type: number
- *                   woCount:
- *                     type: integer
- *                   avgCostPerWO:
- *                     type: number
- *                   percentage:
- *                     type: number
- */
-router.get('/by-wo-type', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, startDate, endDate } = req.query;
+        const costBySite = await analyticsService.getCostBySite(
+          new Date(startDate as string),
+          new Date(endDate as string)
+        );
 
-    const costByWOType = await analyticsService.getCostByWOType(
-      siteId as string,
-      startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
-    );
-
-    res.json({
-      count: costByWOType.length,
-      woTypes: costByWOType,
-    });
-  } catch (error) {
-    console.error('Get cost by WO type error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost by WO type',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/variance:
- *   get:
- *     summary: Get cost variance (current vs previous period)
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: currentPeriodStart
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: currentPeriodEnd
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost variance
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 currentPeriod:
- *                   type: object
- *                   properties:
- *                     cost:
- *                       type: number
- *                     woCount:
- *                       type: integer
- *                 previousPeriod:
- *                   type: object
- *                 variance:
- *                   type: object
- *                   properties:
- *                     costChange:
- *                       type: number
- *                     costChangePercentage:
- *                       type: number
- *                     woCountChange:
- *                       type: integer
- *                     woCountChangePercentage:
- *                       type: number
- */
-router.get('/variance', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, currentPeriodStart, currentPeriodEnd } = req.query;
-
-    const variance = await analyticsService.getCostVariance(
-      siteId as string,
-      currentPeriodStart ? new Date(currentPeriodStart as string) : undefined,
-      currentPeriodEnd ? new Date(currentPeriodEnd as string) : undefined
-    );
-
-    res.json(variance);
-  } catch (error) {
-    console.error('Get cost variance error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost variance',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/by-asset:
- *   get:
- *     summary: Get cost per asset
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost per asset
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   assetId:
- *                     type: string
- *                   assetName:
- *                     type: string
- *                   totalCost:
- *                     type: number
- *                   woCount:
- *                     type: integer
- *                   avgCostPerWO:
- *                     type: number
- *                   lastMaintenanceDate:
- *                     type: string
- *                     format: date-time
- */
-router.get('/by-asset', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, startDate, endDate } = req.query;
-
-    const costPerAsset = await analyticsService.getCostPerAsset(
-      siteId as string,
-      startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
-    );
-
-    res.json({
-      count: costPerAsset.length,
-      assets: costPerAsset,
-    });
-  } catch (error) {
-    console.error('Get cost per asset error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost per asset',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/breakdown:
- *   get:
- *     summary: Get category-wise cost breakdown
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: siteId
- *         schema:
- *           type: string
- *       - in: query
- *         name: startDate
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: endDate
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Cost breakdown
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 labor:
- *                   type: object
- *                   properties:
- *                     amount:
- *                       type: number
- *                     percentage:
- *                       type: number
- *                 parts:
- *                   type: object
- *                 equipment:
- *                   type: object
- *                 other:
- *                   type: object
- *                 total:
- *                   type: number
- */
-router.get('/breakdown', authenticateToken, async (req, res) => {
-  try {
-    const { siteId, startDate, endDate } = req.query;
-
-    const breakdown = await analyticsService.getCostBreakdown(
-      siteId as string,
-      startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
-    );
-
-    res.json(breakdown);
-  } catch (error) {
-    console.error('Get cost breakdown error:', error);
-    res.status(500).json({
-      error: 'Failed to get cost breakdown',
-      details: error.message,
-    });
-  }
-});
-
-/**
- * @swagger
- * /api/v1/analytics/costs/export:
- *   post:
- *     summary: Export cost data (CSV, PDF, Excel)
- *     tags: [Cost Analytics]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - query
- *               - options
- *             properties:
- *               query:
- *                 type: object
- *                 properties:
- *                   siteId:
- *                     type: string
- *                   startDate:
- *                     type: string
- *                     format: date
- *                   endDate:
- *                     type: string
- *                     format: date
- *                   groupBy:
- *                     type: string
- *                     enum: [site, asset, wo_type, category, month]
- *               options:
- *                 type: object
- *                 properties:
- *                   format:
- *                     type: string
- *                     enum: [csv, pdf, excel]
- *                   includeBreakdown:
- *                     type: boolean
- *                   includeTrends:
- *                     type: boolean
- *                   includeComparison:
- *                     type: boolean
- *     responses:
- *       200:
- *         description: Export file
- *         content:
- *           application/octet-stream:
- *             schema:
- *               type: string
- *               format: binary
- */
-router.post('/export', authenticateToken, async (req, res) => {
-  try {
-    const { query, options } = req.body;
-
-    if (!query || !options) {
-      return res.status(400).json({
-        error: 'query and options are required',
-      });
+        return {
+          count: costBySite.length,
+          sites: costBySite,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost by site',
+          details: error.message,
+        });
+      }
     }
+  );
 
-    const costQuery: CostAnalyticsQuery = {
-      ...query,
-      startDate: new Date(query.startDate),
-      endDate: new Date(query.endDate),
-    };
+  // GET /api/v1/analytics/costs/by-wo-type
+  server.get(
+    '/by-wo-type',
+    {
+      schema: {
+        summary: 'Get cost breakdown by work order type',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            siteId: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, startDate, endDate } = request.query as any;
 
-    const exportOptions: CostExportOptions = options;
+        const costByWOType = await analyticsService.getCostByWOType(
+          siteId as string,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined
+        );
 
-    const exportData = await analyticsService.exportCostData(costQuery, exportOptions);
+        return {
+          count: costByWOType.length,
+          woTypes: costByWOType,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost by WO type',
+          details: error.message,
+        });
+      }
+    }
+  );
 
-    // Set headers for download
-    res.setHeader('Content-Type', exportData.mimeType);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${exportData.filename}"`
-    );
+  // GET /api/v1/analytics/costs/variance
+  server.get(
+    '/variance',
+    {
+      schema: {
+        summary: 'Get cost variance (current vs previous period)',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            siteId: { type: 'string' },
+            currentPeriodStart: { type: 'string', format: 'date' },
+            currentPeriodEnd: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, currentPeriodStart, currentPeriodEnd } = request.query as any;
 
-    res.send(exportData.data);
-  } catch (error) {
-    console.error('Export cost data error:', error);
-    res.status(500).json({
-      error: 'Failed to export cost data',
-      details: error.message,
-    });
-  }
-});
+        const variance = await analyticsService.getCostVariance(
+          siteId as string,
+          currentPeriodStart ? new Date(currentPeriodStart as string) : undefined,
+          currentPeriodEnd ? new Date(currentPeriodEnd as string) : undefined
+        );
 
-export default router;
+        return variance;
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost variance',
+          details: error.message,
+        });
+      }
+    }
+  );
+
+  // GET /api/v1/analytics/costs/by-asset
+  server.get(
+    '/by-asset',
+    {
+      schema: {
+        summary: 'Get cost per asset',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            siteId: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, startDate, endDate } = request.query as any;
+
+        const costPerAsset = await analyticsService.getCostPerAsset(
+          siteId as string,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined
+        );
+
+        return {
+          count: costPerAsset.length,
+          assets: costPerAsset,
+        };
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost per asset',
+          details: error.message,
+        });
+      }
+    }
+  );
+
+  // GET /api/v1/analytics/costs/breakdown
+  server.get(
+    '/breakdown',
+    {
+      schema: {
+        summary: 'Get category-wise cost breakdown',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            siteId: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { siteId, startDate, endDate } = request.query as any;
+
+        const breakdown = await analyticsService.getCostBreakdown(
+          siteId as string,
+          startDate ? new Date(startDate as string) : undefined,
+          endDate ? new Date(endDate as string) : undefined
+        );
+
+        return breakdown;
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to get cost breakdown',
+          details: error.message,
+        });
+      }
+    }
+  );
+
+  // POST /api/v1/analytics/costs/export
+  server.post(
+    '/export',
+    {
+      schema: {
+        summary: 'Export cost data (CSV, PDF, Excel)',
+        tags: ['Cost Analytics'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['query', 'options'],
+          properties: {
+            query: {
+              type: 'object',
+              properties: {
+                siteId: { type: 'string' },
+                startDate: { type: 'string', format: 'date' },
+                endDate: { type: 'string', format: 'date' },
+                groupBy: { type: 'string', enum: ['site', 'asset', 'wo_type', 'category', 'month'] },
+              },
+            },
+            options: {
+              type: 'object',
+              properties: {
+                format: { type: 'string', enum: ['csv', 'pdf', 'excel'] },
+                includeBreakdown: { type: 'boolean' },
+                includeTrends: { type: 'boolean' },
+                includeComparison: { type: 'boolean' },
+              },
+            },
+          },
+        },
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      try {
+        const { query, options } = request.body as any;
+
+        if (!query || !options) {
+          return reply.status(400).send({
+            error: 'query and options are required',
+          });
+        }
+
+        const costQuery: CostAnalyticsQuery = {
+          ...query,
+          startDate: new Date(query.startDate),
+          endDate: new Date(query.endDate),
+        };
+
+        const exportOptions: CostExportOptions = options;
+
+        const exportData = await analyticsService.exportCostData(costQuery, exportOptions);
+
+        // Set headers for download
+        reply.header('Content-Type', exportData.mimeType);
+        reply.header(
+          'Content-Disposition',
+          `attachment; filename="${exportData.filename}"`
+        );
+
+        return reply.send(exportData.data);
+      } catch (error: any) {
+        request.log.error(error);
+        return reply.status(500).send({
+          error: 'Failed to export cost data',
+          details: error.message,
+        });
+      }
+    }
+  );
+};
+
+export default costAnalyticsRoutes;

@@ -136,7 +136,7 @@ export class KPICalculationService {
       format: 'JSONEachRow',
     });
 
-    const mttrData = await mttrResult.json<{ mttr: number }>();
+    const mttrData = await mttrResult.json<{ mttr: number }[]>();
     const mttr = mttrData[0]?.mttr || 0;
 
     // Calculate MTBF (Mean Time Between Failures)
@@ -159,7 +159,7 @@ export class KPICalculationService {
     const mtbfData = await mtbfResult.json<{
       failure_count: number;
       total_operating_hours: number;
-    }>();
+    }[]>();
     const mtbf =
       mtbfData[0]?.failure_count > 0
         ? mtbfData[0].total_operating_hours / mtbfData[0].failure_count
@@ -184,7 +184,7 @@ export class KPICalculationService {
       total_wo: number;
       completed_wo: number;
       overdue_wo: number;
-    }>();
+    }[]>();
 
     const totalWO = completionData[0]?.total_wo || 0;
     const completedWO = completionData[0]?.completed_wo || 0;
@@ -208,7 +208,7 @@ export class KPICalculationService {
     const pmData = await pmResult.json<{
       scheduled_pm: number;
       completed_pm: number;
-    }>();
+    }[]>();
 
     const scheduledPM = pmData[0]?.scheduled_pm || 0;
     const completedPM = pmData[0]?.completed_pm || 0;
@@ -239,7 +239,7 @@ export class KPICalculationService {
     const availabilityData = await availabilityResult.json<{
       avg_availability: number;
       total_downtime: number;
-    }>();
+    }[]>();
 
     const availability = availabilityData[0]?.avg_availability || 100;
     const totalDowntime = availabilityData[0]?.total_downtime || 0;
@@ -257,7 +257,7 @@ export class KPICalculationService {
       format: 'JSONEachRow',
     });
 
-    const alarmData = await alarmResult.json<{ critical_alarms: number }>();
+    const alarmData = await alarmResult.json<{ critical_alarms: number }[]>();
     const criticalAlarms = alarmData[0]?.critical_alarms || 0;
 
     // Calculate total maintenance cost
@@ -273,7 +273,7 @@ export class KPICalculationService {
       format: 'JSONEachRow',
     });
 
-    const costData = await costResult.json<{ total_cost: number }>();
+    const costData = await costResult.json<{ total_cost: number }[]>();
     const totalCost = costData[0]?.total_cost || 0;
 
     return {

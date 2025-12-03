@@ -1,5 +1,11 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import jwt from '@fastify/jwt';
+
+declare module 'fastify' {
+  export interface FastifyInstance {
+    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+}
 
 export async function registerJwt(server: FastifyInstance) {
   await server.register(jwt, {

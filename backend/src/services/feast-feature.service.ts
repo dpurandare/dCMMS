@@ -148,7 +148,7 @@ export class FeastFeatureService {
 
       this.fastify.log.info('Triggering Feast feature materialization');
 
-      const process = spawn('python3', [scriptPath], {
+      const child = spawn('python3', [scriptPath], {
         cwd: __dirname,
         env: { ...process.env },
       });
@@ -156,17 +156,17 @@ export class FeastFeatureService {
       let stdout = '';
       let stderr = '';
 
-      process.stdout.on('data', (data) => {
+      child.stdout.on('data', (data: Buffer) => {
         stdout += data.toString();
         this.fastify.log.info({ output: data.toString() }, 'Materialization output');
       });
 
-      process.stderr.on('data', (data) => {
+      child.stderr.on('data', (data: Buffer) => {
         stderr += data.toString();
         this.fastify.log.warn({ error: data.toString() }, 'Materialization warning');
       });
 
-      process.on('close', (code) => {
+      child.on('close', (code: number) => {
         if (code === 0) {
           this.fastify.log.info('Feature materialization completed successfully');
           resolve();
@@ -176,7 +176,7 @@ export class FeastFeatureService {
         }
       });
 
-      process.on('error', (error) => {
+      child.on('error', (error: Error) => {
         this.fastify.log.error({ error }, 'Failed to start materialization process');
         reject(error);
       });

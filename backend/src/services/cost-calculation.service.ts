@@ -1,23 +1,6 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import {
-  CostRecord,
-  CreateCostRecordRequest,
-  UpdateCostRecordRequest,
-  CostSummary,
-  CostCategory,
-  Currency,
-  LaborRate,
-  CreateLaborRateRequest,
-  EquipmentRate,
-  CreateEquipmentRateRequest,
-  CostCalculationInput,
-  CostCalculationResult,
-} from '../models/cost.models';
+import { CostRecord, CreateCostRecordRequest, UpdateCostRecordRequest, CostSummary, CostCategory, Currency, LaborRate, CreateLaborRateRequest, EquipmentRate, CreateEquipmentRateRequest, CostCalculationInput, CostCalculationResult } from '../models/cost.models';
 
-@Injectable()
 export class CostCalculationService {
-  private readonly logger = new Logger(CostCalculationService.name);
-
   // In-memory storage (in production, use database)
   private costRecords: Map<string, CostRecord> = new Map();
   private laborRates: Map<string, LaborRate> = new Map();
@@ -34,11 +17,11 @@ export class CostCalculationService {
    * Add a cost record to a work order
    */
   async addCostRecord(request: CreateCostRecordRequest): Promise<CostRecord> {
-    this.logger.log(`Adding cost record for WO: ${request.workOrderId}`);
+    console.log(`Adding cost record for WO: ${request.workOrderId}`);
 
     // Validate amount
     if (request.amount < 0) {
-      throw new BadRequestException('Amount cannot be negative');
+      throw new Error('Amount cannot be negative');
     }
 
     const costId = `cost_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -67,7 +50,7 @@ export class CostCalculationService {
 
     this.costRecords.set(costId, costRecord);
 
-    this.logger.log(`Cost record ${costId} added: ${request.category} - $${request.amount}`);
+    console.log(`Cost record ${costId} added: ${request.category} - $${request.amount}`);
 
     // Update work order total cost
     await this.updateWorkOrderTotalCost(request.workOrderId);
@@ -93,15 +76,12 @@ export class CostCalculationService {
     const record = this.costRecords.get(costId);
 
     if (!record) {
-      throw new NotFoundException(`Cost record ${costId} not found`);
+      throw new Error(`Cost record ${costId} not found`);
     }
 
     return record;
   }
 
-  /**
-   * Update a cost record (manual entries only)
-   */
   async updateCostRecord(
     costId: string,
     request: UpdateCostRecordRequest
@@ -109,7 +89,7 @@ export class CostCalculationService {
     const record = await this.getCostRecord(costId);
 
     if (record.isAutoCalculated) {
-      throw new BadRequestException('Cannot update auto-calculated cost records');
+      throw new Error('Cannot update auto-calculated cost records');
     }
 
     if (request.description) {
@@ -118,7 +98,7 @@ export class CostCalculationService {
 
     if (request.amount !== undefined) {
       if (request.amount < 0) {
-        throw new BadRequestException('Amount cannot be negative');
+        throw new Error('Amount cannot be negative');
       }
       record.amount = request.amount;
     }
@@ -128,7 +108,7 @@ export class CostCalculationService {
 
     this.costRecords.set(costId, record);
 
-    this.logger.log(`Cost record ${costId} updated`);
+    console.log(`Cost record ${costId} updated`);
 
     // Update work order total cost
     await this.updateWorkOrderTotalCost(record.workOrderId);
@@ -136,35 +116,27 @@ export class CostCalculationService {
     return record;
   }
 
-  /**
-   * Delete a cost record (manual entries only)
-   */
   async deleteCostRecord(costId: string, deletedBy: string): Promise<void> {
     const record = await this.getCostRecord(costId);
 
     if (record.isAutoCalculated) {
-      throw new BadRequestException('Cannot delete auto-calculated cost records');
+      throw new Error('Cannot delete auto-calculated cost records');
     }
 
     this.costRecords.delete(costId);
 
-    this.logger.log(`Cost record ${costId} deleted by ${deletedBy}`);
+    console.log(`Cost record ${costId} deleted by ${deletedBy}`);
 
     // Update work order total cost
     await this.updateWorkOrderTotalCost(record.workOrderId);
   }
 
-  // ===== Auto Cost Calculation =====
-
-  /**
-   * Auto-calculate and add costs for labor, parts, and equipment
-   */
   async autoCalculateCosts(
     workOrderId: string,
     input: CostCalculationInput,
     calculatedBy: string
   ): Promise<CostCalculationResult> {
-    this.logger.log(`Auto-calculating costs for WO: ${workOrderId}`);
+    console.log(`Auto-calculating costs for WO: ${workOrderId}`);
 
     const breakdown: CostCalculationResult['breakdown'] = [];
     let laborCost = 0;
@@ -178,7 +150,7 @@ export class CostCalculationService {
         const rate = await this.getActiveLaborRate(labor.technicianRole);
 
         if (!rate) {
-          this.logger.warn(`No labor rate found for role: ${labor.technicianRole}`);
+          console.warn(`No labor rate found for role: ${labor.technicianRole}`);
           continue;
         }
 
@@ -254,7 +226,7 @@ export class CostCalculationService {
         const rate = await this.getActiveEquipmentRate(equipment.equipmentType);
 
         if (!rate) {
-          this.logger.warn(`No equipment rate found for type: ${equipment.equipmentType}`);
+          console.warn(`No equipment rate found for type: ${equipment.equipmentType}`);
           continue;
         }
 
@@ -304,10 +276,10 @@ export class CostCalculationService {
 
     const totalCost = laborCost + partsCost + equipmentCost + otherCost;
 
-    this.logger.log(
+    console.log(
       `Auto-calculation complete for WO ${workOrderId}: ` +
-        `Labor=$${laborCost}, Parts=$${partsCost}, Equipment=$${equipmentCost}, ` +
-        `Other=$${otherCost}, Total=$${totalCost}`
+      `Labor=$${laborCost}, Parts=$${partsCost}, Equipment=$${equipmentCost}, ` +
+      `Other=$${otherCost}, Total=$${totalCost}`
     );
 
     // Update work order total cost
@@ -323,16 +295,11 @@ export class CostCalculationService {
     };
   }
 
-  // ===== Cost Summary =====
-
-  /**
-   * Get cost summary for a work order
-   */
   async getCostSummary(workOrderId: string): Promise<CostSummary> {
     const records = await this.getCostRecords(workOrderId);
 
     if (records.length === 0) {
-      throw new NotFoundException(`No cost records found for work order ${workOrderId}`);
+      throw new Error(`No cost records found for work order ${workOrderId}`);
     }
 
     // Initialize breakdown
@@ -424,13 +391,8 @@ export class CostCalculationService {
     };
   }
 
-  // ===== Labor Rates =====
-
-  /**
-   * Create a labor rate
-   */
   async createLaborRate(request: CreateLaborRateRequest): Promise<LaborRate> {
-    this.logger.log(`Creating labor rate for role: ${request.role}`);
+    console.log(`Creating labor rate for role: ${request.role}`);
 
     const rateId = `labor_rate_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
@@ -447,7 +409,7 @@ export class CostCalculationService {
 
     this.laborRates.set(rateId, laborRate);
 
-    this.logger.log(
+    console.log(
       `Labor rate created: ${request.role} @ $${request.hourlyRate}/hr`
     );
 
@@ -491,15 +453,12 @@ export class CostCalculationService {
     )[0];
   }
 
-  /**
-   * Update labor rate (creates new version with old one expired)
-   */
   async updateLaborRate(
     role: string,
     newHourlyRate: number,
     updatedBy: string
   ): Promise<LaborRate> {
-    this.logger.log(`Updating labor rate for role: ${role}`);
+    console.log(`Updating labor rate for role: ${role}`);
 
     // Expire old rate
     const currentRate = await this.getActiveLaborRate(role);
@@ -518,18 +477,13 @@ export class CostCalculationService {
       createdBy: updatedBy,
     });
 
-    this.logger.log(`Labor rate updated: ${role} @ $${newHourlyRate}/hr (was $${currentRate?.hourlyRate || 'N/A'}/hr)`);
+    console.log(`Labor rate updated: ${role} @ $${newHourlyRate}/hr (was $${currentRate?.hourlyRate || 'N/A'}/hr)`);
 
     return newRate;
   }
 
-  // ===== Equipment Rates =====
-
-  /**
-   * Create an equipment rate
-   */
   async createEquipmentRate(request: CreateEquipmentRateRequest): Promise<EquipmentRate> {
-    this.logger.log(`Creating equipment rate for type: ${request.equipmentType}`);
+    console.log(`Creating equipment rate for type: ${request.equipmentType}`);
 
     const rateId = `equipment_rate_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
@@ -545,7 +499,7 @@ export class CostCalculationService {
 
     this.equipmentRates.set(rateId, equipmentRate);
 
-    this.logger.log(
+    console.log(
       `Equipment rate created: ${request.equipmentType} @ $${request.hourlyRate}/hr`
     );
 
@@ -589,15 +543,12 @@ export class CostCalculationService {
     )[0];
   }
 
-  /**
-   * Update equipment rate (creates new version with old one expired)
-   */
   async updateEquipmentRate(
     equipmentType: string,
     newHourlyRate: number,
     updatedBy: string
   ): Promise<EquipmentRate> {
-    this.logger.log(`Updating equipment rate for type: ${equipmentType}`);
+    console.log(`Updating equipment rate for type: ${equipmentType}`);
 
     // Expire old rate
     const currentRate = await this.getActiveEquipmentRate(equipmentType);
@@ -615,18 +566,13 @@ export class CostCalculationService {
       createdBy: updatedBy,
     });
 
-    this.logger.log(
+    console.log(
       `Equipment rate updated: ${equipmentType} @ $${newHourlyRate}/hr (was $${currentRate?.hourlyRate || 'N/A'}/hr)`
     );
 
     return newRate;
   }
 
-  // ===== Private Methods =====
-
-  /**
-   * Update work order total cost
-   */
   private async updateWorkOrderTotalCost(workOrderId: string): Promise<void> {
     try {
       const summary = await this.getCostSummary(workOrderId);
@@ -634,20 +580,17 @@ export class CostCalculationService {
       // TODO: Update work order entity with total cost
       // await this.workOrderService.updateTotalCost(workOrderId, summary.totalCost);
 
-      this.logger.log(`Work order ${workOrderId} total cost updated: $${summary.totalCost}`);
+      console.log(`Work order ${workOrderId} total cost updated: $${summary.totalCost}`);
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if ((error as any).message.includes('No cost records found')) {
         // No costs yet, that's ok
-        this.logger.log(`No costs to update for work order ${workOrderId}`);
+        console.log(`No costs to update for work order ${workOrderId}`);
       } else {
-        this.logger.error(`Failed to update work order total cost: ${error.message}`);
+        console.error(`Failed to update work order total cost: ${(error as any).message}`);
       }
     }
   }
 
-  /**
-   * Seed default rates for testing/demo
-   */
   private seedDefaultRates(): void {
     // Labor rates
     const laborRoles = [
@@ -686,6 +629,6 @@ export class CostCalculationService {
       });
     }
 
-    this.logger.log('Default rates seeded');
+    console.log('Default rates seeded');
   }
 }
