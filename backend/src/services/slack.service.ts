@@ -21,7 +21,7 @@ export interface SlackResult {
 
 export interface SlackAlarmMessage {
   alarmId: string;
-  severity: 'critical' | 'warning' | 'info';
+  severity: "critical" | "warning" | "info";
   assetName: string;
   siteName: string;
   sensorType: string;
@@ -35,7 +35,7 @@ export interface SlackAlarmMessage {
 export interface SlackWorkOrderMessage {
   workOrderId: string;
   title: string;
-  priority: 'high' | 'medium' | 'low';
+  priority: "high" | "medium" | "low";
   assignedTo: string;
   dueDate: string;
   assetName: string;
@@ -44,48 +44,75 @@ export interface SlackWorkOrderMessage {
 
 export class SlackService {
   constructor() {
-    console.log('Slack service initialized (Mock Provider)');
+    console.log("Slack service initialized (Mock Provider)");
   }
 
   async sendMessage(channel: string, text: string): Promise<SlackResult> {
-    console.log(`[Mock Slack] Sending message to channel: ${channel}, text: "${text}"`);
-    return { success: true, messageTs: 'mock_ts', channel: channel };
+    console.log(
+      `[Mock Slack] Sending message to channel: ${channel}, text: "${text}"`,
+    );
+    return { success: true, messageTs: "mock_ts", channel: channel };
   }
 
   async sendBlockMessage(options: SlackMessageOptions): Promise<SlackResult> {
-    console.log(`[Mock Slack] Sending block message to channel: ${options.channel}, text: "${options.text}"`);
-    return { success: true, messageTs: 'mock_ts', channel: options.channel };
+    console.log(
+      `[Mock Slack] Sending block message to channel: ${options.channel}, text: "${options.text}"`,
+    );
+    return { success: true, messageTs: "mock_ts", channel: options.channel };
   }
 
-  async sendAlarmNotification(channel: string, alarm: SlackAlarmMessage): Promise<SlackResult> {
-    console.log(`[Mock Slack] Sending alarm notification to channel: ${channel}, alarm: ${alarm.alarmId}`);
-    return { success: true, messageTs: 'mock_ts', channel: channel };
+  async sendAlarmNotification(
+    channel: string,
+    alarm: SlackAlarmMessage,
+  ): Promise<SlackResult> {
+    console.log(
+      `[Mock Slack] Sending alarm notification to channel: ${channel}, alarm: ${alarm.alarmId}`,
+    );
+    return { success: true, messageTs: "mock_ts", channel: channel };
   }
 
-  async sendWorkOrderNotification(channel: string, workOrder: SlackWorkOrderMessage): Promise<SlackResult> {
-    console.log(`[Mock Slack] Sending work order notification to channel: ${channel}, workOrder: ${workOrder.workOrderId}`);
-    return { success: true, messageTs: 'mock_ts', channel: channel };
+  async sendWorkOrderNotification(
+    channel: string,
+    workOrder: SlackWorkOrderMessage,
+  ): Promise<SlackResult> {
+    console.log(
+      `[Mock Slack] Sending work order notification to channel: ${channel}, workOrder: ${workOrder.workOrderId}`,
+    );
+    return { success: true, messageTs: "mock_ts", channel: channel };
   }
 
-  async updateMessage(channel: string, messageTs: string, text: string, blocks?: any[]): Promise<SlackResult> {
-    console.log(`[Mock Slack] Updating message in channel: ${channel}, ts: ${messageTs}`);
+  async updateMessage(
+    channel: string,
+    messageTs: string,
+    text: string,
+    blocks?: any[],
+  ): Promise<SlackResult> {
+    console.log(
+      `[Mock Slack] Updating message in channel: ${channel}, ts: ${messageTs}`,
+    );
     return { success: true, messageTs: messageTs, channel: channel };
   }
 
-  async getUserByEmail(email: string): Promise<{ id: string; name: string } | null> {
-    return { id: 'mock_user_id', name: 'Mock User' };
+  async getUserByEmail(
+    email: string,
+  ): Promise<{ id: string; name: string } | null> {
+    return { id: "mock_user_id", name: "Mock User" };
   }
 
   async getChannelByName(name: string): Promise<string | null> {
-    return 'mock_channel_id';
+    return "mock_channel_id";
   }
 
-  verifySlackRequest(requestBody: string, timestamp: string, signature: string): boolean {
+  verifySlackRequest(
+    requestBody: string,
+    timestamp: string,
+    signature: string,
+  ): boolean {
     return true;
   }
 
   async handleInteractiveAction(payload: any): Promise<void> {
-    console.log('[Mock Slack] Handling interactive action');
+    console.log("[Mock Slack] Handling interactive action");
   }
 
   async testConnection(): Promise<boolean> {

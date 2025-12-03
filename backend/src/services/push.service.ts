@@ -19,30 +19,49 @@ export interface PushNotificationResult {
 
 export class PushService {
   constructor() {
-    console.log('Push service initialized (Mock Provider)');
+    console.log("Push service initialized (Mock Provider)");
   }
 
-  async sendToDevice(token: string, payload: PushNotificationPayload): Promise<PushNotificationResult> {
-    console.log(`[Mock Push] Sending to device ${token}: ${payload.title} - ${payload.body}`);
-    return { success: true, messageId: 'mock_msg_id' };
+  async sendToDevice(
+    token: string,
+    payload: PushNotificationPayload,
+  ): Promise<PushNotificationResult> {
+    console.log(
+      `[Mock Push] Sending to device ${token}: ${payload.title} - ${payload.body}`,
+    );
+    return { success: true, messageId: "mock_msg_id" };
   }
 
-  async sendToTopic(topic: string, payload: PushNotificationPayload): Promise<PushNotificationResult> {
-    console.log(`[Mock Push] Sending to topic ${topic}: ${payload.title} - ${payload.body}`);
-    return { success: true, messageId: 'mock_msg_id' };
+  async sendToTopic(
+    topic: string,
+    payload: PushNotificationPayload,
+  ): Promise<PushNotificationResult> {
+    console.log(
+      `[Mock Push] Sending to topic ${topic}: ${payload.title} - ${payload.body}`,
+    );
+    return { success: true, messageId: "mock_msg_id" };
   }
 
-  async sendToUser(userId: string, payload: PushNotificationPayload): Promise<PushNotificationResult> {
-    console.log(`[Mock Push] Sending to user ${userId}: ${payload.title} - ${payload.body}`);
-    return { success: true, messageId: 'mock_msg_id' };
+  async sendToUser(
+    userId: string,
+    payload: PushNotificationPayload,
+  ): Promise<PushNotificationResult> {
+    console.log(
+      `[Mock Push] Sending to user ${userId}: ${payload.title} - ${payload.body}`,
+    );
+    return { success: true, messageId: "mock_msg_id" };
   }
 
   async subscribeToTopic(tokens: string[], topic: string): Promise<void> {
-    console.log(`[Mock Push] Subscribing ${tokens.length} tokens to topic ${topic}`);
+    console.log(
+      `[Mock Push] Subscribing ${tokens.length} tokens to topic ${topic}`,
+    );
   }
 
   async unsubscribeFromTopic(tokens: string[], topic: string): Promise<void> {
-    console.log(`[Mock Push] Unsubscribing ${tokens.length} tokens from topic ${topic}`);
+    console.log(
+      `[Mock Push] Unsubscribing ${tokens.length} tokens from topic ${topic}`,
+    );
   }
 }
 

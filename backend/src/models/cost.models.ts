@@ -1,4 +1,3 @@
-
 /**
  * Cost Management Data Models
  *
@@ -8,29 +7,29 @@
 // ===== Cost Categories =====
 
 export enum CostCategory {
-  LABOR = 'labor',
-  PARTS = 'parts',
-  EQUIPMENT = 'equipment',
-  OTHER = 'other',
+  LABOR = "labor",
+  PARTS = "parts",
+  EQUIPMENT = "equipment",
+  OTHER = "other",
 }
 
 export enum Currency {
-  USD = 'USD',
-  EUR = 'EUR',
-  INR = 'INR',
-  GBP = 'GBP',
+  USD = "USD",
+  EUR = "EUR",
+  INR = "INR",
+  GBP = "GBP",
 }
 
 export enum BudgetPeriod {
-  MONTHLY = 'monthly',
-  QUARTERLY = 'quarterly',
-  YEARLY = 'yearly',
+  MONTHLY = "monthly",
+  QUARTERLY = "quarterly",
+  YEARLY = "yearly",
 }
 
 export enum BudgetStatus {
-  ON_TRACK = 'on_track',
-  AT_RISK = 'at_risk',
-  OVER_BUDGET = 'over_budget',
+  ON_TRACK = "on_track",
+  AT_RISK = "at_risk",
+  OVER_BUDGET = "over_budget",
 }
 
 // ===== Cost Record =====
@@ -143,7 +142,7 @@ export interface Budget {
   budgetPeriod: BudgetPeriod;
   periodStart: Date;
   periodEnd: Date;
-  category: CostCategory | 'all'; // 'all' for total budget
+  category: CostCategory | "all"; // 'all' for total budget
   allocatedAmount: number;
   spentAmount: number;
   currency: Currency;
@@ -167,7 +166,7 @@ export interface CreateBudgetRequest {
   budgetPeriod: BudgetPeriod;
   periodStart: Date;
   periodEnd: Date;
-  category: CostCategory | 'all';
+  category: CostCategory | "all";
   allocatedAmount: number;
   currency?: Currency;
   createdBy: string;
@@ -230,7 +229,7 @@ export interface CostAnalyticsQuery {
   siteId?: string;
   startDate: Date;
   endDate: Date;
-  groupBy: 'site' | 'asset' | 'wo_type' | 'category' | 'month';
+  groupBy: "site" | "asset" | "wo_type" | "category" | "month";
   categories?: CostCategory[];
   woTypes?: string[];
   assetIds?: string[];
@@ -304,7 +303,7 @@ export interface CostByWOType {
 }
 
 export interface CostExportOptions {
-  format: 'csv' | 'pdf' | 'excel';
+  format: "csv" | "pdf" | "excel";
   includeBreakdown: boolean;
   includeTrends: boolean;
   includeComparison: boolean;
@@ -316,7 +315,7 @@ export interface BudgetAlert {
   id: string;
   budgetId: string;
   budget: Budget;
-  alertType: 'warning' | 'critical' | 'over_budget';
+  alertType: "warning" | "critical" | "over_budget";
   message: string;
   spentPercentage: number;
   createdAt: Date;
@@ -498,7 +497,7 @@ export interface BudgetForecast {
   currentSpending: number;
   forecastedEndOfPeriodSpending: number;
   confidence: number; // 0-1
-  method: 'linear' | 'moving_average' | 'exponential_smoothing';
+  method: "linear" | "moving_average" | "exponential_smoothing";
   assumptions: string[];
   warnings: string[];
 }

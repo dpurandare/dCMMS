@@ -6,10 +6,13 @@
 
 export class ModelPerformanceService {
   constructor() {
-    console.log('Model Performance Service initialized (Mock Provider)');
+    console.log("Model Performance Service initialized (Mock Provider)");
   }
 
-  async trackPredictionAccuracy(predictionId: string, actualValue: number): Promise<void> {
+  async trackPredictionAccuracy(
+    predictionId: string,
+    actualValue: number,
+  ): Promise<void> {
     console.log(`[Mock Performance] Tracked accuracy for ${predictionId}`);
   }
 
@@ -21,12 +24,17 @@ export class ModelPerformanceService {
     workOrderId: string,
     assetId: string,
     actualFailure: boolean,
-    failureType?: string
+    failureType?: string,
   ): Promise<void> {
-    console.log(`[Mock Performance] Recorded ground truth for WO ${workOrderId}: ${actualFailure}`);
+    console.log(
+      `[Mock Performance] Recorded ground truth for WO ${workOrderId}: ${actualFailure}`,
+    );
   }
 
-  async calculateMetrics(modelName: string, windowSize: number = 30): Promise<any> {
+  async calculateMetrics(
+    modelName: string,
+    windowSize: number = 30,
+  ): Promise<any> {
     return {
       modelName,
       windowSize,
@@ -38,14 +46,22 @@ export class ModelPerformanceService {
     };
   }
 
-  async getMetricsHistory(modelName: string, startDate?: Date, endDate?: Date): Promise<any[]> {
+  async getMetricsHistory(
+    modelName: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any[]> {
     return [
       { timestamp: new Date(), accuracy: 0.95 },
       { timestamp: new Date(Date.now() - 86400000), accuracy: 0.94 },
     ];
   }
 
-  async compareModelVersions(modelName: string, versionA: string, versionB: string): Promise<any> {
+  async compareModelVersions(
+    modelName: string,
+    versionA: string,
+    versionB: string,
+  ): Promise<any> {
     return {
       modelName,
       versionA,
@@ -71,7 +87,7 @@ export class ModelPerformanceService {
   }
 
   async evaluateOverduePredictions(): Promise<any> {
-    console.log('[Mock Performance] Evaluating overdue predictions');
+    console.log("[Mock Performance] Evaluating overdue predictions");
     return { evaluated: 10, updated: 5 };
   }
 }

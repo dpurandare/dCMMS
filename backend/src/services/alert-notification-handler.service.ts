@@ -1,9 +1,12 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { alerts, users, assets, sites } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
-import { createNotificationService, NotificationEventType } from './notification.service';
-import { createWebhookService } from './webhook.service';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { alerts, users, assets, sites } from "../db/schema";
+import { eq, and } from "drizzle-orm";
+import {
+  createNotificationService,
+  NotificationEventType,
+} from "./notification.service";
+import { createWebhookService } from "./webhook.service";
 
 export interface AlertEvent {
   alertId: string;
@@ -12,8 +15,8 @@ export interface AlertEvent {
   assetId?: string;
   title: string;
   description?: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  status: 'active' | 'acknowledged' | 'resolved' | 'suppressed';
+  severity: "critical" | "high" | "medium" | "low" | "info";
+  status: "active" | "acknowledged" | "resolved" | "suppressed";
   triggeredAt: string;
   metadata?: Record<string, any>;
 }
@@ -38,21 +41,27 @@ export class AlertNotificationHandler {
    * Handle new alert event
    */
   async handleAlertCreated(alertEvent: AlertEvent): Promise<void> {
-    this.fastify.log.info({ alertId: alertEvent.alertId }, 'Handling alert created event');
+    this.fastify.log.info(
+      { alertId: alertEvent.alertId },
+      "Handling alert created event",
+    );
 
     try {
       // Get alert details from database
-      const alert = await db.query.alerts.findFirst({
+      const alert = (await db.query.alerts.findFirst({
         where: eq(alerts.alertId, alertEvent.alertId),
         with: {
           site: true,
           asset: true,
           tenant: true,
         },
-      }) as any; // Cast to any to avoid complex type inference issues with Drizzle relations
+      })) as any; // Cast to any to avoid complex type inference issues with Drizzle relations
 
       if (!alert) {
-        this.fastify.log.warn({ alertId: alertEvent.alertId }, 'Alert not found in database');
+        this.fastify.log.warn(
+          { alertId: alertEvent.alertId },
+          "Alert not found in database",
+        );
         return;
       }
 
@@ -62,24 +71,27 @@ export class AlertNotificationHandler {
       if (!eventType) {
         this.fastify.log.info(
           { severity: alertEvent.severity },
-          'No notification configured for this severity'
+          "No notification configured for this severity",
         );
         return;
       }
 
       // Get users to notify (site managers and assigned technicians)
-      const usersToNotify = await this.getUsersToNotify(alert.tenantId, alert.siteId);
+      const usersToNotify = await this.getUsersToNotify(
+        alert.tenantId,
+        alert.siteId,
+      );
 
       // Prepare notification data
       const notificationData = {
-        asset_name: alert.asset?.name || 'Unknown Asset',
+        asset_name: alert.asset?.name || "Unknown Asset",
         site_name: alert.site.name,
         alarm_severity: alertEvent.severity,
-        value: alertEvent.metadata?.value || 'N/A',
-        threshold: alertEvent.metadata?.threshold || 'N/A',
+        value: alertEvent.metadata?.value || "N/A",
+        threshold: alertEvent.metadata?.threshold || "N/A",
         alert_id: alertEvent.alertId,
         alert_title: alertEvent.title,
-        alert_description: alertEvent.description || '',
+        alert_description: alertEvent.description || "",
       };
 
       // Send notifications to all relevant users
@@ -89,19 +101,20 @@ export class AlertNotificationHandler {
             tenantId: alert.tenantId,
             userId: user.id,
             templateCode: eventType, // Mapping eventType to templateCode
-            channels: ['email', 'push'], // Default channels
+            channels: ["email", "push"], // Default channels
             variables: notificationData,
-            priority: alertEvent.severity === 'critical' ? 'critical' : 'medium',
+            priority:
+              alertEvent.severity === "critical" ? "critical" : "medium",
           });
 
           this.fastify.log.info(
             { userId: user.id, alertId: alertEvent.alertId },
-            'Notification sent for alert'
+            "Notification sent for alert",
           );
         } catch (error) {
           this.fastify.log.error(
             { error, userId: user.id, alertId: alertEvent.alertId },
-            'Failed to send notification'
+            "Failed to send notification",
           );
         }
       }
@@ -127,15 +140,26 @@ export class AlertNotificationHandler {
           ...notificationData,
         });
       } catch (error) {
-        this.fastify.log.error({ error, alertId: alertEvent.alertId }, 'Failed to send webhooks');
+        this.fastify.log.error(
+          { error, alertId: alertEvent.alertId },
+          "Failed to send webhooks",
+        );
       }
 
       // Set up escalation timer for critical alerts
-      if (alertEvent.severity === 'critical') {
-        await this.setupEscalation(alert.id, alert.tenantId, alert.siteId, notificationData);
+      if (alertEvent.severity === "critical") {
+        await this.setupEscalation(
+          alert.id,
+          alert.tenantId,
+          alert.siteId,
+          notificationData,
+        );
       }
     } catch (error) {
-      this.fastify.log.error({ error, alertEvent }, 'Failed to handle alert created event');
+      this.fastify.log.error(
+        { error, alertEvent },
+        "Failed to handle alert created event",
+      );
       throw error;
     }
   }
@@ -144,7 +168,10 @@ export class AlertNotificationHandler {
    * Handle alert acknowledged event
    */
   async handleAlertAcknowledged(alertEvent: AlertEvent): Promise<void> {
-    this.fastify.log.info({ alertId: alertEvent.alertId }, 'Handling alert acknowledged event');
+    this.fastify.log.info(
+      { alertId: alertEvent.alertId },
+      "Handling alert acknowledged event",
+    );
 
     try {
       // Cancel escalation timer if exists
@@ -152,33 +179,40 @@ export class AlertNotificationHandler {
       if (escalationTimer) {
         clearTimeout(escalationTimer);
         this.escalationTimers.delete(alertEvent.alertId);
-        this.fastify.log.info({ alertId: alertEvent.alertId }, 'Escalation timer cancelled');
+        this.fastify.log.info(
+          { alertId: alertEvent.alertId },
+          "Escalation timer cancelled",
+        );
       }
 
       // Get alert details
-      const alert = await db.query.alerts.findFirst({
+      const alert = (await db.query.alerts.findFirst({
         where: eq(alerts.alertId, alertEvent.alertId),
         with: {
           site: true,
           asset: true,
           acknowledgedByUser: true,
         },
-      }) as any;
+      })) as any;
 
       if (!alert || !alert.acknowledgedByUser) {
         return;
       }
 
       // Get users to notify
-      const usersToNotify = await this.getUsersToNotify(alert.tenantId, alert.siteId);
+      const usersToNotify = await this.getUsersToNotify(
+        alert.tenantId,
+        alert.siteId,
+      );
 
       // Prepare notification data
       const notificationData = {
-        asset_name: alert.asset?.name || 'Unknown Asset',
+        asset_name: alert.asset?.name || "Unknown Asset",
         site_name: alert.site.name,
         alert_id: alertEvent.alertId,
         acknowledged_by: `${alert.acknowledgedByUser.firstName} ${alert.acknowledgedByUser.lastName}`,
-        acknowledged_at: alert.acknowledgedAt?.toISOString() || new Date().toISOString(),
+        acknowledged_at:
+          alert.acknowledgedAt?.toISOString() || new Date().toISOString(),
       };
 
       // Send notifications
@@ -189,16 +223,22 @@ export class AlertNotificationHandler {
           await this.notificationService.sendNotification({
             tenantId: alert.tenantId,
             userId: user.id,
-            templateCode: 'alert_acknowledged',
-            channels: ['email', 'push'],
+            templateCode: "alert_acknowledged",
+            channels: ["email", "push"],
             variables: notificationData,
           });
         } catch (error) {
-          this.fastify.log.error({ error, userId: user.id }, 'Failed to send ack notification');
+          this.fastify.log.error(
+            { error, userId: user.id },
+            "Failed to send ack notification",
+          );
         }
       }
     } catch (error) {
-      this.fastify.log.error({ error, alertEvent }, 'Failed to handle alert acknowledged event');
+      this.fastify.log.error(
+        { error, alertEvent },
+        "Failed to handle alert acknowledged event",
+      );
       throw error;
     }
   }
@@ -207,7 +247,10 @@ export class AlertNotificationHandler {
    * Handle alert resolved event
    */
   async handleAlertResolved(alertEvent: AlertEvent): Promise<void> {
-    this.fastify.log.info({ alertId: alertEvent.alertId }, 'Handling alert resolved event');
+    this.fastify.log.info(
+      { alertId: alertEvent.alertId },
+      "Handling alert resolved event",
+    );
 
     try {
       // Cancel escalation timer if exists
@@ -218,29 +261,33 @@ export class AlertNotificationHandler {
       }
 
       // Get alert details
-      const alert = await db.query.alerts.findFirst({
+      const alert = (await db.query.alerts.findFirst({
         where: eq(alerts.alertId, alertEvent.alertId),
         with: {
           site: true,
           asset: true,
           resolvedByUser: true,
         },
-      }) as any;
+      })) as any;
 
       if (!alert || !alert.resolvedByUser) {
         return;
       }
 
       // Get users to notify
-      const usersToNotify = await this.getUsersToNotify(alert.tenantId, alert.siteId);
+      const usersToNotify = await this.getUsersToNotify(
+        alert.tenantId,
+        alert.siteId,
+      );
 
       // Prepare notification data
       const notificationData = {
-        asset_name: alert.asset?.name || 'Unknown Asset',
+        asset_name: alert.asset?.name || "Unknown Asset",
         site_name: alert.site.name,
         alert_id: alertEvent.alertId,
         resolved_by: `${alert.resolvedByUser.firstName} ${alert.resolvedByUser.lastName}`,
-        resolved_at: alert.resolvedAt?.toISOString() || new Date().toISOString(),
+        resolved_at:
+          alert.resolvedAt?.toISOString() || new Date().toISOString(),
       };
 
       // Send notifications
@@ -251,16 +298,22 @@ export class AlertNotificationHandler {
           await this.notificationService.sendNotification({
             tenantId: alert.tenantId,
             userId: user.id,
-            templateCode: 'alert_resolved',
-            channels: ['email', 'push'],
+            templateCode: "alert_resolved",
+            channels: ["email", "push"],
             variables: notificationData,
           });
         } catch (error) {
-          this.fastify.log.error({ error, userId: user.id }, 'Failed to send resolved notification');
+          this.fastify.log.error(
+            { error, userId: user.id },
+            "Failed to send resolved notification",
+          );
         }
       }
     } catch (error) {
-      this.fastify.log.error({ error, alertEvent }, 'Failed to handle alert resolved event');
+      this.fastify.log.error(
+        { error, alertEvent },
+        "Failed to handle alert resolved event",
+      );
       throw error;
     }
   }
@@ -268,11 +321,13 @@ export class AlertNotificationHandler {
   /**
    * Map alert severity to notification event type
    */
-  private mapSeverityToEventType(severity: string): NotificationEventType | null {
+  private mapSeverityToEventType(
+    severity: string,
+  ): NotificationEventType | null {
     const severityMap: Record<string, NotificationEventType> = {
-      critical: 'alert_critical',
-      high: 'alert_high',
-      medium: 'alert_medium',
+      critical: "alert_critical",
+      high: "alert_high",
+      medium: "alert_medium",
     };
 
     return severityMap[severity] || null;
@@ -284,10 +339,7 @@ export class AlertNotificationHandler {
   private async getUsersToNotify(tenantId: string, siteId: string) {
     // Get site managers and technicians for the site
     const siteUsers = await db.query.users.findMany({
-      where: and(
-        eq(users.tenantId, tenantId),
-        eq(users.isActive, true)
-      ),
+      where: and(eq(users.tenantId, tenantId), eq(users.isActive, true)),
       columns: {
         id: true,
         email: true,
@@ -299,7 +351,12 @@ export class AlertNotificationHandler {
     });
 
     // Filter users by role (site_manager, technician, tenant_admin, super_admin)
-    const relevantRoles = ['site_manager', 'technician', 'tenant_admin', 'super_admin'];
+    const relevantRoles = [
+      "site_manager",
+      "technician",
+      "tenant_admin",
+      "super_admin",
+    ];
     return siteUsers.filter((user) => relevantRoles.includes(user.role));
   }
 
@@ -310,76 +367,84 @@ export class AlertNotificationHandler {
     alertId: string,
     tenantId: string,
     siteId: string,
-    notificationData: Record<string, any>
+    notificationData: Record<string, any>,
   ): Promise<void> {
     // Check if there's an escalation rule
     const escalationMinutes = 30; // Default: 30 minutes
 
     this.fastify.log.info(
       { alertId, escalationMinutes },
-      'Setting up escalation timer'
+      "Setting up escalation timer",
     );
 
     // Set escalation timer
-    const timer = setTimeout(async () => {
-      try {
-        // Check if alert is still active (not acknowledged or resolved)
-        const alert = await db.query.alerts.findFirst({
-          where: eq(alerts.id, alertId),
-        });
+    const timer = setTimeout(
+      async () => {
+        try {
+          // Check if alert is still active (not acknowledged or resolved)
+          const alert = await db.query.alerts.findFirst({
+            where: eq(alerts.id, alertId),
+          });
 
-        if (!alert || alert.status !== 'active') {
-          this.fastify.log.info({ alertId }, 'Alert already handled, skipping escalation');
-          return;
-        }
-
-        // Get supervisors/admins to escalate to
-        const supervisors = await db.query.users.findMany({
-          where: and(
-            eq(users.tenantId, tenantId),
-            eq(users.isActive, true)
-          ),
-          columns: {
-            id: true,
-            email: true,
-            role: true,
-          },
-        });
-
-        const adminRoles = ['tenant_admin', 'super_admin'];
-        const admins = supervisors.filter((user) => adminRoles.includes(user.role));
-
-        // Send escalation notifications
-        for (const admin of admins) {
-          try {
-            await this.notificationService.sendNotification({
-              tenantId,
-              userId: admin.id,
-              templateCode: 'alert_critical',
-              channels: ['email', 'sms', 'push'],
-              variables: {
-                ...notificationData,
-                escalated: true,
-                escalation_reason: 'Alert not acknowledged within 30 minutes',
-              },
-              priority: 'critical',
-            });
-
+          if (!alert || alert.status !== "active") {
             this.fastify.log.info(
-              { userId: admin.id, alertId },
-              'Escalation notification sent'
+              { alertId },
+              "Alert already handled, skipping escalation",
             );
-          } catch (error) {
-            this.fastify.log.error({ error, userId: admin.id }, 'Failed to send escalation');
+            return;
           }
-        }
 
-        // Remove timer from map
-        this.escalationTimers.delete(alertId);
-      } catch (error) {
-        this.fastify.log.error({ error, alertId }, 'Escalation failed');
-      }
-    }, escalationMinutes * 60 * 1000);
+          // Get supervisors/admins to escalate to
+          const supervisors = await db.query.users.findMany({
+            where: and(eq(users.tenantId, tenantId), eq(users.isActive, true)),
+            columns: {
+              id: true,
+              email: true,
+              role: true,
+            },
+          });
+
+          const adminRoles = ["tenant_admin", "super_admin"];
+          const admins = supervisors.filter((user) =>
+            adminRoles.includes(user.role),
+          );
+
+          // Send escalation notifications
+          for (const admin of admins) {
+            try {
+              await this.notificationService.sendNotification({
+                tenantId,
+                userId: admin.id,
+                templateCode: "alert_critical",
+                channels: ["email", "sms", "push"],
+                variables: {
+                  ...notificationData,
+                  escalated: true,
+                  escalation_reason: "Alert not acknowledged within 30 minutes",
+                },
+                priority: "critical",
+              });
+
+              this.fastify.log.info(
+                { userId: admin.id, alertId },
+                "Escalation notification sent",
+              );
+            } catch (error) {
+              this.fastify.log.error(
+                { error, userId: admin.id },
+                "Failed to send escalation",
+              );
+            }
+          }
+
+          // Remove timer from map
+          this.escalationTimers.delete(alertId);
+        } catch (error) {
+          this.fastify.log.error({ error, alertId }, "Escalation failed");
+        }
+      },
+      escalationMinutes * 60 * 1000,
+    );
 
     this.escalationTimers.set(alertId, timer);
   }
@@ -387,27 +452,33 @@ export class AlertNotificationHandler {
   /**
    * Process alert events from Kafka
    */
-  async processAlertEvent(event: { type: string; payload: AlertEvent }): Promise<void> {
+  async processAlertEvent(event: {
+    type: string;
+    payload: AlertEvent;
+  }): Promise<void> {
     const { type, payload } = event;
 
-    this.fastify.log.info({ type, alertId: payload.alertId }, 'Processing alert event');
+    this.fastify.log.info(
+      { type, alertId: payload.alertId },
+      "Processing alert event",
+    );
 
     try {
       switch (type) {
-        case 'alert.created':
+        case "alert.created":
           await this.handleAlertCreated(payload);
           break;
-        case 'alert.acknowledged':
+        case "alert.acknowledged":
           await this.handleAlertAcknowledged(payload);
           break;
-        case 'alert.resolved':
+        case "alert.resolved":
           await this.handleAlertResolved(payload);
           break;
         default:
-          this.fastify.log.warn({ type }, 'Unknown alert event type');
+          this.fastify.log.warn({ type }, "Unknown alert event type");
       }
     } catch (error) {
-      this.fastify.log.error({ error, event }, 'Failed to process alert event');
+      this.fastify.log.error({ error, event }, "Failed to process alert event");
       throw error;
     }
   }
@@ -416,15 +487,17 @@ export class AlertNotificationHandler {
    * Cleanup escalation timers on shutdown
    */
   cleanup(): void {
-    this.fastify.log.info('Cleaning up escalation timers');
+    this.fastify.log.info("Cleaning up escalation timers");
     for (const [alertId, timer] of this.escalationTimers.entries()) {
       clearTimeout(timer);
-      this.fastify.log.info({ alertId }, 'Cleared escalation timer');
+      this.fastify.log.info({ alertId }, "Cleared escalation timer");
     }
     this.escalationTimers.clear();
   }
 }
 
-export function createAlertNotificationHandler(fastify: FastifyInstance): AlertNotificationHandler {
+export function createAlertNotificationHandler(
+  fastify: FastifyInstance,
+): AlertNotificationHandler {
   return new AlertNotificationHandler(fastify);
 }

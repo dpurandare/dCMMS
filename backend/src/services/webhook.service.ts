@@ -13,9 +13,9 @@
  *   WEBHOOK_MAX_RETRIES=3
  */
 
-import crypto from 'crypto';
-import axios, { AxiosError } from 'axios';
-import { db, pool } from '../db';
+import crypto from "crypto";
+import axios, { AxiosError } from "axios";
+import { db, pool } from "../db";
 
 // ==========================================
 // Types
@@ -24,7 +24,7 @@ import { db, pool } from '../db';
 export interface WebhookConfig {
   id: string;
   url: string;
-  authType: 'none' | 'bearer' | 'basic' | 'hmac';
+  authType: "none" | "bearer" | "basic" | "hmac";
   authToken?: string;
   customHeaders?: Record<string, string>;
   secretKey?: string;
@@ -59,14 +59,13 @@ export class WebhookService {
   private maxRetries: number;
 
   constructor() {
-    this.timeout = parseInt(process.env.WEBHOOK_TIMEOUT_MS || '10000');
-    this.maxRetries = parseInt(process.env.WEBHOOK_MAX_RETRIES || '3');
+    this.timeout = parseInt(process.env.WEBHOOK_TIMEOUT_MS || "10000");
+    this.maxRetries = parseInt(process.env.WEBHOOK_MAX_RETRIES || "3");
   }
 
   /**
    * Trigger webhooks for an event
    */
-
 
   /**
    * Send webhook notification
@@ -74,7 +73,7 @@ export class WebhookService {
   async sendWebhook(
     webhook: WebhookConfig,
     payload: WebhookPayload,
-    attemptNumber: number = 1
+    attemptNumber: number = 1,
   ): Promise<WebhookDeliveryResult> {
     const startTime = Date.now();
 
@@ -92,7 +91,7 @@ export class WebhookService {
         payload.data,
         webhook.url,
         requestBody,
-        attemptNumber
+        attemptNumber,
       );
 
       // Send HTTP POST
@@ -109,16 +108,20 @@ export class WebhookService {
 
       // Update delivery log
       await this.updateDeliveryLog(deliveryId, {
-        status: success ? 'success' : 'failed',
+        status: success ? "success" : "failed",
         responseStatus: response.status,
         responseBody: JSON.stringify(response.data).substring(0, 10000), // Limit size
         responseTimeMs: responseTime,
-        errorMessage: success ? null : `HTTP ${response.status}: ${response.statusText}`,
+        errorMessage: success
+          ? null
+          : `HTTP ${response.status}: ${response.statusText}`,
         completedAt: new Date(),
       });
 
       if (success) {
-        console.log(`✓ Webhook delivered successfully: ${webhook.url} (${response.status}) in ${responseTime}ms`);
+        console.log(
+          `✓ Webhook delivered successfully: ${webhook.url} (${response.status}) in ${responseTime}ms`,
+        );
         return {
           success: true,
           deliveryId,
@@ -138,7 +141,9 @@ export class WebhookService {
             attemptNumber,
           };
         } else {
-          console.error(`✗ Webhook failed after ${attemptNumber} attempts: ${webhook.url} (${response.status})`);
+          console.error(
+            `✗ Webhook failed after ${attemptNumber} attempts: ${webhook.url} (${response.status})`,
+          );
           return {
             success: false,
             deliveryId,
@@ -162,8 +167,8 @@ export class WebhookService {
         webhook.url,
         JSON.stringify(payload),
         attemptNumber,
-        'failed',
-        errorMessage
+        "failed",
+        errorMessage,
       );
 
       // Schedule retry if not max attempts
@@ -192,7 +197,7 @@ export class WebhookService {
   async triggerWebhooks(
     tenantId: string,
     eventType: string,
-    eventData: Record<string, any>
+    eventData: Record<string, any>,
   ): Promise<WebhookDeliveryResult[]> {
     // Get webhooks for this event type
     const webhooks = await this.getWebhooksForEvent(tenantId, eventType);
@@ -202,7 +207,9 @@ export class WebhookService {
       return [];
     }
 
-    console.log(`Triggering ${webhooks.length} webhook(s) for event: ${eventType}`);
+    console.log(
+      `Triggering ${webhooks.length} webhook(s) for event: ${eventType}`,
+    );
 
     // Build payload
     const payload: WebhookPayload = {
@@ -212,14 +219,14 @@ export class WebhookService {
       tenantId,
       data: eventData,
       metadata: {
-        source: 'dCMMS',
-        version: '1.0',
+        source: "dCMMS",
+        version: "1.0",
       },
     };
 
     // Send to all webhooks in parallel
     const results = await Promise.all(
-      webhooks.map((webhook) => this.sendWebhook(webhook, payload))
+      webhooks.map((webhook) => this.sendWebhook(webhook, payload)),
     );
 
     return results;
@@ -228,27 +235,33 @@ export class WebhookService {
   /**
    * Build HTTP headers for webhook request
    */
-  private buildHeaders(webhook: WebhookConfig, payload: WebhookPayload): Record<string, string> {
+  private buildHeaders(
+    webhook: WebhookConfig,
+    payload: WebhookPayload,
+  ): Record<string, string> {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'dCMMS-Webhook/1.0',
-      'X-Webhook-Event': payload.eventType,
-      'X-Webhook-Timestamp': payload.timestamp,
-      'X-Webhook-ID': crypto.randomUUID(),
+      "Content-Type": "application/json",
+      "User-Agent": "dCMMS-Webhook/1.0",
+      "X-Webhook-Event": payload.eventType,
+      "X-Webhook-Timestamp": payload.timestamp,
+      "X-Webhook-ID": crypto.randomUUID(),
     };
 
     // Add authentication
-    if (webhook.authType === 'bearer' && webhook.authToken) {
-      headers['Authorization'] = `Bearer ${webhook.authToken}`;
-    } else if (webhook.authType === 'basic' && webhook.authToken) {
-      headers['Authorization'] = `Basic ${webhook.authToken}`;
+    if (webhook.authType === "bearer" && webhook.authToken) {
+      headers["Authorization"] = `Bearer ${webhook.authToken}`;
+    } else if (webhook.authType === "basic" && webhook.authToken) {
+      headers["Authorization"] = `Basic ${webhook.authToken}`;
     }
 
     // Add HMAC signature
-    if (webhook.authType === 'hmac' && webhook.secretKey) {
-      const signature = this.generateSignature(JSON.stringify(payload), webhook.secretKey);
-      headers['X-Webhook-Signature'] = signature;
-      headers['X-Webhook-Signature-Algorithm'] = 'sha256';
+    if (webhook.authType === "hmac" && webhook.secretKey) {
+      const signature = this.generateSignature(
+        JSON.stringify(payload),
+        webhook.secretKey,
+      );
+      headers["X-Webhook-Signature"] = signature;
+      headers["X-Webhook-Signature-Algorithm"] = "sha256";
     }
 
     // Add custom headers
@@ -263,9 +276,9 @@ export class WebhookService {
    * Generate HMAC-SHA256 signature
    */
   private generateSignature(payload: string, secret: string): string {
-    const hmac = crypto.createHmac('sha256', secret);
+    const hmac = crypto.createHmac("sha256", secret);
     hmac.update(payload);
-    return `sha256=${hmac.digest('hex')}`;
+    return `sha256=${hmac.digest("hex")}`;
   }
 
   /**
@@ -275,15 +288,19 @@ export class WebhookService {
     const expectedSignature = this.generateSignature(payload, secret);
     return crypto.timingSafeEqual(
       Buffer.from(signature),
-      Buffer.from(expectedSignature)
+      Buffer.from(expectedSignature),
     );
   }
 
   /**
    * Get webhooks for event type
    */
-  private async getWebhooksForEvent(tenantId: string, eventType: string): Promise<WebhookConfig[]> {
-    const result = await pool.query(`
+  private async getWebhooksForEvent(
+    tenantId: string,
+    eventType: string,
+  ): Promise<WebhookConfig[]> {
+    const result = await pool.query(
+      `
       SELECT
         w.id,
         w.url,
@@ -300,7 +317,9 @@ export class WebhookService {
           $2 = ANY(w.event_types)
           OR 'all' = ANY(w.event_types)
         )
-    `, [tenantId, eventType]);
+    `,
+      [tenantId, eventType],
+    );
 
     return result.rows;
   }
@@ -315,10 +334,11 @@ export class WebhookService {
     url: string,
     requestBody: string,
     attemptNumber: number,
-    status: string = 'pending',
-    errorMessage?: string
+    status: string = "pending",
+    errorMessage?: string,
   ): Promise<string> {
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       INSERT INTO webhook_deliveries (
         webhook_id,
         event_type,
@@ -330,16 +350,18 @@ export class WebhookService {
         error_message
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
-    `, [
-      webhookId,
-      eventType,
-      JSON.stringify(eventData),
-      url,
-      requestBody,
-      attemptNumber,
-      status,
-      errorMessage || null,
-    ]);
+    `,
+      [
+        webhookId,
+        eventType,
+        JSON.stringify(eventData),
+        url,
+        requestBody,
+        attemptNumber,
+        status,
+        errorMessage || null,
+      ],
+    );
 
     return result.rows[0].id;
   }
@@ -356,7 +378,7 @@ export class WebhookService {
       responseTimeMs?: number;
       errorMessage?: string | null;
       completedAt?: Date;
-    }
+    },
   ): Promise<void> {
     const fields: string[] = [];
     const values: any[] = [];
@@ -391,11 +413,14 @@ export class WebhookService {
 
     values.push(deliveryId);
 
-    await pool.query(`
+    await pool.query(
+      `
       UPDATE webhook_deliveries
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE id = $${paramCount}
-    `, values);
+    `,
+      values,
+    );
   }
 
   /**
@@ -405,21 +430,26 @@ export class WebhookService {
     deliveryId: string,
     webhook: WebhookConfig,
     payload: WebhookPayload,
-    attemptNumber: number
+    attemptNumber: number,
   ): Promise<void> {
     // Exponential backoff: 2^attempt seconds
     const delaySeconds = Math.pow(2, attemptNumber); // 2, 4, 8 seconds
     const nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
 
-    await pool.query(`
+    await pool.query(
+      `
       UPDATE webhook_deliveries
       SET
         status = 'retrying',
         next_retry_at = $1
       WHERE id = $2
-    `, [nextRetryAt, deliveryId]);
+    `,
+      [nextRetryAt, deliveryId],
+    );
 
-    console.log(`Scheduled retry #${attemptNumber + 1} for webhook ${webhook.url} in ${delaySeconds}s`);
+    console.log(
+      `Scheduled retry #${attemptNumber + 1} for webhook ${webhook.url} in ${delaySeconds}s`,
+    );
 
     // In production, this would be handled by a background worker
     // For now, schedule in-memory retry
@@ -433,19 +463,19 @@ export class WebhookService {
    */
   private getErrorMessage(error: any): string {
     if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
-        return 'Request timeout';
-      } else if (error.code === 'ENOTFOUND') {
-        return 'DNS lookup failed';
-      } else if (error.code === 'ECONNREFUSED') {
-        return 'Connection refused';
+      if (error.code === "ECONNABORTED") {
+        return "Request timeout";
+      } else if (error.code === "ENOTFOUND") {
+        return "DNS lookup failed";
+      } else if (error.code === "ECONNREFUSED") {
+        return "Connection refused";
       } else if (error.response) {
         return `HTTP ${error.response.status}: ${error.response.statusText}`;
       } else if (error.request) {
-        return 'No response received';
+        return "No response received";
       }
     }
-    return error.message || 'Unknown error';
+    return error.message || "Unknown error";
   }
 
   /**
@@ -492,7 +522,7 @@ export class WebhookService {
         event: `notification.${row.event_type}`,
         eventType: row.event_type,
         timestamp: new Date().toISOString(),
-        tenantId: row.event_data.tenantId || '',
+        tenantId: row.event_data.tenantId || "",
         data: row.event_data,
       };
 
@@ -501,7 +531,7 @@ export class WebhookService {
   }
 }
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance } from "fastify";
 
 export function createWebhookService(fastify: FastifyInstance): WebhookService {
   return new WebhookService();

@@ -14,10 +14,14 @@ export interface AssetPrediction {
 
 export class MLInferenceService {
   constructor() {
-    console.log('ML Inference Service initialized (Mock Provider)');
+    console.log("ML Inference Service initialized (Mock Provider)");
   }
 
-  async predictSingle(modelName: string, assetId: string, useCache: boolean = true): Promise<any> {
+  async predictSingle(
+    modelName: string,
+    assetId: string,
+    useCache: boolean = true,
+  ): Promise<any> {
     return {
       modelName,
       assetId,
@@ -28,21 +32,46 @@ export class MLInferenceService {
     };
   }
 
-  async predictAllAssets(modelName: string, riskLevel?: string): Promise<AssetPrediction[]> {
+  async predictAllAssets(
+    modelName: string,
+    riskLevel?: string,
+  ): Promise<AssetPrediction[]> {
     return [
-      { assetId: 'asset-1', prediction: 0.9, risk: 'high', failureProbability: 0.9, confidence: 0.95 },
-      { assetId: 'asset-2', prediction: 0.2, risk: 'low', failureProbability: 0.2, confidence: 0.98 },
+      {
+        assetId: "asset-1",
+        prediction: 0.9,
+        risk: "high",
+        failureProbability: 0.9,
+        confidence: 0.95,
+      },
+      {
+        assetId: "asset-2",
+        prediction: 0.2,
+        risk: "low",
+        failureProbability: 0.2,
+        confidence: 0.98,
+      },
     ];
   }
 
   getPredictionLogs(limit: number): any[] {
     return [
-      { id: 'log-1', timestamp: new Date(), model: 'model-1', result: 'success' },
-      { id: 'log-2', timestamp: new Date(), model: 'model-1', result: 'success' },
+      {
+        id: "log-1",
+        timestamp: new Date(),
+        model: "model-1",
+        result: "success",
+      },
+      {
+        id: "log-2",
+        timestamp: new Date(),
+        model: "model-1",
+        result: "success",
+      },
     ];
   }
 
   clearCache(): void {
-    console.log('[Mock Inference] Cache cleared');
+    console.log("[Mock Inference] Cache cleared");
   }
 }

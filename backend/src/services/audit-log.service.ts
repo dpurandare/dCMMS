@@ -1,7 +1,7 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { auditLogs } from '../db/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { auditLogs } from "../db/schema";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 
 export interface AuditLogEntry {
   tenantId: string;
@@ -57,10 +57,13 @@ export class AuditLogService {
           entityType: entry.entityType,
           entityId: entry.entityId,
         },
-        'Audit log entry created'
+        "Audit log entry created",
       );
     } catch (error) {
-      this.fastify.log.error({ error, entry }, 'Failed to create audit log entry');
+      this.fastify.log.error(
+        { error, entry },
+        "Failed to create audit log entry",
+      );
       // Don't throw - audit logging should not break the main flow
     }
   }
@@ -75,13 +78,13 @@ export class AuditLogService {
     reportId: string,
     templateId: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'report_generated',
-      entityType: 'compliance_report',
+      action: "report_generated",
+      entityType: "compliance_report",
       entityId: reportId,
       changes: { templateId },
       ipAddress,
@@ -95,13 +98,13 @@ export class AuditLogService {
     reportId: string,
     format: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'report_downloaded',
-      entityType: 'compliance_report',
+      action: "report_downloaded",
+      entityType: "compliance_report",
       entityId: reportId,
       changes: { format },
       ipAddress,
@@ -116,13 +119,13 @@ export class AuditLogService {
     oldStatus: string,
     newStatus: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'report_status_changed',
-      entityType: 'compliance_report',
+      action: "report_status_changed",
+      entityType: "compliance_report",
       entityId: reportId,
       changes: { oldStatus, newStatus },
       ipAddress,
@@ -135,13 +138,13 @@ export class AuditLogService {
     userId: string,
     reportId: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'report_deleted',
-      entityType: 'compliance_report',
+      action: "report_deleted",
+      entityType: "compliance_report",
       entityId: reportId,
       ipAddress,
       userAgent,
@@ -154,13 +157,13 @@ export class AuditLogService {
     templateId: string,
     changes: Record<string, any>,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'template_modified',
-      entityType: 'compliance_template',
+      action: "template_modified",
+      entityType: "compliance_template",
       entityId: templateId,
       changes,
       ipAddress,
@@ -173,13 +176,13 @@ export class AuditLogService {
     userId: string,
     templateId: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'template_created',
-      entityType: 'compliance_template',
+      action: "template_created",
+      entityType: "compliance_template",
       entityId: templateId,
       ipAddress,
       userAgent,
@@ -191,13 +194,13 @@ export class AuditLogService {
     userId: string,
     templateId: string,
     ipAddress?: string,
-    userAgent?: string
+    userAgent?: string,
   ): Promise<void> {
     await this.log({
       tenantId,
       userId,
-      action: 'template_deleted',
-      entityType: 'compliance_template',
+      action: "template_deleted",
+      entityType: "compliance_template",
       entityId: templateId,
       ipAddress,
       userAgent,
@@ -211,7 +214,7 @@ export class AuditLogService {
     tenantId: string,
     filters?: AuditLogFilter,
     limit: number = 1000,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<any[]> {
     try {
       const whereConditions = [eq(auditLogs.tenantId, tenantId)];
@@ -259,7 +262,10 @@ export class AuditLogService {
         timestamp: log.timestamp,
       }));
     } catch (error) {
-      this.fastify.log.error({ error, tenantId, filters }, 'Failed to query audit logs');
+      this.fastify.log.error(
+        { error, tenantId, filters },
+        "Failed to query audit logs",
+      );
       throw error;
     }
   }
@@ -269,7 +275,7 @@ export class AuditLogService {
    */
   async exportToCSV(
     tenantId: string,
-    filters?: AuditLogFilter
+    filters?: AuditLogFilter,
   ): Promise<string> {
     try {
       const logs = await this.query(tenantId, filters, 100000); // Max 100k rows
@@ -277,21 +283,30 @@ export class AuditLogService {
       const lines: string[] = [];
 
       // Header
-      lines.push('"Timestamp","User ID","Action","Entity Type","Entity ID","Changes","IP Address","User Agent"');
+      lines.push(
+        '"Timestamp","User ID","Action","Entity Type","Entity ID","Changes","IP Address","User Agent"',
+      );
 
       // Data rows
       for (const log of logs) {
-        const changes = log.changes ? JSON.stringify(log.changes).replace(/"/g, '""') : '';
-        const userAgent = log.userAgent ? log.userAgent.replace(/"/g, '""') : '';
+        const changes = log.changes
+          ? JSON.stringify(log.changes).replace(/"/g, '""')
+          : "";
+        const userAgent = log.userAgent
+          ? log.userAgent.replace(/"/g, '""')
+          : "";
 
         lines.push(
-          `"${log.timestamp}","${log.userId}","${log.action}","${log.entityType}","${log.entityId}","${changes}","${log.ipAddress || ''}","${userAgent}"`
+          `"${log.timestamp}","${log.userId}","${log.action}","${log.entityType}","${log.entityId}","${changes}","${log.ipAddress || ""}","${userAgent}"`,
         );
       }
 
-      return lines.join('\n');
+      return lines.join("\n");
     } catch (error) {
-      this.fastify.log.error({ error, tenantId, filters }, 'Failed to export audit logs');
+      this.fastify.log.error(
+        { error, tenantId, filters },
+        "Failed to export audit logs",
+      );
       throw error;
     }
   }
@@ -301,7 +316,7 @@ export class AuditLogService {
    */
   async getStatistics(
     tenantId: string,
-    filters?: AuditLogFilter
+    filters?: AuditLogFilter,
   ): Promise<{
     totalLogs: number;
     actionCounts: Record<string, number>;
@@ -315,7 +330,8 @@ export class AuditLogService {
 
       for (const log of logs) {
         actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
-        entityTypeCounts[log.entityType] = (entityTypeCounts[log.entityType] || 0) + 1;
+        entityTypeCounts[log.entityType] =
+          (entityTypeCounts[log.entityType] || 0) + 1;
       }
 
       return {
@@ -324,12 +340,17 @@ export class AuditLogService {
         entityTypeCounts,
       };
     } catch (error) {
-      this.fastify.log.error({ error, tenantId, filters }, 'Failed to get audit log statistics');
+      this.fastify.log.error(
+        { error, tenantId, filters },
+        "Failed to get audit log statistics",
+      );
       throw error;
     }
   }
 }
 
-export function createAuditLogService(fastify: FastifyInstance): AuditLogService {
+export function createAuditLogService(
+  fastify: FastifyInstance,
+): AuditLogService {
   return new AuditLogService(fastify);
 }

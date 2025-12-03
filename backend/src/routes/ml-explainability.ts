@@ -1,23 +1,23 @@
-import { FastifyPluginAsync } from 'fastify';
-import { MLExplainabilityService } from '../services/ml-explainability.service';
+import { FastifyPluginAsync } from "fastify";
+import { MLExplainabilityService } from "../services/ml-explainability.service";
 
 const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
   const explainabilityService = new MLExplainabilityService();
 
   // POST /api/v1/ml-explainability/explain
   server.post(
-    '/explain',
+    "/explain",
     {
       schema: {
-        summary: 'Generate explanation for a prediction',
-        tags: ['ML Explainability'],
+        summary: "Generate explanation for a prediction",
+        tags: ["ML Explainability"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['modelName', 'assetId'],
+          type: "object",
+          required: ["modelName", "assetId"],
           properties: {
-            modelName: { type: 'string' },
-            assetId: { type: 'string' },
+            modelName: { type: "string" },
+            assetId: { type: "string" },
           },
         },
       },
@@ -25,10 +25,17 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { modelName, assetId } = request.body as { modelName: string; assetId: string };
+        const { modelName, assetId } = request.body as {
+          modelName: string;
+          assetId: string;
+        };
 
-        const explanation = await explainabilityService.getExplanation(modelName, assetId);
-        const recommendation = explainabilityService.getRecommendation(explanation);
+        const explanation = await explainabilityService.getExplanation(
+          modelName,
+          assetId,
+        );
+        const recommendation =
+          explainabilityService.getRecommendation(explanation);
 
         return {
           explanation,
@@ -37,30 +44,30 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Failed to generate explanation',
+          error: error.message || "Failed to generate explanation",
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/ml-explainability/explain/waterfall/:assetId
   server.get(
-    '/explain/waterfall/:assetId',
+    "/explain/waterfall/:assetId",
     {
       schema: {
-        summary: 'Get waterfall chart data',
-        tags: ['ML Explainability'],
+        summary: "Get waterfall chart data",
+        tags: ["ML Explainability"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            assetId: { type: 'string' },
+            assetId: { type: "string" },
           },
         },
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelName: { type: 'string' },
+            modelName: { type: "string" },
           },
         },
       },
@@ -69,35 +76,40 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { assetId } = request.params as { assetId: string };
-        const { modelName = 'default-model' } = request.query as { modelName?: string };
+        const { modelName = "default-model" } = request.query as {
+          modelName?: string;
+        };
 
-        const waterfallData = await explainabilityService.getWaterfallData(modelName, assetId);
+        const waterfallData = await explainabilityService.getWaterfallData(
+          modelName,
+          assetId,
+        );
 
         return waterfallData;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Failed to get waterfall data',
+          error: error.message || "Failed to get waterfall data",
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/ml-explainability/explain/feature-importance
   server.post(
-    '/explain/feature-importance',
+    "/explain/feature-importance",
     {
       schema: {
-        summary: 'Get global feature importance',
-        tags: ['ML Explainability'],
+        summary: "Get global feature importance",
+        tags: ["ML Explainability"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['modelName'],
+          type: "object",
+          required: ["modelName"],
           properties: {
-            modelName: { type: 'string' },
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
+            modelName: { type: "string" },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
           },
         },
       },
@@ -105,22 +117,26 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { modelName, startDate, endDate } = request.body as { modelName: string; startDate?: string; endDate?: string };
+        const { modelName, startDate, endDate } = request.body as {
+          modelName: string;
+          startDate?: string;
+          endDate?: string;
+        };
 
         const importance = await explainabilityService.getFeatureImportance(
           modelName,
           startDate ? new Date(startDate) : undefined,
-          endDate ? new Date(endDate) : undefined
+          endDate ? new Date(endDate) : undefined,
         );
 
         return importance;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Failed to get feature importance',
+          error: error.message || "Failed to get feature importance",
         });
       }
-    }
+    },
   );
 };
 

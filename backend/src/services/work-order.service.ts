@@ -1,6 +1,6 @@
-import { db } from '../db';
-import { workOrders, workOrderTasks } from '../db/schema';
-import { eq, and, desc, asc, sql, like, or } from 'drizzle-orm';
+import { db } from "../db";
+import { workOrders, workOrderTasks } from "../db/schema";
+import { eq, and, desc, asc, sql, like, or } from "drizzle-orm";
 
 export interface WorkOrderFilters {
   status?: string;
@@ -16,7 +16,7 @@ export interface PaginationParams {
   page: number;
   limit: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface CreateWorkOrderData {
@@ -24,9 +24,15 @@ export interface CreateWorkOrderData {
   workOrderId: string;
   title: string;
   description?: string;
-  type: 'corrective' | 'preventive' | 'predictive' | 'inspection' | 'emergency';
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  status?: 'draft' | 'open' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled';
+  type: "corrective" | "preventive" | "predictive" | "inspection" | "emergency";
+  priority: "critical" | "high" | "medium" | "low";
+  status?:
+    | "draft"
+    | "open"
+    | "in_progress"
+    | "on_hold"
+    | "completed"
+    | "cancelled";
   siteId: string;
   assetId?: string;
   assignedTo?: string;
@@ -39,9 +45,20 @@ export interface CreateWorkOrderData {
 export interface UpdateWorkOrderData {
   title?: string;
   description?: string;
-  type?: 'corrective' | 'preventive' | 'predictive' | 'inspection' | 'emergency';
-  priority?: 'critical' | 'high' | 'medium' | 'low';
-  status?: 'draft' | 'open' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled';
+  type?:
+    | "corrective"
+    | "preventive"
+    | "predictive"
+    | "inspection"
+    | "emergency";
+  priority?: "critical" | "high" | "medium" | "low";
+  status?:
+    | "draft"
+    | "open"
+    | "in_progress"
+    | "on_hold"
+    | "completed"
+    | "cancelled";
   assignedTo?: string;
   scheduledStartDate?: Date;
   scheduledEndDate?: Date;
@@ -57,7 +74,7 @@ export class WorkOrderService {
    */
   static async generateWorkOrderId(tenantId: string): Promise<string> {
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "");
 
     // Get count of work orders created today for this tenant
     const [result] = await db
@@ -66,12 +83,12 @@ export class WorkOrderService {
       .where(
         and(
           eq(workOrders.tenantId, tenantId),
-          sql`DATE(${workOrders.createdAt}) = CURRENT_DATE`
-        )
+          sql`DATE(${workOrders.createdAt}) = CURRENT_DATE`,
+        ),
       );
 
     const count = Number(result?.count || 0) + 1;
-    const sequence = count.toString().padStart(4, '0');
+    const sequence = count.toString().padStart(4, "0");
 
     return `WO-${dateStr}-${sequence}`;
   }
@@ -82,9 +99,14 @@ export class WorkOrderService {
   static async list(
     tenantId: string,
     filters: WorkOrderFilters,
-    pagination: PaginationParams
+    pagination: PaginationParams,
   ) {
-    const { page, limit, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+    const {
+      page,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
     const offset = (page - 1) * limit;
 
     // Build where conditions
@@ -119,8 +141,8 @@ export class WorkOrderService {
         or(
           like(workOrders.title, `%${filters.search}%`),
           like(workOrders.workOrderId, `%${filters.search}%`),
-          like(workOrders.description, `%${filters.search}%`)
-        )!
+          like(workOrders.description, `%${filters.search}%`),
+        )!,
       );
     }
 
@@ -133,8 +155,10 @@ export class WorkOrderService {
     const total = Number(countResult?.count || 0);
 
     // Get paginated results
-    const orderByColumn = (workOrders[sortBy as keyof typeof workOrders] as any) || workOrders.createdAt;
-    const orderFn = sortOrder === 'asc' ? asc : desc;
+    const orderByColumn =
+      (workOrders[sortBy as keyof typeof workOrders] as any) ||
+      workOrders.createdAt;
+    const orderFn = sortOrder === "asc" ? asc : desc;
 
     const results = await db
       .select()
@@ -190,7 +214,7 @@ export class WorkOrderService {
       .insert(workOrders)
       .values({
         ...data,
-        status: data.status || 'draft',
+        status: data.status || "draft",
         createdBy: data.createdBy,
       })
       .returning();
@@ -221,7 +245,7 @@ export class WorkOrderService {
     const [deleted] = await db
       .update(workOrders)
       .set({
-        status: 'cancelled',
+        status: "cancelled",
         updatedAt: new Date(),
       })
       .where(and(eq(workOrders.id, id), eq(workOrders.tenantId, tenantId)))
@@ -236,16 +260,22 @@ export class WorkOrderService {
   static async updateStatus(
     id: string,
     tenantId: string,
-    status: 'draft' | 'open' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
+    status:
+      | "draft"
+      | "open"
+      | "in_progress"
+      | "on_hold"
+      | "completed"
+      | "cancelled",
   ) {
     const updates: Partial<UpdateWorkOrderData> = { status };
 
     // Auto-set dates based on status
-    if (status === 'in_progress' && !updates.actualStartDate) {
+    if (status === "in_progress" && !updates.actualStartDate) {
       updates.actualStartDate = new Date();
     }
 
-    if (status === 'completed' && !updates.actualEndDate) {
+    if (status === "completed" && !updates.actualEndDate) {
       updates.actualEndDate = new Date();
     }
 

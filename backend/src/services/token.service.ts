@@ -1,5 +1,5 @@
-import { FastifyInstance } from 'fastify';
-import { UserPayload } from './auth.service';
+import { FastifyInstance } from "fastify";
+import { UserPayload } from "./auth.service";
 
 export interface TokenPair {
   accessToken: string;
@@ -11,7 +11,10 @@ export class TokenService {
   /**
    * Generate access and refresh tokens
    */
-  static async generateTokens(server: FastifyInstance, user: UserPayload): Promise<TokenPair> {
+  static async generateTokens(
+    server: FastifyInstance,
+    user: UserPayload,
+  ): Promise<TokenPair> {
     const accessToken = server.jwt.sign(
       {
         id: user.id,
@@ -21,23 +24,23 @@ export class TokenService {
         role: user.role,
       },
       {
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
-      }
+        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m",
+      },
     );
 
     const refreshToken = server.jwt.sign(
       {
         id: user.id,
         tenantId: user.tenantId,
-        type: 'refresh',
+        type: "refresh",
       },
       {
-        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d',
-      }
+        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || "7d",
+      },
     );
 
     // Parse expiry time (e.g., "15m" -> 900 seconds)
-    const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m';
+    const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
     const expiresIn = this.parseExpiryToSeconds(expiryString);
 
     return {
@@ -50,18 +53,21 @@ export class TokenService {
   /**
    * Verify and decode refresh token
    */
-  static async verifyRefreshToken(server: FastifyInstance, refreshToken: string): Promise<any> {
+  static async verifyRefreshToken(
+    server: FastifyInstance,
+    refreshToken: string,
+  ): Promise<any> {
     try {
       const decoded = server.jwt.verify(refreshToken);
 
       // Check if it's a refresh token
-      if ((decoded as any).type !== 'refresh') {
-        throw new Error('Invalid token type');
+      if ((decoded as any).type !== "refresh") {
+        throw new Error("Invalid token type");
       }
 
       return decoded;
     } catch (error) {
-      throw new Error('Invalid refresh token');
+      throw new Error("Invalid refresh token");
     }
   }
 
@@ -73,13 +79,13 @@ export class TokenService {
     const value = parseInt(expiry.slice(0, -1), 10);
 
     switch (unit) {
-      case 's':
+      case "s":
         return value;
-      case 'm':
+      case "m":
         return value * 60;
-      case 'h':
+      case "h":
         return value * 60 * 60;
-      case 'd':
+      case "d":
         return value * 60 * 60 * 24;
       default:
         return 900; // Default 15 minutes

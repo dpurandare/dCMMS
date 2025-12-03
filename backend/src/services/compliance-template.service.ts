@@ -1,8 +1,13 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { complianceReportTemplates, workOrders, assets, alerts } from '../db/schema';
-import { eq, and, gte, lte } from 'drizzle-orm';
-import { createClient } from '@clickhouse/client';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import {
+  complianceReportTemplates,
+  workOrders,
+  assets,
+  alerts,
+} from "../db/schema";
+import { eq, and, gte, lte } from "drizzle-orm";
+import { createClient } from "@clickhouse/client";
 
 export interface ComplianceField {
   name: string;
@@ -46,10 +51,10 @@ export class ComplianceTemplateService {
 
     // Initialize ClickHouse client
     this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-      username: process.env.CLICKHOUSE_USER || 'clickhouse_user',
-      password: process.env.CLICKHOUSE_PASSWORD || 'clickhouse_password_dev',
-      database: process.env.CLICKHOUSE_DATABASE || 'dcmms_analytics',
+      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
+      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
+      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
     });
   }
 
@@ -61,16 +66,18 @@ export class ComplianceTemplateService {
       const templates = await db.query.complianceReportTemplates.findMany({
         where: reportType
           ? and(
-            eq(complianceReportTemplates.reportType, reportType),
-            eq(complianceReportTemplates.isActive, true)
-          )
+              eq(complianceReportTemplates.reportType, reportType),
+              eq(complianceReportTemplates.isActive, true),
+            )
           : eq(complianceReportTemplates.isActive, true),
-        orderBy: (complianceReportTemplates, { asc }) => [asc(complianceReportTemplates.name)],
+        orderBy: (complianceReportTemplates, { asc }) => [
+          asc(complianceReportTemplates.name),
+        ],
       });
 
       return templates.map((t) => this.mapTemplate(t));
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to get compliance templates');
+      this.fastify.log.error({ error }, "Failed to get compliance templates");
       throw error;
     }
   }
@@ -90,7 +97,10 @@ export class ComplianceTemplateService {
 
       return this.mapTemplate(template);
     } catch (error) {
-      this.fastify.log.error({ error, templateId }, 'Failed to get compliance template');
+      this.fastify.log.error(
+        { error, templateId },
+        "Failed to get compliance template",
+      );
       throw error;
     }
   }
@@ -103,9 +113,12 @@ export class ComplianceTemplateService {
     tenantId: string,
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<AutoPopulateData> {
-    this.fastify.log.info({ templateId, tenantId, siteId }, 'Auto-populating template data');
+    this.fastify.log.info(
+      { templateId, tenantId, siteId },
+      "Auto-populating template data",
+    );
 
     try {
       const template = await this.getTemplate(templateId);
@@ -129,13 +142,13 @@ export class ComplianceTemplateService {
             tenantId,
             siteId,
             startDate,
-            endDate
+            endDate,
           );
           populatedData[fieldName] = data;
         } catch (error) {
           this.fastify.log.warn(
             { error, fieldName, mapping },
-            'Failed to auto-populate field'
+            "Failed to auto-populate field",
           );
           // Continue with other fields even if one fails
           populatedData[fieldName] = [];
@@ -144,12 +157,15 @@ export class ComplianceTemplateService {
 
       this.fastify.log.info(
         { templateId, fieldsPopulated: Object.keys(populatedData).length },
-        'Template data auto-populated'
+        "Template data auto-populated",
       );
 
       return populatedData;
     } catch (error) {
-      this.fastify.log.error({ error, templateId }, 'Failed to auto-populate template data');
+      this.fastify.log.error(
+        { error, templateId },
+        "Failed to auto-populate template data",
+      );
       throw error;
     }
   }
@@ -162,24 +178,44 @@ export class ComplianceTemplateService {
     tenantId: string,
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<any[]> {
     const { source, filters, fields, aggregation, group_by } = mapping;
 
     switch (source) {
-      case 'assets':
+      case "assets":
         return this.fetchAssetData(tenantId, siteId, filters, fields);
 
-      case 'work_orders':
-        return this.fetchWorkOrderData(tenantId, siteId, filters, fields, startDate, endDate);
+      case "work_orders":
+        return this.fetchWorkOrderData(
+          tenantId,
+          siteId,
+          filters,
+          fields,
+          startDate,
+          endDate,
+        );
 
-      case 'alerts':
-        return this.fetchAlertData(tenantId, siteId, filters, fields, startDate, endDate);
+      case "alerts":
+        return this.fetchAlertData(
+          tenantId,
+          siteId,
+          filters,
+          fields,
+          startDate,
+          endDate,
+        );
 
-      case 'audit_logs':
-        return this.fetchAuditLogData(tenantId, filters, fields, startDate, endDate);
+      case "audit_logs":
+        return this.fetchAuditLogData(
+          tenantId,
+          filters,
+          fields,
+          startDate,
+          endDate,
+        );
 
-      case 'telemetry_aggregates':
+      case "telemetry_aggregates":
         return this.fetchTelemetryData(
           tenantId,
           siteId,
@@ -188,11 +224,11 @@ export class ComplianceTemplateService {
           aggregation,
           group_by,
           startDate,
-          endDate
+          endDate,
         );
 
       default:
-        this.fastify.log.warn({ source }, 'Unknown data source');
+        this.fastify.log.warn({ source }, "Unknown data source");
         return [];
     }
   }
@@ -204,7 +240,7 @@ export class ComplianceTemplateService {
     tenantId: string,
     siteId?: string,
     filters?: any,
-    fields?: string[]
+    fields?: string[],
   ): Promise<any[]> {
     const whereConditions = [eq(assets.tenantId, tenantId)];
 
@@ -214,7 +250,9 @@ export class ComplianceTemplateService {
 
     if (filters?.status) {
       // Filter by status if provided
-      const statusArray = Array.isArray(filters.status) ? filters.status : [filters.status];
+      const statusArray = Array.isArray(filters.status)
+        ? filters.status
+        : [filters.status];
       // Note: For simplicity, we'll fetch all and filter in memory
     }
 
@@ -245,7 +283,7 @@ export class ComplianceTemplateService {
     filters?: any,
     fields?: string[],
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<any[]> {
     const whereConditions = [eq(workOrders.tenantId, tenantId)];
 
@@ -274,8 +312,12 @@ export class ComplianceTemplateService {
     }
 
     if (filters?.status) {
-      const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-      filteredData = filteredData.filter((wo: any) => statuses.includes(wo.status));
+      const statuses = Array.isArray(filters.status)
+        ? filters.status
+        : [filters.status];
+      filteredData = filteredData.filter((wo: any) =>
+        statuses.includes(wo.status),
+      );
     }
 
     // Project only requested fields
@@ -301,7 +343,7 @@ export class ComplianceTemplateService {
     filters?: any,
     fields?: string[],
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<any[]> {
     const whereConditions = [eq(alerts.tenantId, tenantId)];
 
@@ -325,13 +367,21 @@ export class ComplianceTemplateService {
     let filteredData = alertData;
 
     if (filters?.severity) {
-      const severities = Array.isArray(filters.severity) ? filters.severity : [filters.severity];
-      filteredData = filteredData.filter((alert: any) => severities.includes(alert.severity));
+      const severities = Array.isArray(filters.severity)
+        ? filters.severity
+        : [filters.severity];
+      filteredData = filteredData.filter((alert: any) =>
+        severities.includes(alert.severity),
+      );
     }
 
     if (filters?.status) {
-      const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-      filteredData = filteredData.filter((alert: any) => statuses.includes(alert.status));
+      const statuses = Array.isArray(filters.status)
+        ? filters.status
+        : [filters.status];
+      filteredData = filteredData.filter((alert: any) =>
+        statuses.includes(alert.status),
+      );
     }
 
     // Project only requested fields
@@ -356,11 +406,11 @@ export class ComplianceTemplateService {
     filters?: any,
     fields?: string[],
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<any[]> {
     // TODO: Implement audit log querying
     // For now, return empty array
-    this.fastify.log.warn('Audit log fetching not yet implemented');
+    this.fastify.log.warn("Audit log fetching not yet implemented");
     return [];
   }
 
@@ -375,7 +425,7 @@ export class ComplianceTemplateService {
     aggregation?: string,
     groupBy?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<any[]> {
     try {
       const whereClauses = [`tenant_id = '${tenantId}'`];
@@ -396,12 +446,12 @@ export class ComplianceTemplateService {
         whereClauses.push(`time_bucket <= '${endDate.toISOString()}'`);
       }
 
-      const whereClause = whereClauses.join(' AND ');
+      const whereClause = whereClauses.join(" AND ");
 
       // Build query based on aggregation and groupBy
       let query: string;
 
-      if (groupBy === 'month' && aggregation === 'sum') {
+      if (groupBy === "month" && aggregation === "sum") {
         query = `
           SELECT
             toStartOfMonth(time_bucket) AS month,
@@ -423,14 +473,14 @@ export class ComplianceTemplateService {
 
       const result = await this.clickhouse.query({
         query,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       const data = await result.json<any[]>();
 
       return data;
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to fetch telemetry data');
+      this.fastify.log.error({ error }, "Failed to fetch telemetry data");
       return [];
     }
   }
@@ -438,7 +488,10 @@ export class ComplianceTemplateService {
   /**
    * Validate report data against template rules
    */
-  validateReportData(template: ComplianceTemplate, reportData: any): {
+  validateReportData(
+    template: ComplianceTemplate,
+    reportData: any,
+  ): {
     valid: boolean;
     errors: string[];
   } {
@@ -454,31 +507,52 @@ export class ComplianceTemplateService {
     for (const [fieldName, rule] of Object.entries(rules)) {
       const value = reportData[fieldName];
 
-      if (rule.required && (value === undefined || value === null || value === '')) {
+      if (
+        rule.required &&
+        (value === undefined || value === null || value === "")
+      ) {
         errors.push(`Field '${fieldName}' is required`);
         continue;
       }
 
       // Type-specific validation
       if (value !== undefined && value !== null) {
-        if (rule.min_length && typeof value === 'string' && value.length < rule.min_length) {
-          errors.push(`Field '${fieldName}' must be at least ${rule.min_length} characters`);
+        if (
+          rule.min_length &&
+          typeof value === "string" &&
+          value.length < rule.min_length
+        ) {
+          errors.push(
+            `Field '${fieldName}' must be at least ${rule.min_length} characters`,
+          );
         }
 
-        if (rule.min && typeof value === 'number' && value < rule.min) {
+        if (rule.min && typeof value === "number" && value < rule.min) {
           errors.push(`Field '${fieldName}' must be at least ${rule.min}`);
         }
 
-        if (rule.max && typeof value === 'number' && value > rule.max) {
+        if (rule.max && typeof value === "number" && value > rule.max) {
           errors.push(`Field '${fieldName}' must be at most ${rule.max}`);
         }
 
-        if (rule.min_rows && Array.isArray(value) && value.length < rule.min_rows) {
-          errors.push(`Field '${fieldName}' must have at least ${rule.min_rows} rows`);
+        if (
+          rule.min_rows &&
+          Array.isArray(value) &&
+          value.length < rule.min_rows
+        ) {
+          errors.push(
+            `Field '${fieldName}' must have at least ${rule.min_rows} rows`,
+          );
         }
 
-        if (rule.max_rows && Array.isArray(value) && value.length > rule.max_rows) {
-          errors.push(`Field '${fieldName}' must have at most ${rule.max_rows} rows`);
+        if (
+          rule.max_rows &&
+          Array.isArray(value) &&
+          value.length > rule.max_rows
+        ) {
+          errors.push(
+            `Field '${fieldName}' must have at most ${rule.max_rows} rows`,
+          );
         }
       }
     }
@@ -501,8 +575,8 @@ export class ComplianceTemplateService {
       reportType: dbTemplate.reportType,
       complianceStandard: dbTemplate.complianceStandard,
       version: dbTemplate.version,
-      requiredFields: JSON.parse(dbTemplate.requiredFields || '[]'),
-      optionalFields: JSON.parse(dbTemplate.optionalFields || '[]'),
+      requiredFields: JSON.parse(dbTemplate.requiredFields || "[]"),
+      optionalFields: JSON.parse(dbTemplate.optionalFields || "[]"),
       autoPopulateMappings: dbTemplate.autoPopulateMappings
         ? JSON.parse(dbTemplate.autoPopulateMappings)
         : undefined,
@@ -523,7 +597,7 @@ export class ComplianceTemplateService {
 }
 
 export function createComplianceTemplateService(
-  fastify: FastifyInstance
+  fastify: FastifyInstance,
 ): ComplianceTemplateService {
   return new ComplianceTemplateService(fastify);
 }

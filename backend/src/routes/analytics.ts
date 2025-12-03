@@ -1,7 +1,10 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createKPICalculationService } from '../services/kpi-calculation.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createKPICalculationService } from "../services/kpi-calculation.service";
 
 // Validation schemas
 const kpiQuerySchema = z.object({
@@ -23,34 +26,34 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get<{
     Querystring: z.infer<typeof kpiQuerySchema>;
   }>(
-    '/analytics/kpis',
+    "/analytics/kpis",
     {
       schema: {
         querystring: kpiQuerySchema,
-        tags: ['Analytics'],
-        description: 'Get KPIs for analytics dashboard',
+        tags: ["Analytics"],
+        description: "Get KPIs for analytics dashboard",
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              mttr: { type: 'number' },
-              mtbf: { type: 'number' },
-              completionRate: { type: 'number' },
-              availability: { type: 'number' },
-              pmCompliance: { type: 'number' },
-              firstTimeFixRate: { type: 'number' },
-              totalWorkOrders: { type: 'number' },
-              completedWorkOrders: { type: 'number' },
-              overdueWorkOrders: { type: 'number' },
-              criticalAlarms: { type: 'number' },
-              totalDowntimeHours: { type: 'number' },
-              totalMaintenanceCost: { type: 'number' },
-              calculatedAt: { type: 'string', format: 'date-time' },
+              mttr: { type: "number" },
+              mtbf: { type: "number" },
+              completionRate: { type: "number" },
+              availability: { type: "number" },
+              pmCompliance: { type: "number" },
+              firstTimeFixRate: { type: "number" },
+              totalWorkOrders: { type: "number" },
+              completedWorkOrders: { type: "number" },
+              overdueWorkOrders: { type: "number" },
+              criticalAlarms: { type: "number" },
+              totalDowntimeHours: { type: "number" },
+              totalMaintenanceCost: { type: "number" },
+              calculatedAt: { type: "string", format: "date-time" },
               period: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  startDate: { type: 'string', format: 'date-time' },
-                  endDate: { type: 'string', format: 'date-time' },
+                  startDate: { type: "string", format: "date-time" },
+                  endDate: { type: "string", format: "date-time" },
                 },
               },
             },
@@ -65,8 +68,8 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
-            message: 'Tenant ID not found in user session',
+            error: "Unauthorized",
+            message: "Tenant ID not found in user session",
           });
         }
 
@@ -86,32 +89,43 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
 
         return reply.send(kpis);
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to get KPIs');
+        fastify.log.error({ error }, "Failed to get KPIs");
         return reply.status(500).send({
-          error: 'Failed to calculate KPIs',
+          error: "Failed to calculate KPIs",
         });
       }
-    }
+    },
   );
 
   // Get KPI trends (last 7 days)
   fastify.get<{
     Querystring: {
       site_id?: string;
-      metric: 'mttr' | 'mtbf' | 'completion_rate' | 'availability' | 'pm_compliance';
+      metric:
+        | "mttr"
+        | "mtbf"
+        | "completion_rate"
+        | "availability"
+        | "pm_compliance";
       days?: number;
     };
   }>(
-    '/analytics/kpis/trends',
+    "/analytics/kpis/trends",
     {
       schema: {
         querystring: z.object({
           site_id: z.string().uuid().optional(),
-          metric: z.enum(['mttr', 'mtbf', 'completion_rate', 'availability', 'pm_compliance']),
+          metric: z.enum([
+            "mttr",
+            "mtbf",
+            "completion_rate",
+            "availability",
+            "pm_compliance",
+          ]),
           days: z.number().optional().default(7),
         }),
-        tags: ['Analytics'],
-        description: 'Get KPI trends over time',
+        tags: ["Analytics"],
+        description: "Get KPI trends over time",
       },
     },
     async (request, reply) => {
@@ -120,7 +134,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -148,8 +162,15 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
           });
 
           trends.push({
-            date: start.toISOString().split('T')[0],
-            value: kpis[metric === 'completion_rate' ? 'completionRate' : metric === 'pm_compliance' ? 'pmCompliance' : metric],
+            date: start.toISOString().split("T")[0],
+            value:
+              kpis[
+                metric === "completion_rate"
+                  ? "completionRate"
+                  : metric === "pm_compliance"
+                    ? "pmCompliance"
+                    : metric
+              ],
           });
         }
 
@@ -161,12 +182,12 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
           trends,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to get KPI trends');
+        fastify.log.error({ error }, "Failed to get KPI trends");
         return reply.status(500).send({
-          error: 'Failed to get KPI trends',
+          error: "Failed to get KPI trends",
         });
       }
-    }
+    },
   );
 
   // Invalidate KPI cache (admin only)
@@ -175,14 +196,14 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       site_id?: string;
     };
   }>(
-    '/admin/analytics/kpis/invalidate-cache',
+    "/admin/analytics/kpis/invalidate-cache",
     {
       schema: {
         body: z.object({
           site_id: z.string().uuid().optional(),
         }),
-        tags: ['Admin', 'Analytics'],
-        description: 'Invalidate KPI cache for tenant/site',
+        tags: ["Admin", "Analytics"],
+        description: "Invalidate KPI cache for tenant/site",
       },
     },
     async (request, reply) => {
@@ -191,7 +212,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -201,14 +222,14 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
 
         return reply.send({
           success: true,
-          message: 'KPI cache invalidated successfully',
+          message: "KPI cache invalidated successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to invalidate KPI cache');
+        fastify.log.error({ error }, "Failed to invalidate KPI cache");
         return reply.status(500).send({
-          error: 'Failed to invalidate KPI cache',
+          error: "Failed to invalidate KPI cache",
         });
       }
-    }
+    },
   );
 }

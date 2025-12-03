@@ -5,8 +5,8 @@
  * Schedule: Every day at 3:00 AM (after predictive maintenance job)
  */
 
-import { CronJob } from 'cron';
-import { ModelPerformanceService } from '../services/model-performance.service';
+import { CronJob } from "cron";
+import { ModelPerformanceService } from "../services/model-performance.service";
 
 const performanceService = new ModelPerformanceService();
 
@@ -16,21 +16,24 @@ const performanceService = new ModelPerformanceService();
  * Format: second minute hour day-of-month month day-of-week
  */
 export const modelPerformanceJob = new CronJob(
-  '0 3 * * *', // Every day at 3:00 AM
+  "0 3 * * *", // Every day at 3:00 AM
   async () => {
-    console.log('[CRON] Starting model performance evaluation job...');
+    console.log("[CRON] Starting model performance evaluation job...");
 
     try {
       // Step 1: Evaluate overdue predictions
-      console.log('[CRON] Evaluating overdue predictions...');
-      const evaluationResult = await performanceService.evaluateOverduePredictions();
+      console.log("[CRON] Evaluating overdue predictions...");
+      const evaluationResult =
+        await performanceService.evaluateOverduePredictions();
 
-      console.log('[CRON] Overdue predictions evaluated:');
+      console.log("[CRON] Overdue predictions evaluated:");
       console.log(`[CRON]   - Total evaluated: ${evaluationResult.evaluated}`);
-      console.log(`[CRON]   - Assumed no failure: ${evaluationResult.assumedNoFailure}`);
+      console.log(
+        `[CRON]   - Assumed no failure: ${evaluationResult.assumedNoFailure}`,
+      );
 
       // Step 2: Calculate metrics for each model
-      const models = ['predictive_maintenance']; // Add more models as needed
+      const models = ["predictive_maintenance"]; // Add more models as needed
 
       for (const modelName of models) {
         try {
@@ -43,11 +46,13 @@ export const modelPerformanceJob = new CronJob(
 
           const metrics = await performanceService.calculateMetrics(
             modelName,
-            30
+            30,
           );
 
           console.log(`[CRON] Metrics calculated for ${modelName}:`);
-          console.log(`[CRON]   - Evaluated predictions: ${metrics.evaluatedPredictions}`);
+          console.log(
+            `[CRON]   - Evaluated predictions: ${metrics.evaluatedPredictions}`,
+          );
           console.log(`[CRON]   - Precision: ${metrics.precision.toFixed(3)}`);
           console.log(`[CRON]   - Recall: ${metrics.recall.toFixed(3)}`);
           console.log(`[CRON]   - F1 Score: ${metrics.f1Score.toFixed(3)}`);
@@ -57,23 +62,30 @@ export const modelPerformanceJob = new CronJob(
           const alerts = await performanceService.getActiveAlerts(modelName);
 
           if (alerts.length > 0) {
-            console.log(`[CRON] ⚠️  ${alerts.length} active performance alert(s) for ${modelName}`);
+            console.log(
+              `[CRON] ⚠️  ${alerts.length} active performance alert(s) for ${modelName}`,
+            );
             for (const alert of alerts) {
-              console.log(`[CRON]     - [${alert.severity.toUpperCase()}] ${alert.message}`);
+              console.log(
+                `[CRON]     - [${alert.severity.toUpperCase()}] ${alert.message}`,
+              );
             }
           }
         } catch (error) {
-          if ((error as any).message.includes('Not enough')) {
+          if ((error as any).message.includes("Not enough")) {
             console.log(`[CRON] ${(error as any).message} for ${modelName}`);
           } else {
-            console.error(`[CRON] Failed to calculate metrics for ${modelName}:`, error);
+            console.error(
+              `[CRON] Failed to calculate metrics for ${modelName}:`,
+              error,
+            );
           }
         }
       }
 
-      console.log('[CRON] Model performance evaluation job completed');
+      console.log("[CRON] Model performance evaluation job completed");
     } catch (error) {
-      console.error('[CRON] Model performance evaluation job failed:', error);
+      console.error("[CRON] Model performance evaluation job failed:", error);
 
       // Send alert to admin (optional)
       // TODO: Integrate with alerting system
@@ -81,7 +93,7 @@ export const modelPerformanceJob = new CronJob(
   },
   null, // onComplete callback
   false, // start immediately
-  'America/New_York' // timezone
+  "America/New_York", // timezone
 );
 
 /**
@@ -89,7 +101,9 @@ export const modelPerformanceJob = new CronJob(
  */
 export function startModelPerformanceCron() {
   modelPerformanceJob.start();
-  console.log('[CRON] Model performance evaluation job scheduled (daily at 3:00 AM)');
+  console.log(
+    "[CRON] Model performance evaluation job scheduled (daily at 3:00 AM)",
+  );
 }
 
 /**
@@ -97,14 +111,14 @@ export function startModelPerformanceCron() {
  */
 export function stopModelPerformanceCron() {
   modelPerformanceJob.stop();
-  console.log('[CRON] Model performance evaluation job stopped');
+  console.log("[CRON] Model performance evaluation job stopped");
 }
 
 /**
  * Run job immediately (for testing)
  */
 export async function runModelPerformanceNow() {
-  console.log('[CRON] Running model performance evaluation job immediately...');
+  console.log("[CRON] Running model performance evaluation job immediately...");
   const performanceService = new ModelPerformanceService();
 
   // Evaluate overdue
@@ -113,23 +127,26 @@ export async function runModelPerformanceNow() {
 
   // Calculate metrics
   try {
-    const metrics = await performanceService.calculateMetrics('predictive_maintenance', 30);
-    console.log('[CRON] Metrics:', metrics);
+    const metrics = await performanceService.calculateMetrics(
+      "predictive_maintenance",
+      30,
+    );
+    console.log("[CRON] Metrics:", metrics);
     return metrics;
   } catch (error) {
-    console.log('[CRON] Could not calculate metrics:', (error as any).message);
+    console.log("[CRON] Could not calculate metrics:", (error as any).message);
     return null;
   }
 }
 
 // Auto-start if this file is executed directly
 if (require.main === module) {
-  console.log('Starting model performance evaluation cron job...');
+  console.log("Starting model performance evaluation cron job...");
   startModelPerformanceCron();
 
   // Keep process alive
-  process.on('SIGINT', () => {
-    console.log('Stopping cron job...');
+  process.on("SIGINT", () => {
+    console.log("Stopping cron job...");
     stopModelPerformanceCron();
     process.exit(0);
   });

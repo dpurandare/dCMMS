@@ -1,13 +1,13 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { assets, workOrders, alerts } from '../db/schema';
-import { eq, and, gte, sql } from 'drizzle-orm';
-import { createClient } from '@clickhouse/client';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { assets, workOrders, alerts } from "../db/schema";
+import { eq, and, gte, sql } from "drizzle-orm";
+import { createClient } from "@clickhouse/client";
 
 export interface HealthScoreBreakdown {
   assetId: string;
   score: number;
-  category: 'excellent' | 'good' | 'fair' | 'poor';
+  category: "excellent" | "good" | "fair" | "poor";
   components: {
     alarmsScore: number;
     alarmsWeight: number;
@@ -38,11 +38,11 @@ export class AssetHealthScoringService {
 
   // Weight configuration
   private readonly WEIGHTS = {
-    alarms: 0.30,           // 30%
-    workOrders: 0.20,       // 20%
-    telemetry: 0.30,        // 30%
-    age: 0.10,              // 10%
-    maintenance: 0.10,      // 10%
+    alarms: 0.3, // 30%
+    workOrders: 0.2, // 20%
+    telemetry: 0.3, // 30%
+    age: 0.1, // 10%
+    maintenance: 0.1, // 10%
   };
 
   constructor(fastify: FastifyInstance) {
@@ -50,10 +50,10 @@ export class AssetHealthScoringService {
 
     // Initialize ClickHouse client
     this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-      username: process.env.CLICKHOUSE_USER || 'clickhouse_user',
-      password: process.env.CLICKHOUSE_PASSWORD || 'clickhouse_password_dev',
-      database: process.env.CLICKHOUSE_DATABASE || 'dcmms_analytics',
+      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
+      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
+      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
     });
   }
 
@@ -61,7 +61,7 @@ export class AssetHealthScoringService {
    * Calculate health score for a single asset
    */
   async calculateHealthScore(assetId: string): Promise<HealthScoreBreakdown> {
-    this.fastify.log.info({ assetId }, 'Calculating asset health score');
+    this.fastify.log.info({ assetId }, "Calculating asset health score");
 
     try {
       // Get asset details
@@ -74,11 +74,15 @@ export class AssetHealthScoringService {
       }
 
       // Calculate each component
-      const [alarmsScore, alarmsCount] = await this.calculateAlarmsScore(assetId);
-      const [workOrdersScore, workOrdersCount] = await this.calculateWorkOrdersScore(assetId);
-      const [telemetryScore, anomalyCount] = await this.calculateTelemetryScore(assetId);
+      const [alarmsScore, alarmsCount] =
+        await this.calculateAlarmsScore(assetId);
+      const [workOrdersScore, workOrdersCount] =
+        await this.calculateWorkOrdersScore(assetId);
+      const [telemetryScore, anomalyCount] =
+        await this.calculateTelemetryScore(assetId);
       const [ageScore, assetAge] = this.calculateAgeScore(asset.createdAt);
-      const [maintenanceScore, daysSince] = await this.calculateMaintenanceScore(assetId);
+      const [maintenanceScore, daysSince] =
+        await this.calculateMaintenanceScore(assetId);
 
       // Calculate weighted total score
       const totalScore =
@@ -93,7 +97,7 @@ export class AssetHealthScoringService {
 
       this.fastify.log.info(
         { assetId, score: finalScore, category },
-        'Asset health score calculated'
+        "Asset health score calculated",
       );
 
       return {
@@ -120,7 +124,10 @@ export class AssetHealthScoringService {
         calculatedAt: new Date(),
       };
     } catch (error) {
-      this.fastify.log.error({ error, assetId }, 'Failed to calculate health score');
+      this.fastify.log.error(
+        { error, assetId },
+        "Failed to calculate health score",
+      );
       throw error;
     }
   }
@@ -128,11 +135,16 @@ export class AssetHealthScoringService {
   /**
    * Calculate health scores for multiple assets (bulk)
    */
-  async calculateBulkHealthScores(assetIds: string[]): Promise<HealthScoreBreakdown[]> {
-    this.fastify.log.info({ count: assetIds.length }, 'Calculating bulk health scores');
+  async calculateBulkHealthScores(
+    assetIds: string[],
+  ): Promise<HealthScoreBreakdown[]> {
+    this.fastify.log.info(
+      { count: assetIds.length },
+      "Calculating bulk health scores",
+    );
 
     const scores = await Promise.all(
-      assetIds.map((assetId) => this.calculateHealthScore(assetId))
+      assetIds.map((assetId) => this.calculateHealthScore(assetId)),
     );
 
     return scores;
@@ -142,7 +154,9 @@ export class AssetHealthScoringService {
    * Calculate alarms score component (0-100)
    * Lower score = more alarms
    */
-  private async calculateAlarmsScore(assetId: string): Promise<[number, number]> {
+  private async calculateAlarmsScore(
+    assetId: string,
+  ): Promise<[number, number]> {
     // Get alarm count from last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -150,12 +164,14 @@ export class AssetHealthScoringService {
     const recentAlerts = await db.query.alerts.findMany({
       where: and(
         eq(alerts.assetId, assetId),
-        gte(alerts.createdAt, thirtyDaysAgo)
+        gte(alerts.createdAt, thirtyDaysAgo),
       ),
     });
 
     const alarmCount = recentAlerts.length;
-    const criticalCount = recentAlerts.filter((a) => a.severity === 'critical').length;
+    const criticalCount = recentAlerts.filter(
+      (a) => a.severity === "critical",
+    ).length;
 
     // Scoring logic:
     // 0 alarms = 100 score
@@ -188,7 +204,9 @@ export class AssetHealthScoringService {
    * Calculate work orders score component (0-100)
    * Lower score = more frequent work orders
    */
-  private async calculateWorkOrdersScore(assetId: string): Promise<[number, number]> {
+  private async calculateWorkOrdersScore(
+    assetId: string,
+  ): Promise<[number, number]> {
     // Get work order count from last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -196,12 +214,14 @@ export class AssetHealthScoringService {
     const recentWOs = await db.query.workOrders.findMany({
       where: and(
         eq(workOrders.assetId, assetId),
-        gte(workOrders.createdAt, thirtyDaysAgo)
+        gte(workOrders.createdAt, thirtyDaysAgo),
       ),
     });
 
     const woCount = recentWOs.length;
-    const correctiveCount = recentWOs.filter((wo) => wo.type === 'corrective').length;
+    const correctiveCount = recentWOs.filter(
+      (wo) => wo.type === "corrective",
+    ).length;
 
     // Scoring logic:
     // 0-1 WOs = 100 score
@@ -234,7 +254,9 @@ export class AssetHealthScoringService {
    * Calculate telemetry anomalies score component (0-100)
    * Uses ClickHouse telemetry data
    */
-  private async calculateTelemetryScore(assetId: string): Promise<[number, number]> {
+  private async calculateTelemetryScore(
+    assetId: string,
+  ): Promise<[number, number]> {
     try {
       // Get anomaly count from last 7 days
       const sevenDaysAgo = new Date();
@@ -250,7 +272,7 @@ export class AssetHealthScoringService {
 
       const result = await this.clickhouse.query({
         query,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       const data = await result.json<any[]>();
@@ -280,7 +302,10 @@ export class AssetHealthScoringService {
       return [score, anomalyCount];
     } catch (error) {
       // If ClickHouse is unavailable or no data, return neutral score
-      this.fastify.log.warn({ error, assetId }, 'Failed to get telemetry score, using default');
+      this.fastify.log.warn(
+        { error, assetId },
+        "Failed to get telemetry score, using default",
+      );
       return [100, 0];
     }
   }
@@ -322,13 +347,15 @@ export class AssetHealthScoringService {
    * Calculate maintenance score component (0-100)
    * Recent maintenance = higher score
    */
-  private async calculateMaintenanceScore(assetId: string): Promise<[number, number]> {
+  private async calculateMaintenanceScore(
+    assetId: string,
+  ): Promise<[number, number]> {
     // Get most recent completed preventive work order
     const recentMaintenance = await db.query.workOrders.findFirst({
       where: and(
         eq(workOrders.assetId, assetId),
-        eq(workOrders.type, 'preventive'),
-        eq(workOrders.status, 'completed')
+        eq(workOrders.type, "preventive"),
+        eq(workOrders.status, "completed"),
       ),
       orderBy: (workOrders, { desc }) => [desc(workOrders.actualEnd)],
     });
@@ -340,7 +367,8 @@ export class AssetHealthScoringService {
 
     const now = new Date();
     const daysSince = Math.floor(
-      (now.getTime() - recentMaintenance.actualEnd.getTime()) / (24 * 60 * 60 * 1000)
+      (now.getTime() - recentMaintenance.actualEnd.getTime()) /
+        (24 * 60 * 60 * 1000),
     );
 
     // Scoring logic:
@@ -371,12 +399,12 @@ export class AssetHealthScoringService {
    * Get score category from score value
    */
   private getScoreCategory(
-    score: number
-  ): 'excellent' | 'good' | 'fair' | 'poor' {
-    if (score >= 90) return 'excellent';
-    if (score >= 70) return 'good';
-    if (score >= 50) return 'fair';
-    return 'poor';
+    score: number,
+  ): "excellent" | "good" | "fair" | "poor" {
+    if (score >= 90) return "excellent";
+    if (score >= 70) return "good";
+    if (score >= 50) return "fair";
+    return "poor";
   }
 
   /**
@@ -384,12 +412,12 @@ export class AssetHealthScoringService {
    */
   async close(): Promise<void> {
     await this.clickhouse.close();
-    this.fastify.log.info('Asset health scoring ClickHouse connection closed');
+    this.fastify.log.info("Asset health scoring ClickHouse connection closed");
   }
 }
 
 export function createAssetHealthScoringService(
-  fastify: FastifyInstance
+  fastify: FastifyInstance,
 ): AssetHealthScoringService {
   return new AssetHealthScoringService(fastify);
 }

@@ -1,12 +1,12 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { complianceGeneratedReports } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { createComplianceTemplateService } from './compliance-template.service';
-import PDFDocument from 'pdfkit';
-import { createWriteStream, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
-import { randomUUID } from 'crypto';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { complianceGeneratedReports } from "../db/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { createComplianceTemplateService } from "./compliance-template.service";
+import PDFDocument from "pdfkit";
+import { createWriteStream, mkdirSync, existsSync } from "fs";
+import { join } from "path";
+import { randomUUID } from "crypto";
 
 export interface GenerateReportRequest {
   templateId: string;
@@ -14,8 +14,8 @@ export interface GenerateReportRequest {
   startDate?: Date;
   endDate?: Date;
   manualData?: Record<string, any>;
-  watermark?: 'DRAFT' | 'FINAL';
-  format?: 'pdf' | 'csv' | 'json';
+  watermark?: "DRAFT" | "FINAL";
+  format?: "pdf" | "csv" | "json";
 }
 
 export interface GeneratedReport {
@@ -25,7 +25,7 @@ export interface GeneratedReport {
   templateId: string;
   siteId?: string;
   reportData: any;
-  status: 'draft' | 'final' | 'submitted';
+  status: "draft" | "final" | "submitted";
   format: string;
   filePath: string;
   watermark: string;
@@ -48,7 +48,7 @@ export class ComplianceReportGenerationService {
 
     // Determine storage path (S3 for production, local for dev)
     this.storageBasePath =
-      process.env.COMPLIANCE_REPORTS_PATH || '/tmp/dcmms/compliance-reports';
+      process.env.COMPLIANCE_REPORTS_PATH || "/tmp/dcmms/compliance-reports";
 
     // Ensure storage directory exists
     if (!existsSync(this.storageBasePath)) {
@@ -62,16 +62,18 @@ export class ComplianceReportGenerationService {
   async generateReport(
     request: GenerateReportRequest,
     tenantId: string,
-    userId: string
+    userId: string,
   ): Promise<GeneratedReport> {
     this.fastify.log.info(
       { templateId: request.templateId, format: request.format },
-      'Generating compliance report'
+      "Generating compliance report",
     );
 
     try {
       // Get template
-      const template = await this.templateService.getTemplate(request.templateId);
+      const template = await this.templateService.getTemplate(
+        request.templateId,
+      );
 
       if (!template) {
         throw new Error(`Template not found: ${request.templateId}`);
@@ -83,7 +85,7 @@ export class ComplianceReportGenerationService {
         tenantId,
         request.siteId,
         request.startDate,
-        request.endDate
+        request.endDate,
       );
 
       // Merge with manual data
@@ -93,23 +95,33 @@ export class ComplianceReportGenerationService {
       };
 
       // Validate
-      const validation = this.templateService.validateReportData(template, reportData);
+      const validation = this.templateService.validateReportData(
+        template,
+        reportData,
+      );
 
       if (!validation.valid) {
-        throw new Error(`Report validation failed: ${validation.errors.join(', ')}`);
+        throw new Error(
+          `Report validation failed: ${validation.errors.join(", ")}`,
+        );
       }
 
       // Generate unique report name/identifier
       const reportName = `RPT-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`;
 
       // Generate file based on format
-      const format = request.format || 'pdf';
-      const watermark = request.watermark || 'DRAFT';
+      const format = request.format || "pdf";
+      const watermark = request.watermark || "DRAFT";
       let filePath: string;
 
-      if (format === 'pdf') {
-        filePath = await this.generatePDF(template, reportData, reportName, watermark);
-      } else if (format === 'csv') {
+      if (format === "pdf") {
+        filePath = await this.generatePDF(
+          template,
+          reportData,
+          reportName,
+          watermark,
+        );
+      } else if (format === "csv") {
         filePath = await this.generateCSV(template, reportData, reportName);
       } else {
         filePath = await this.generateJSON(template, reportData, reportName);
@@ -135,7 +147,7 @@ export class ComplianceReportGenerationService {
           reportingPeriodStart: request.startDate || new Date(),
           reportingPeriodEnd: request.endDate || new Date(),
           reportData: JSON.stringify(reportData),
-          status: watermark === 'FINAL' ? 'final' : 'draft',
+          status: watermark === "FINAL" ? "final" : "draft",
           fileFormat: format,
           fileUrl: filePath,
           watermark,
@@ -143,11 +155,14 @@ export class ComplianceReportGenerationService {
         })
         .returning();
 
-      this.fastify.log.info({ reportId: dbReport.id, format }, 'Compliance report generated');
+      this.fastify.log.info(
+        { reportId: dbReport.id, format },
+        "Compliance report generated",
+      );
 
       return this.mapReport(dbReport);
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to generate compliance report');
+      this.fastify.log.error({ error }, "Failed to generate compliance report");
       throw error;
     }
   }
@@ -159,7 +174,7 @@ export class ComplianceReportGenerationService {
     template: any,
     reportData: any,
     reportName: string,
-    watermark: string
+    watermark: string,
   ): Promise<string> {
     const fileName = `${reportName}.pdf`;
     const filePath = join(this.storageBasePath, fileName);
@@ -167,11 +182,11 @@ export class ComplianceReportGenerationService {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({
-          size: 'A4',
+          size: "A4",
           margins: { top: 50, bottom: 50, left: 50, right: 50 },
           info: {
             Title: template.name,
-            Author: 'dCMMS',
+            Author: "dCMMS",
             Subject: `${template.complianceStandard} - ${template.reportType}`,
           },
         });
@@ -180,7 +195,7 @@ export class ComplianceReportGenerationService {
         doc.pipe(writeStream);
 
         // Add watermark
-        if (watermark === 'DRAFT') {
+        if (watermark === "DRAFT") {
           this.addWatermark(doc, watermark);
         }
 
@@ -195,11 +210,11 @@ export class ComplianceReportGenerationService {
 
         doc.end();
 
-        writeStream.on('finish', () => {
+        writeStream.on("finish", () => {
           resolve(filePath);
         });
 
-        writeStream.on('error', (error) => {
+        writeStream.on("error", (error) => {
           reject(error);
         });
       } catch (error) {
@@ -218,10 +233,10 @@ export class ComplianceReportGenerationService {
     doc.save();
     doc
       .fontSize(80)
-      .fillColor('#ff0000', 0.1)
+      .fillColor("#ff0000", 0.1)
       .rotate(-45, { origin: [width / 2, height / 2] })
       .text(text, 0, height / 2, {
-        align: 'center',
+        align: "center",
         width: width,
       });
     doc.restore();
@@ -234,22 +249,22 @@ export class ComplianceReportGenerationService {
     doc: PDFKit.PDFDocument,
     template: any,
     reportName: string,
-    watermark: string
+    watermark: string,
   ): void {
     // Title
     doc
       .fontSize(20)
-      .fillColor('#000000')
-      .text(template.name, { align: 'center' });
+      .fillColor("#000000")
+      .text(template.name, { align: "center" });
 
     doc.moveDown(0.5);
 
     // Subtitle
     doc
       .fontSize(12)
-      .fillColor('#666666')
+      .fillColor("#666666")
       .text(`${template.complianceStandard} - Version ${template.version}`, {
-        align: 'center',
+        align: "center",
       });
 
     doc.moveDown(1);
@@ -257,19 +272,19 @@ export class ComplianceReportGenerationService {
     // Report metadata
     doc
       .fontSize(10)
-      .fillColor('#333333')
+      .fillColor("#333333")
       .text(`Report: ${reportName}`, { continued: true })
-      .text(`    Status: ${watermark}`, { align: 'right' });
+      .text(`    Status: ${watermark}`, { align: "right" });
 
     doc
       .text(`Generated: ${new Date().toISOString()}`, { continued: true })
-      .text(`    Type: ${template.reportType}`, { align: 'right' });
+      .text(`    Type: ${template.reportType}`, { align: "right" });
 
     doc.moveDown(1);
 
     // Divider
     doc
-      .strokeColor('#cccccc')
+      .strokeColor("#cccccc")
       .lineWidth(1)
       .moveTo(50, doc.y)
       .lineTo(doc.page.width - 50, doc.y)
@@ -281,20 +296,27 @@ export class ComplianceReportGenerationService {
   /**
    * Add content to PDF
    */
-  private addPDFContent(doc: PDFKit.PDFDocument, template: any, reportData: any): void {
+  private addPDFContent(
+    doc: PDFKit.PDFDocument,
+    template: any,
+    reportData: any,
+  ): void {
     // Required fields section
-    doc.fontSize(14).fillColor('#000000').text('Required Fields', { underline: true });
+    doc
+      .fontSize(14)
+      .fillColor("#000000")
+      .text("Required Fields", { underline: true });
     doc.moveDown(0.5);
 
     for (const field of template.requiredFields) {
-      const value = reportData[field.name] || 'N/A';
+      const value = reportData[field.name] || "N/A";
       const displayValue = this.formatFieldValue(value);
 
       doc
         .fontSize(10)
-        .fillColor('#333333')
+        .fillColor("#333333")
         .text(`${field.label}:`, { continued: true })
-        .fillColor('#000000')
+        .fillColor("#000000")
         .text(` ${displayValue}`);
 
       doc.moveDown(0.3);
@@ -304,11 +326,14 @@ export class ComplianceReportGenerationService {
 
     // Optional fields section (if any have values)
     const optionalFieldsWithValues = template.optionalFields.filter(
-      (field: any) => reportData[field.name]
+      (field: any) => reportData[field.name],
     );
 
     if (optionalFieldsWithValues.length > 0) {
-      doc.fontSize(14).fillColor('#000000').text('Additional Information', { underline: true });
+      doc
+        .fontSize(14)
+        .fillColor("#000000")
+        .text("Additional Information", { underline: true });
       doc.moveDown(0.5);
 
       for (const field of optionalFieldsWithValues) {
@@ -317,9 +342,9 @@ export class ComplianceReportGenerationService {
 
         doc
           .fontSize(10)
-          .fillColor('#333333')
+          .fillColor("#333333")
           .text(`${field.label}:`, { continued: true })
-          .fillColor('#000000')
+          .fillColor("#000000")
           .text(` ${displayValue}`);
 
         doc.moveDown(0.3);
@@ -331,7 +356,10 @@ export class ComplianceReportGenerationService {
     // Handle array data (tables)
     for (const [key, value] of Object.entries(reportData)) {
       if (Array.isArray(value) && value.length > 0) {
-        doc.fontSize(14).fillColor('#000000').text(this.formatFieldName(key), { underline: true });
+        doc
+          .fontSize(14)
+          .fillColor("#000000")
+          .text(this.formatFieldName(key), { underline: true });
         doc.moveDown(0.5);
 
         // Add table
@@ -352,16 +380,16 @@ export class ComplianceReportGenerationService {
     const columnWidth = (doc.page.width - 100) / headers.length;
 
     // Draw header row
-    doc.fontSize(9).fillColor('#ffffff');
+    doc.fontSize(9).fillColor("#ffffff");
     let x = 50;
     const headerY = doc.y;
 
-    doc.rect(50, headerY, doc.page.width - 100, 20).fill('#4a5568');
+    doc.rect(50, headerY, doc.page.width - 100, 20).fill("#4a5568");
 
     headers.forEach((header) => {
       doc.text(this.formatFieldName(header), x + 5, headerY + 5, {
         width: columnWidth - 10,
-        align: 'left',
+        align: "left",
       });
       x += columnWidth;
     });
@@ -375,16 +403,16 @@ export class ComplianceReportGenerationService {
 
       // Alternate row colors
       if (index % 2 === 0) {
-        doc.rect(50, rowY, doc.page.width - 100, 18).fill('#f7fafc');
+        doc.rect(50, rowY, doc.page.width - 100, 18).fill("#f7fafc");
       }
 
-      doc.fontSize(8).fillColor('#000000');
+      doc.fontSize(8).fillColor("#000000");
 
       headers.forEach((header) => {
         const value = this.formatFieldValue(row[header]);
         doc.text(value, x + 5, rowY + 4, {
           width: columnWidth - 10,
-          align: 'left',
+          align: "left",
         });
         x += columnWidth;
       });
@@ -406,14 +434,14 @@ export class ComplianceReportGenerationService {
 
       doc
         .fontSize(8)
-        .fillColor('#666666')
+        .fillColor("#666666")
         .text(`Page ${i + 1} of ${pageCount}`, 50, footerY, {
-          align: 'center',
+          align: "center",
           width: doc.page.width - 100,
         });
 
-      doc.text('Generated by dCMMS', 50, footerY, {
-        align: 'right',
+      doc.text("Generated by dCMMS", 50, footerY, {
+        align: "right",
         width: doc.page.width - 100,
       });
     }
@@ -425,7 +453,7 @@ export class ComplianceReportGenerationService {
   private async generateCSV(
     template: any,
     reportData: any,
-    reportName: string
+    reportName: string,
   ): Promise<string> {
     const fileName = `${reportName}.csv`;
     const filePath = join(this.storageBasePath, fileName);
@@ -437,26 +465,29 @@ export class ComplianceReportGenerationService {
     lines.push(`"Report","${template.name}"`);
     lines.push(`"Standard","${template.complianceStandard}"`);
     lines.push(`"Generated","${new Date().toISOString()}"`);
-    lines.push('');
+    lines.push("");
 
     // Fields
     lines.push('"Field","Value"');
 
-    for (const field of [...template.requiredFields, ...template.optionalFields]) {
-      const value = reportData[field.name] || '';
+    for (const field of [
+      ...template.requiredFields,
+      ...template.optionalFields,
+    ]) {
+      const value = reportData[field.name] || "";
       const displayValue = this.formatFieldValue(value);
       lines.push(`"${field.label}","${displayValue}"`);
     }
 
-    const csvContent = lines.join('\n');
+    const csvContent = lines.join("\n");
 
     return new Promise((resolve, reject) => {
       const writeStream = createWriteStream(filePath);
       writeStream.write(csvContent);
       writeStream.end();
 
-      writeStream.on('finish', () => resolve(filePath));
-      writeStream.on('error', reject);
+      writeStream.on("finish", () => resolve(filePath));
+      writeStream.on("error", reject);
     });
   }
 
@@ -466,7 +497,7 @@ export class ComplianceReportGenerationService {
   private async generateJSON(
     template: any,
     reportData: any,
-    reportName: string
+    reportName: string,
   ): Promise<string> {
     const fileName = `${reportName}.json`;
     const filePath = join(this.storageBasePath, fileName);
@@ -488,26 +519,33 @@ export class ComplianceReportGenerationService {
       writeStream.write(JSON.stringify(jsonReport, null, 2));
       writeStream.end();
 
-      writeStream.on('finish', () => resolve(filePath));
-      writeStream.on('error', reject);
+      writeStream.on("finish", () => resolve(filePath));
+      writeStream.on("error", reject);
     });
   }
 
   /**
    * List generated reports
    */
-  async listReports(tenantId: string, filters?: {
-    templateId?: string;
-    status?: string;
-  }): Promise<GeneratedReport[]> {
+  async listReports(
+    tenantId: string,
+    filters?: {
+      templateId?: string;
+      status?: string;
+    },
+  ): Promise<GeneratedReport[]> {
     const whereConditions = [eq(complianceGeneratedReports.tenantId, tenantId)];
 
     if (filters?.templateId) {
-      whereConditions.push(eq(complianceGeneratedReports.templateId, filters.templateId));
+      whereConditions.push(
+        eq(complianceGeneratedReports.templateId, filters.templateId),
+      );
     }
 
     if (filters?.status) {
-      whereConditions.push(eq(complianceGeneratedReports.status, filters.status as any));
+      whereConditions.push(
+        eq(complianceGeneratedReports.status, filters.status as any),
+      );
     }
 
     const reports = await db.query.complianceGeneratedReports.findMany({
@@ -521,11 +559,14 @@ export class ComplianceReportGenerationService {
   /**
    * Get single report
    */
-  async getReport(reportId: string, tenantId: string): Promise<GeneratedReport | null> {
+  async getReport(
+    reportId: string,
+    tenantId: string,
+  ): Promise<GeneratedReport | null> {
     const report = await db.query.complianceGeneratedReports.findFirst({
       where: and(
         eq(complianceGeneratedReports.id, reportId),
-        eq(complianceGeneratedReports.tenantId, tenantId)
+        eq(complianceGeneratedReports.tenantId, tenantId),
       ),
     });
 
@@ -542,7 +583,7 @@ export class ComplianceReportGenerationService {
   async updateReportStatus(
     reportId: string,
     tenantId: string,
-    status: 'draft' | 'final' | 'submitted'
+    status: "draft" | "final" | "submitted",
   ): Promise<GeneratedReport | null> {
     const [updated] = await db
       .update(complianceGeneratedReports)
@@ -550,8 +591,8 @@ export class ComplianceReportGenerationService {
       .where(
         and(
           eq(complianceGeneratedReports.id, reportId),
-          eq(complianceGeneratedReports.tenantId, tenantId)
-        )
+          eq(complianceGeneratedReports.tenantId, tenantId),
+        ),
       )
       .returning();
 
@@ -566,10 +607,10 @@ export class ComplianceReportGenerationService {
    * Helper: Format field value for display
    */
   private formatFieldValue(value: any): string {
-    if (value === null || value === undefined) return 'N/A';
+    if (value === null || value === undefined) return "N/A";
     if (Array.isArray(value)) return `${value.length} items`;
-    if (typeof value === 'object') return JSON.stringify(value);
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === "object") return JSON.stringify(value);
+    if (typeof value === "boolean") return value ? "Yes" : "No";
     return String(value);
   }
 
@@ -578,8 +619,8 @@ export class ComplianceReportGenerationService {
    */
   private formatFieldName(name: string): string {
     return name
-      .replace(/_/g, ' ')
-      .replace(/([A-Z])/g, ' $1')
+      .replace(/_/g, " ")
+      .replace(/([A-Z])/g, " $1")
       .replace(/^./, (str) => str.toUpperCase())
       .trim();
   }
@@ -594,7 +635,7 @@ export class ComplianceReportGenerationService {
       tenantId: dbReport.tenantId,
       templateId: dbReport.templateId,
       siteId: dbReport.siteId,
-      reportData: JSON.parse(dbReport.reportData || '{}'),
+      reportData: JSON.parse(dbReport.reportData || "{}"),
       status: dbReport.status,
       format: dbReport.fileFormat,
       filePath: dbReport.fileUrl,
@@ -606,7 +647,7 @@ export class ComplianceReportGenerationService {
 }
 
 export function createComplianceReportGenerationService(
-  fastify: FastifyInstance
+  fastify: FastifyInstance,
 ): ComplianceReportGenerationService {
   return new ComplianceReportGenerationService(fastify);
 }

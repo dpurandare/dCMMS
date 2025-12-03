@@ -1,26 +1,42 @@
-import { FastifyPluginAsync } from 'fastify';
-import { pool } from '../db';
+import { FastifyPluginAsync } from "fastify";
+import { pool } from "../db";
 
 const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
   // GET /api/v1/notifications/history
   server.get(
-    '/history',
+    "/history",
     {
       schema: {
-        summary: 'Query notification history with filters',
-        tags: ['Notifications'],
+        summary: "Query notification history with filters",
+        tags: ["Notifications"],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            userId: { type: 'string', format: 'uuid' },
-            channel: { type: 'string', enum: ['email', 'sms', 'push', 'slack', 'webhook'] },
-            status: { type: 'string', enum: ['sent', 'delivered', 'failed', 'bounced', 'clicked', 'opened'] },
-            priority: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
-            eventType: { type: 'string' },
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
-            offset: { type: 'integer', minimum: 0, default: 0 },
+            userId: { type: "string", format: "uuid" },
+            channel: {
+              type: "string",
+              enum: ["email", "sms", "push", "slack", "webhook"],
+            },
+            status: {
+              type: "string",
+              enum: [
+                "sent",
+                "delivered",
+                "failed",
+                "bounced",
+                "clicked",
+                "opened",
+              ],
+            },
+            priority: {
+              type: "string",
+              enum: ["critical", "high", "medium", "low"],
+            },
+            eventType: { type: "string" },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
@@ -28,7 +44,8 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
         const {
           userId,
           channel,
@@ -161,24 +178,24 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to query notification history',
+          error: "Failed to query notification history",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/notifications/history/:id
   server.get(
-    '/history/:id',
+    "/history/:id",
     {
       schema: {
-        summary: 'Get detailed notification info',
-        tags: ['Notifications'],
+        summary: "Get detailed notification info",
+        tags: ["Notifications"],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
+            id: { type: "string", format: "uuid" },
           },
         },
       },
@@ -187,7 +204,8 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         const result = await pool.query(
           `
@@ -219,13 +237,13 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
           INNER JOIN users u ON nh.user_id = u.id
           WHERE nh.id = $1 AND u.tenant_id = $2
         `,
-          [id, tenantId]
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Notification not found',
+            error: "Notification not found",
           });
         }
 
@@ -237,26 +255,29 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get notification',
+          error: "Failed to get notification",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/notifications/stats
   server.get(
-    '/stats',
+    "/stats",
     {
       schema: {
-        summary: 'Get notification statistics',
-        tags: ['Notifications'],
+        summary: "Get notification statistics",
+        tags: ["Notifications"],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            groupBy: { type: 'string', enum: ['channel', 'status', 'priority', 'day', 'week', 'month'] },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
+            groupBy: {
+              type: "string",
+              enum: ["channel", "status", "priority", "day", "week", "month"],
+            },
           },
         },
       },
@@ -264,11 +285,18 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
-        const { startDate, endDate, groupBy = 'channel' } = request.query as any;
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
+        const {
+          startDate,
+          endDate,
+          groupBy = "channel",
+        } = request.query as any;
 
         // Date range (default: last 30 days)
-        const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const start =
+          startDate ||
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const end = endDate || new Date().toISOString();
 
         // Overall stats
@@ -289,16 +317,18 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             AND nh.sent_at >= $2
             AND nh.sent_at <= $3
         `,
-          [tenantId, start, end]
+          [tenantId, start, end],
         );
 
         // Grouped stats
-        let groupByColumn = 'channel';
-        if (groupBy === 'status') groupByColumn = 'status';
-        else if (groupBy === 'priority') groupByColumn = 'priority';
-        else if (groupBy === 'day') groupByColumn = 'DATE(sent_at)';
-        else if (groupBy === 'week') groupByColumn = 'DATE_TRUNC(\'week\', sent_at)';
-        else if (groupBy === 'month') groupByColumn = 'DATE_TRUNC(\'month\', sent_at)';
+        let groupByColumn = "channel";
+        if (groupBy === "status") groupByColumn = "status";
+        else if (groupBy === "priority") groupByColumn = "priority";
+        else if (groupBy === "day") groupByColumn = "DATE(sent_at)";
+        else if (groupBy === "week")
+          groupByColumn = "DATE_TRUNC('week', sent_at)";
+        else if (groupBy === "month")
+          groupByColumn = "DATE_TRUNC('month', sent_at)";
 
         const groupedResult = await pool.query(
           `
@@ -315,7 +345,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
           GROUP BY ${groupByColumn}
           ORDER BY group_key
         `,
-          [tenantId, start, end]
+          [tenantId, start, end],
         );
 
         return {
@@ -329,26 +359,27 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get notification statistics',
+          error: "Failed to get notification statistics",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/notifications/analytics
   server.get(
-    '/analytics',
+    "/analytics",
     {
       schema: {
-        summary: 'Get analytics dashboard data',
-        tags: ['Notifications'],
+        summary: "Get analytics dashboard data",
+        tags: ["Notifications"],
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         // Get various metrics in parallel
         const [
@@ -373,7 +404,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             GROUP BY DATE(sent_at)
             ORDER BY date
           `,
-            [tenantId]
+            [tenantId],
           ),
 
           // Last 30 days summary
@@ -390,7 +421,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             WHERE u.tenant_id = $1
               AND nh.sent_at >= NOW() - INTERVAL '30 days'
           `,
-            [tenantId]
+            [tenantId],
           ),
 
           // Channel breakdown
@@ -408,7 +439,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             GROUP BY channel
             ORDER BY count DESC
           `,
-            [tenantId]
+            [tenantId],
           ),
 
           // Top templates
@@ -427,7 +458,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             ORDER BY sent DESC
             LIMIT 10
           `,
-            [tenantId]
+            [tenantId],
           ),
 
           // Common failure reasons
@@ -446,7 +477,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
             ORDER BY count DESC
             LIMIT 10
           `,
-            [tenantId]
+            [tenantId],
           ),
         ]);
 
@@ -464,26 +495,26 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get analytics',
+          error: "Failed to get analytics",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/notifications/digest-history
   server.get(
-    '/digest-history',
+    "/digest-history",
     {
       schema: {
-        summary: 'Get digest history',
-        tags: ['Notifications'],
+        summary: "Get digest history",
+        tags: ["Notifications"],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            userId: { type: 'string', format: 'uuid' },
-            limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-            offset: { type: 'integer', minimum: 0, default: 0 },
+            userId: { type: "string", format: "uuid" },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
@@ -491,9 +522,14 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
-        const currentUserId = (request.headers['x-user-id'] as string); // From auth middleware
-        const { userId = currentUserId, limit = 20, offset = 0 } = request.query as any;
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
+        const currentUserId = request.headers["x-user-id"] as string; // From auth middleware
+        const {
+          userId = currentUserId,
+          limit = 20,
+          offset = 0,
+        } = request.query as any;
 
         const result = await pool.query(
           `
@@ -517,7 +553,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
           ORDER BY ndh.sent_at DESC
           LIMIT $3 OFFSET $4
         `,
-          [tenantId, userId, limit, offset]
+          [tenantId, userId, limit, offset],
         );
 
         // Get total count
@@ -529,7 +565,7 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
           WHERE u.tenant_id = $1
             AND ($2::uuid IS NULL OR ndh.user_id = $2)
         `,
-          [tenantId, userId]
+          [tenantId, userId],
         );
 
         return {
@@ -543,11 +579,11 @@ const notificationHistoryRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get digest history',
+          error: "Failed to get digest history",
           message: error.message,
         });
       }
-    }
+    },
   );
 };
 

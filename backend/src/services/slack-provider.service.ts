@@ -1,7 +1,7 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { notificationHistory } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { notificationHistory } from "../db/schema";
+import { eq } from "drizzle-orm";
 
 export interface SlackMessage {
   channel: string;
@@ -11,7 +11,7 @@ export interface SlackMessage {
 }
 
 export interface SlackSendResult {
-  status: 'sent' | 'failed';
+  status: "sent" | "failed";
   messageId?: string;
   timestamp?: string;
   error?: string;
@@ -33,7 +33,7 @@ export interface SlackInstallation {
  */
 export class SlackProviderService {
   private fastify: FastifyInstance;
-  private readonly SLACK_API_BASE = 'https://slack.com/api';
+  private readonly SLACK_API_BASE = "https://slack.com/api";
 
   // Store Slack installations (in production, this should be in database)
   private installations: Map<string, SlackInstallation> = new Map();
@@ -49,10 +49,15 @@ export class SlackProviderService {
     tenantId: string;
     channel: string;
     text: string;
-    severity?: 'critical' | 'high' | 'medium' | 'low' | 'info';
+    severity?: "critical" | "high" | "medium" | "low" | "info";
     title?: string;
     data?: Record<string, any>;
-    actions?: Array<{ type: string; text: string; value: string; url?: string }>;
+    actions?: Array<{
+      type: string;
+      text: string;
+      value: string;
+      url?: string;
+    }>;
   }): Promise<SlackSendResult> {
     const { tenantId, channel, text, severity, title, data, actions } = params;
 
@@ -61,16 +66,20 @@ export class SlackProviderService {
       const installation = this.installations.get(tenantId);
 
       if (!installation) {
-        this.fastify.log.warn({ tenantId }, 'No Slack installation found for tenant');
+        this.fastify.log.warn(
+          { tenantId },
+          "No Slack installation found for tenant",
+        );
         return {
-          status: 'failed',
-          error: 'Slack not connected for this tenant. Please install the Slack app.',
+          status: "failed",
+          error:
+            "Slack not connected for this tenant. Please install the Slack app.",
         };
       }
 
       // Build Slack message with blocks
       const blocks = this.buildMessageBlocks({
-        title: title || 'Notification',
+        title: title || "Notification",
         text,
         severity,
         data,
@@ -79,9 +88,9 @@ export class SlackProviderService {
 
       // Send message via Slack API
       const response = await fetch(`${this.SLACK_API_BASE}/chat.postMessage`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json; charset=utf-8',
+          "Content-Type": "application/json; charset=utf-8",
           Authorization: `Bearer ${installation.accessToken}`,
         },
         body: JSON.stringify({
@@ -94,24 +103,27 @@ export class SlackProviderService {
       const result = await response.json();
 
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to send Slack message');
+        throw new Error(result.error || "Failed to send Slack message");
       }
 
       this.fastify.log.info(
         { channel, timestamp: result.ts, messageId: result.message?.ts },
-        'Slack message sent successfully'
+        "Slack message sent successfully",
       );
 
       return {
-        status: 'sent',
+        status: "sent",
         messageId: result.message?.ts,
         timestamp: result.ts,
       };
     } catch (error: any) {
-      this.fastify.log.error({ error, channel }, 'Failed to send Slack message');
+      this.fastify.log.error(
+        { error, channel },
+        "Failed to send Slack message",
+      );
       return {
-        status: 'failed',
-        error: error.message || 'Unknown error',
+        status: "failed",
+        error: error.message || "Unknown error",
       };
     }
   }
@@ -122,9 +134,14 @@ export class SlackProviderService {
   private buildMessageBlocks(params: {
     title: string;
     text: string;
-    severity?: 'critical' | 'high' | 'medium' | 'low' | 'info';
+    severity?: "critical" | "high" | "medium" | "low" | "info";
     data?: Record<string, any>;
-    actions?: Array<{ type: string; text: string; value: string; url?: string }>;
+    actions?: Array<{
+      type: string;
+      text: string;
+      value: string;
+      url?: string;
+    }>;
   }): any[] {
     const { title, text, severity, data, actions } = params;
 
@@ -136,9 +153,9 @@ export class SlackProviderService {
 
     // Header block with emoji
     blocks.push({
-      type: 'header',
+      type: "header",
       text: {
-        type: 'plain_text',
+        type: "plain_text",
         text: `${emoji} ${title}`,
         emoji: true,
       },
@@ -146,14 +163,14 @@ export class SlackProviderService {
 
     // Divider
     blocks.push({
-      type: 'divider',
+      type: "divider",
     });
 
     // Main message block
     blocks.push({
-      type: 'section',
+      type: "section",
       text: {
-        type: 'mrkdwn',
+        type: "mrkdwn",
         text,
       },
     });
@@ -161,10 +178,10 @@ export class SlackProviderService {
     // Add severity badge if provided
     if (severity) {
       blocks.push({
-        type: 'context',
+        type: "context",
         elements: [
           {
-            type: 'mrkdwn',
+            type: "mrkdwn",
             text: `*Severity:* ${this.formatSeverity(severity)}`,
           },
         ],
@@ -178,7 +195,7 @@ export class SlackProviderService {
       for (const [key, value] of Object.entries(data)) {
         if (value !== undefined && value !== null) {
           fields.push({
-            type: 'mrkdwn',
+            type: "mrkdwn",
             text: `*${this.formatFieldName(key)}:*\n${value}`,
           });
         }
@@ -186,7 +203,7 @@ export class SlackProviderService {
 
       if (fields.length > 0) {
         blocks.push({
-          type: 'section',
+          type: "section",
           fields,
         });
       }
@@ -200,9 +217,9 @@ export class SlackProviderService {
         if (action.url) {
           // Link button
           elements.push({
-            type: 'button',
+            type: "button",
             text: {
-              type: 'plain_text',
+              type: "plain_text",
               text: action.text,
               emoji: true,
             },
@@ -212,9 +229,9 @@ export class SlackProviderService {
         } else {
           // Interactive button
           elements.push({
-            type: 'button',
+            type: "button",
             text: {
-              type: 'plain_text',
+              type: "plain_text",
               text: action.text,
               emoji: true,
             },
@@ -226,7 +243,7 @@ export class SlackProviderService {
 
       if (elements.length > 0) {
         blocks.push({
-          type: 'actions',
+          type: "actions",
           elements,
         });
       }
@@ -234,10 +251,10 @@ export class SlackProviderService {
 
     // Add color bar via attachment (deprecated but still works for color)
     blocks.push({
-      type: 'context',
+      type: "context",
       elements: [
         {
-          type: 'mrkdwn',
+          type: "mrkdwn",
           text: ` `, // Empty context to add spacing
         },
       ],
@@ -251,14 +268,14 @@ export class SlackProviderService {
    */
   private getSeverityColor(severity?: string): string {
     const colorMap: Record<string, string> = {
-      critical: '#FF0000', // Red
-      high: '#FF8C00', // Orange
-      medium: '#FFD700', // Yellow
-      low: '#00BFFF', // Light blue
-      info: '#808080', // Gray
+      critical: "#FF0000", // Red
+      high: "#FF8C00", // Orange
+      medium: "#FFD700", // Yellow
+      low: "#00BFFF", // Light blue
+      info: "#808080", // Gray
     };
 
-    return severity ? colorMap[severity] || '#808080' : '#808080';
+    return severity ? colorMap[severity] || "#808080" : "#808080";
   }
 
   /**
@@ -266,14 +283,14 @@ export class SlackProviderService {
    */
   private getSeverityEmoji(severity?: string): string {
     const emojiMap: Record<string, string> = {
-      critical: '🔴',
-      high: '🟠',
-      medium: '🟡',
-      low: '🔵',
-      info: 'ℹ️',
+      critical: "🔴",
+      high: "🟠",
+      medium: "🟡",
+      low: "🔵",
+      info: "ℹ️",
     };
 
-    return severity ? emojiMap[severity] || 'ℹ️' : 'ℹ️';
+    return severity ? emojiMap[severity] || "ℹ️" : "ℹ️";
   }
 
   /**
@@ -290,19 +307,26 @@ export class SlackProviderService {
    */
   private formatFieldName(name: string): string {
     return name
-      .split('_')
+      .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .join(" ");
   }
 
   /**
    * Store Slack installation (OAuth callback)
    */
-  async storeInstallation(tenantId: string, installation: SlackInstallation): Promise<void> {
+  async storeInstallation(
+    tenantId: string,
+    installation: SlackInstallation,
+  ): Promise<void> {
     this.installations.set(tenantId, installation);
     this.fastify.log.info(
-      { tenantId, teamId: installation.teamId, teamName: installation.teamName },
-      'Slack installation stored'
+      {
+        tenantId,
+        teamId: installation.teamId,
+        teamName: installation.teamName,
+      },
+      "Slack installation stored",
     );
   }
 
@@ -318,19 +342,22 @@ export class SlackProviderService {
    */
   async removeInstallation(tenantId: string): Promise<void> {
     this.installations.delete(tenantId);
-    this.fastify.log.info({ tenantId }, 'Slack installation removed');
+    this.fastify.log.info({ tenantId }, "Slack installation removed");
   }
 
   /**
    * Test Slack connection
    */
-  async testConnection(tenantId: string, channel: string): Promise<SlackSendResult> {
+  async testConnection(
+    tenantId: string,
+    channel: string,
+  ): Promise<SlackSendResult> {
     return this.send({
       tenantId,
       channel,
-      text: 'This is a test message from dCMMS. Your Slack integration is working! 🎉',
-      severity: 'info',
-      title: 'Connection Test',
+      text: "This is a test message from dCMMS. Your Slack integration is working! 🎉",
+      severity: "info",
+      title: "Connection Test",
     });
   }
 
@@ -353,32 +380,32 @@ export class SlackProviderService {
     const redirectUri = process.env.SLACK_REDIRECT_URI;
 
     if (!clientId || !clientSecret) {
-      throw new Error('Slack OAuth credentials not configured');
+      throw new Error("Slack OAuth credentials not configured");
     }
 
     try {
       const response = await fetch(`${this.SLACK_API_BASE}/oauth.v2.access`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,
           code,
-          redirect_uri: redirectUri || '',
+          redirect_uri: redirectUri || "",
         }).toString(),
       });
 
       const result = await response.json();
 
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to exchange OAuth code');
+        throw new Error(result.error || "Failed to exchange OAuth code");
       }
 
       this.fastify.log.info(
         { teamId: result.team.id, teamName: result.team.name },
-        'Slack OAuth exchange successful'
+        "Slack OAuth exchange successful",
       );
 
       return {
@@ -395,7 +422,7 @@ export class SlackProviderService {
           : undefined,
       };
     } catch (error: any) {
-      this.fastify.log.error({ error }, 'Failed to exchange Slack OAuth code');
+      this.fastify.log.error({ error }, "Failed to exchange Slack OAuth code");
       throw error;
     }
   }
@@ -408,23 +435,23 @@ export class SlackProviderService {
     const redirectUri = process.env.SLACK_REDIRECT_URI;
 
     if (!clientId) {
-      throw new Error('Slack client ID not configured');
+      throw new Error("Slack client ID not configured");
     }
 
     const scopes = [
-      'chat:write',
-      'chat:write.public',
-      'channels:read',
-      'groups:read',
-      'im:read',
-      'mpim:read',
-      'incoming-webhook',
+      "chat:write",
+      "chat:write.public",
+      "channels:read",
+      "groups:read",
+      "im:read",
+      "mpim:read",
+      "incoming-webhook",
     ];
 
     const params = new URLSearchParams({
       client_id: clientId,
-      scope: scopes.join(','),
-      redirect_uri: redirectUri || '',
+      scope: scopes.join(","),
+      redirect_uri: redirectUri || "",
       ...(state && { state }),
     });
 
@@ -432,6 +459,8 @@ export class SlackProviderService {
   }
 }
 
-export function createSlackProviderService(fastify: FastifyInstance): SlackProviderService {
+export function createSlackProviderService(
+  fastify: FastifyInstance,
+): SlackProviderService {
   return new SlackProviderService(fastify);
 }

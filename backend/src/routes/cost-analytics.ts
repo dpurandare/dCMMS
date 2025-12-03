@@ -1,8 +1,8 @@
-import { FastifyPluginAsync } from 'fastify';
-import { CostAnalyticsService } from '../services/cost-analytics.service';
-import { CostAnalyticsQuery, CostExportOptions } from '../models/cost.models';
+import { FastifyPluginAsync } from "fastify";
+import { CostAnalyticsService } from "../services/cost-analytics.service";
+import { CostAnalyticsQuery, CostExportOptions } from "../models/cost.models";
 
-import { CostCalculationService } from '../services/cost-calculation.service';
+import { CostCalculationService } from "../services/cost-calculation.service";
 
 const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
   const costService = new CostCalculationService();
@@ -10,22 +10,25 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
 
   // GET /api/v1/analytics/costs
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'Get aggregate cost analytics',
-        tags: ['Cost Analytics'],
+        summary: "Get aggregate cost analytics",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
-          required: ['startDate', 'endDate', 'groupBy'],
+          type: "object",
+          required: ["startDate", "endDate", "groupBy"],
           properties: {
-            siteId: { type: 'string' },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
-            groupBy: { type: 'string', enum: ['site', 'asset', 'wo_type', 'category', 'month'] },
-            categories: { type: 'string' },
-            woTypes: { type: 'string' },
+            siteId: { type: "string" },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
+            groupBy: {
+              type: "string",
+              enum: ["site", "asset", "wo_type", "category", "month"],
+            },
+            categories: { type: "string" },
+            woTypes: { type: "string" },
           },
         },
       },
@@ -33,11 +36,12 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { siteId, startDate, endDate, groupBy, categories, woTypes } = request.query as any;
+        const { siteId, startDate, endDate, groupBy, categories, woTypes } =
+          request.query as any;
 
         if (!startDate || !endDate || !groupBy) {
           return reply.status(400).send({
-            error: 'startDate, endDate, and groupBy are required',
+            error: "startDate, endDate, and groupBy are required",
           });
         }
 
@@ -46,8 +50,10 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
           startDate: new Date(startDate as string),
           endDate: new Date(endDate as string),
           groupBy: groupBy as any,
-          categories: categories ? (categories as string).split(',') as any[] : undefined,
-          woTypes: woTypes ? (woTypes as string).split(',') : undefined,
+          categories: categories
+            ? ((categories as string).split(",") as any[])
+            : undefined,
+          woTypes: woTypes ? (woTypes as string).split(",") : undefined,
         };
 
         const analytics = await analyticsService.getCostAnalytics(query);
@@ -56,27 +62,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost analytics',
+          error: "Failed to get cost analytics",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/trends
   server.get(
-    '/trends',
+    "/trends",
     {
       schema: {
-        summary: 'Get cost trends over time (monthly aggregates)',
-        tags: ['Cost Analytics'],
+        summary: "Get cost trends over time (monthly aggregates)",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
+            siteId: { type: "string" },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
           },
         },
       },
@@ -89,7 +95,7 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
         const trends = await analyticsService.getCostTrends(
           siteId as string,
           startDate ? new Date(startDate as string) : undefined,
-          endDate ? new Date(endDate as string) : undefined
+          endDate ? new Date(endDate as string) : undefined,
         );
 
         return {
@@ -99,27 +105,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost trends',
+          error: "Failed to get cost trends",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/by-site
   server.get(
-    '/by-site',
+    "/by-site",
     {
       schema: {
-        summary: 'Get cost breakdown by site',
-        tags: ['Cost Analytics'],
+        summary: "Get cost breakdown by site",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
-          required: ['startDate', 'endDate'],
+          type: "object",
+          required: ["startDate", "endDate"],
           properties: {
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
           },
         },
       },
@@ -131,13 +137,13 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
 
         if (!startDate || !endDate) {
           return reply.status(400).send({
-            error: 'startDate and endDate are required',
+            error: "startDate and endDate are required",
           });
         }
 
         const costBySite = await analyticsService.getCostBySite(
           new Date(startDate as string),
-          new Date(endDate as string)
+          new Date(endDate as string),
         );
 
         return {
@@ -147,27 +153,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost by site',
+          error: "Failed to get cost by site",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/by-wo-type
   server.get(
-    '/by-wo-type',
+    "/by-wo-type",
     {
       schema: {
-        summary: 'Get cost breakdown by work order type',
-        tags: ['Cost Analytics'],
+        summary: "Get cost breakdown by work order type",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
+            siteId: { type: "string" },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
           },
         },
       },
@@ -180,7 +186,7 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
         const costByWOType = await analyticsService.getCostByWOType(
           siteId as string,
           startDate ? new Date(startDate as string) : undefined,
-          endDate ? new Date(endDate as string) : undefined
+          endDate ? new Date(endDate as string) : undefined,
         );
 
         return {
@@ -190,27 +196,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost by WO type',
+          error: "Failed to get cost by WO type",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/variance
   server.get(
-    '/variance',
+    "/variance",
     {
       schema: {
-        summary: 'Get cost variance (current vs previous period)',
-        tags: ['Cost Analytics'],
+        summary: "Get cost variance (current vs previous period)",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            currentPeriodStart: { type: 'string', format: 'date' },
-            currentPeriodEnd: { type: 'string', format: 'date' },
+            siteId: { type: "string" },
+            currentPeriodStart: { type: "string", format: "date" },
+            currentPeriodEnd: { type: "string", format: "date" },
           },
         },
       },
@@ -218,39 +224,42 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { siteId, currentPeriodStart, currentPeriodEnd } = request.query as any;
+        const { siteId, currentPeriodStart, currentPeriodEnd } =
+          request.query as any;
 
         const variance = await analyticsService.getCostVariance(
           siteId as string,
-          currentPeriodStart ? new Date(currentPeriodStart as string) : undefined,
-          currentPeriodEnd ? new Date(currentPeriodEnd as string) : undefined
+          currentPeriodStart
+            ? new Date(currentPeriodStart as string)
+            : undefined,
+          currentPeriodEnd ? new Date(currentPeriodEnd as string) : undefined,
         );
 
         return variance;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost variance',
+          error: "Failed to get cost variance",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/by-asset
   server.get(
-    '/by-asset',
+    "/by-asset",
     {
       schema: {
-        summary: 'Get cost per asset',
-        tags: ['Cost Analytics'],
+        summary: "Get cost per asset",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
+            siteId: { type: "string" },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
           },
         },
       },
@@ -263,7 +272,7 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
         const costPerAsset = await analyticsService.getCostPerAsset(
           siteId as string,
           startDate ? new Date(startDate as string) : undefined,
-          endDate ? new Date(endDate as string) : undefined
+          endDate ? new Date(endDate as string) : undefined,
         );
 
         return {
@@ -273,27 +282,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost per asset',
+          error: "Failed to get cost per asset",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/analytics/costs/breakdown
   server.get(
-    '/breakdown',
+    "/breakdown",
     {
       schema: {
-        summary: 'Get category-wise cost breakdown',
-        tags: ['Cost Analytics'],
+        summary: "Get category-wise cost breakdown",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
+            siteId: { type: "string" },
+            startDate: { type: "string", format: "date" },
+            endDate: { type: "string", format: "date" },
           },
         },
       },
@@ -306,48 +315,51 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
         const breakdown = await analyticsService.getCostBreakdown(
           siteId as string,
           startDate ? new Date(startDate as string) : undefined,
-          endDate ? new Date(endDate as string) : undefined
+          endDate ? new Date(endDate as string) : undefined,
         );
 
         return breakdown;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get cost breakdown',
+          error: "Failed to get cost breakdown",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/analytics/costs/export
   server.post(
-    '/export',
+    "/export",
     {
       schema: {
-        summary: 'Export cost data (CSV, PDF, Excel)',
-        tags: ['Cost Analytics'],
+        summary: "Export cost data (CSV, PDF, Excel)",
+        tags: ["Cost Analytics"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['query', 'options'],
+          type: "object",
+          required: ["query", "options"],
           properties: {
             query: {
-              type: 'object',
+              type: "object",
               properties: {
-                siteId: { type: 'string' },
-                startDate: { type: 'string', format: 'date' },
-                endDate: { type: 'string', format: 'date' },
-                groupBy: { type: 'string', enum: ['site', 'asset', 'wo_type', 'category', 'month'] },
+                siteId: { type: "string" },
+                startDate: { type: "string", format: "date" },
+                endDate: { type: "string", format: "date" },
+                groupBy: {
+                  type: "string",
+                  enum: ["site", "asset", "wo_type", "category", "month"],
+                },
               },
             },
             options: {
-              type: 'object',
+              type: "object",
               properties: {
-                format: { type: 'string', enum: ['csv', 'pdf', 'excel'] },
-                includeBreakdown: { type: 'boolean' },
-                includeTrends: { type: 'boolean' },
-                includeComparison: { type: 'boolean' },
+                format: { type: "string", enum: ["csv", "pdf", "excel"] },
+                includeBreakdown: { type: "boolean" },
+                includeTrends: { type: "boolean" },
+                includeComparison: { type: "boolean" },
               },
             },
           },
@@ -361,7 +373,7 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
 
         if (!query || !options) {
           return reply.status(400).send({
-            error: 'query and options are required',
+            error: "query and options are required",
           });
         }
 
@@ -373,24 +385,27 @@ const costAnalyticsRoutes: FastifyPluginAsync = async (server) => {
 
         const exportOptions: CostExportOptions = options;
 
-        const exportData = await analyticsService.exportCostData(costQuery, exportOptions);
+        const exportData = await analyticsService.exportCostData(
+          costQuery,
+          exportOptions,
+        );
 
         // Set headers for download
-        reply.header('Content-Type', exportData.mimeType);
+        reply.header("Content-Type", exportData.mimeType);
         reply.header(
-          'Content-Disposition',
-          `attachment; filename="${exportData.filename}"`
+          "Content-Disposition",
+          `attachment; filename="${exportData.filename}"`,
         );
 
         return reply.send(exportData.data);
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to export cost data',
+          error: "Failed to export cost data",
           details: error.message,
         });
       }
-    }
+    },
   );
 };
 

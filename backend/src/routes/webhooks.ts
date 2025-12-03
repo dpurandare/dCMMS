@@ -1,31 +1,40 @@
-import { FastifyPluginAsync } from 'fastify';
-import { db, pool } from '../db';
-import WebhookService from '../services/webhook.service';
+import { FastifyPluginAsync } from "fastify";
+import { db, pool } from "../db";
+import WebhookService from "../services/webhook.service";
 
 const webhookRoutes: FastifyPluginAsync = async (server) => {
   const webhookService = new WebhookService();
 
   // POST /api/v1/webhooks
   server.post(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'Register new webhook',
-        tags: ['Webhooks'],
+        summary: "Register new webhook",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['name', 'url', 'eventTypes'],
+          type: "object",
+          required: ["name", "url", "eventTypes"],
           properties: {
-            name: { type: 'string', maxLength: 100 },
-            description: { type: 'string' },
-            url: { type: 'string', format: 'uri' },
-            authType: { type: 'string', enum: ['none', 'bearer', 'basic', 'hmac'], default: 'none' },
-            authToken: { type: 'string' },
-            customHeaders: { type: 'object' },
-            eventTypes: { type: 'array', items: { type: 'string' } },
-            timeoutSeconds: { type: 'integer', minimum: 1, maximum: 60, default: 10 },
-            maxRetries: { type: 'integer', minimum: 0, maximum: 5, default: 3 },
+            name: { type: "string", maxLength: 100 },
+            description: { type: "string" },
+            url: { type: "string", format: "uri" },
+            authType: {
+              type: "string",
+              enum: ["none", "bearer", "basic", "hmac"],
+              default: "none",
+            },
+            authToken: { type: "string" },
+            customHeaders: { type: "object" },
+            eventTypes: { type: "array", items: { type: "string" } },
+            timeoutSeconds: {
+              type: "integer",
+              minimum: 1,
+              maximum: 60,
+              default: 10,
+            },
+            maxRetries: { type: "integer", minimum: 0, maximum: 5, default: 3 },
           },
         },
       },
@@ -37,7 +46,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           name,
           description,
           url,
-          authType = 'none',
+          authType = "none",
           authToken,
           customHeaders,
           eventTypes,
@@ -50,7 +59,9 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const userId = user.id;
 
         // Generate secret key for HMAC
-        const secretKeyResult = await pool.query('SELECT generate_webhook_secret() AS secret');
+        const secretKeyResult = await pool.query(
+          "SELECT generate_webhook_secret() AS secret",
+        );
         const secretKey = secretKeyResult.rows[0].secret;
 
         // Insert webhook
@@ -93,7 +104,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
             timeoutSeconds,
             maxRetries,
             userId,
-          ]
+          ],
         );
 
         const webhook = result.rows[0];
@@ -101,32 +112,32 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         return reply.status(201).send({
           success: true,
           webhook,
-          message: 'Webhook created successfully',
+          message: "Webhook created successfully",
         });
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to create webhook',
+          error: "Failed to create webhook",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/webhooks
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'List webhooks',
-        tags: ['Webhooks'],
+        summary: "List webhooks",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            active: { type: 'boolean' },
-            eventType: { type: 'string' },
+            active: { type: "boolean" },
+            eventType: { type: "string" },
           },
         },
       },
@@ -164,7 +175,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         if (active !== undefined) {
           query += ` AND w.active = $${paramCount++}`;
-          params.push(active === 'true' || active === true);
+          params.push(active === "true" || active === true);
         }
 
         if (eventType) {
@@ -172,7 +183,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           params.push(eventType);
         }
 
-        query += ' ORDER BY w.created_at DESC';
+        query += " ORDER BY w.created_at DESC";
 
         const result = await pool.query(query, params);
 
@@ -185,25 +196,25 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to list webhooks',
+          error: "Failed to list webhooks",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/webhooks/:id
   server.get(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Get webhook details',
-        tags: ['Webhooks'],
+        summary: "Get webhook details",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -241,13 +252,13 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           LEFT JOIN webhook_stats ws ON w.id = ws.webhook_id
           WHERE w.id = $1 AND w.tenant_id = $2
         `,
-          [id, tenantId]
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
@@ -259,40 +270,40 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get webhook',
+          error: "Failed to get webhook",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // PUT /api/v1/webhooks/:id
   server.put(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Update webhook',
-        tags: ['Webhooks'],
+        summary: "Update webhook",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
         body: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string' },
-            description: { type: 'string' },
-            url: { type: 'string' },
-            authType: { type: 'string' },
-            authToken: { type: 'string' },
-            customHeaders: { type: 'object' },
-            eventTypes: { type: 'array', items: { type: 'string' } },
-            timeoutSeconds: { type: 'integer' },
-            maxRetries: { type: 'integer' },
-            active: { type: 'boolean' },
+            name: { type: "string" },
+            description: { type: "string" },
+            url: { type: "string" },
+            authType: { type: "string" },
+            authToken: { type: "string" },
+            customHeaders: { type: "object" },
+            eventTypes: { type: "array", items: { type: "string" } },
+            timeoutSeconds: { type: "integer" },
+            maxRetries: { type: "integer" },
+            active: { type: "boolean" },
           },
         },
       },
@@ -354,44 +365,44 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
             active,
             id,
             tenantId,
-          ]
+          ],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
         return {
           success: true,
           webhook: result.rows[0],
-          message: 'Webhook updated successfully',
+          message: "Webhook updated successfully",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to update webhook',
+          error: "Failed to update webhook",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // DELETE /api/v1/webhooks/:id
   server.delete(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Delete webhook',
-        tags: ['Webhooks'],
+        summary: "Delete webhook",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -404,51 +415,51 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const tenantId = user.tenantId;
 
         const result = await pool.query(
-          'DELETE FROM webhooks WHERE id = $1 AND tenant_id = $2 RETURNING id',
-          [id, tenantId]
+          "DELETE FROM webhooks WHERE id = $1 AND tenant_id = $2 RETURNING id",
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
         return {
           success: true,
-          message: 'Webhook deleted successfully',
+          message: "Webhook deleted successfully",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to delete webhook',
+          error: "Failed to delete webhook",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/webhooks/:id/deliveries
   server.get(
-    '/:id/deliveries',
+    "/:id/deliveries",
     {
       schema: {
-        summary: 'Get webhook delivery logs',
-        tags: ['Webhooks'],
+        summary: "Get webhook delivery logs",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            limit: { type: 'integer', default: 50 },
-            offset: { type: 'integer', default: 0 },
+            limit: { type: "integer", default: 50 },
+            offset: { type: "integer", default: 0 },
           },
         },
       },
@@ -463,14 +474,14 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         // Verify webhook belongs to tenant
         const webhookCheck = await pool.query(
-          'SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2',
-          [id, tenantId]
+          "SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
         );
 
         if (webhookCheck.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
@@ -494,13 +505,13 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           ORDER BY sent_at DESC
           LIMIT $2 OFFSET $3
         `,
-          [id, limit, offset]
+          [id, limit, offset],
         );
 
         // Get total count
         const countResult = await pool.query(
-          'SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1',
-          [id]
+          "SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1",
+          [id],
         );
 
         return {
@@ -514,25 +525,25 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get webhook deliveries',
+          error: "Failed to get webhook deliveries",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/webhooks/:id/test
   server.post(
-    '/:id/test',
+    "/:id/test",
     {
       schema: {
-        summary: 'Test webhook with sample payload',
-        tags: ['Webhooks'],
+        summary: "Test webhook with sample payload",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -559,13 +570,13 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           FROM webhooks
           WHERE id = $1 AND tenant_id = $2
         `,
-          [id, tenantId]
+          [id, tenantId],
         );
 
         if (webhookResult.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
@@ -573,17 +584,17 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         // Send test payload
         const testPayload = {
-          event: 'webhook.test',
-          eventType: 'webhook_test',
+          event: "webhook.test",
+          eventType: "webhook_test",
           timestamp: new Date().toISOString(),
           tenantId,
           data: {
-            message: 'This is a test webhook from dCMMS',
+            message: "This is a test webhook from dCMMS",
             webhookId: id,
           },
           metadata: {
-            source: 'dCMMS',
-            version: '1.0',
+            source: "dCMMS",
+            version: "1.0",
             test: true,
           },
         };
@@ -598,31 +609,33 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
             responseTime: result.responseTime,
             error: result.error,
           },
-          message: result.success ? 'Test webhook sent successfully' : 'Test webhook failed',
+          message: result.success
+            ? "Test webhook sent successfully"
+            : "Test webhook failed",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to test webhook',
+          error: "Failed to test webhook",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/webhooks/:id/stats
   server.get(
-    '/:id/stats',
+    "/:id/stats",
     {
       schema: {
-        summary: 'Get webhook statistics',
-        tags: ['Webhooks'],
+        summary: "Get webhook statistics",
+        tags: ["Webhooks"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -636,14 +649,14 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         // Verify webhook belongs to tenant
         const webhookCheck = await pool.query(
-          'SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2',
-          [id, tenantId]
+          "SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
         );
 
         if (webhookCheck.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Webhook not found',
+            error: "Webhook not found",
           });
         }
 
@@ -664,7 +677,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           FROM webhook_stats
           WHERE webhook_id = $1
         `,
-          [id]
+          [id],
         );
 
         if (result.rows.length === 0) {
@@ -688,11 +701,11 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get webhook statistics',
+          error: "Failed to get webhook statistics",
           message: error.message,
         });
       }
-    }
+    },
   );
 };
 

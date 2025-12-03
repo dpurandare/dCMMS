@@ -1,7 +1,11 @@
-import { FastifyPluginAsync } from 'fastify';
-import { ZodTypeProvider, validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { z } from 'zod';
-import { forecastService } from '../services/forecast.service';
+import { FastifyPluginAsync } from "fastify";
+import {
+  ZodTypeProvider,
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { z } from "zod";
+import { forecastService } from "../services/forecast.service";
 
 const forecastRoutes: FastifyPluginAsync = async (server) => {
   server.setValidatorCompiler(validatorCompiler);
@@ -10,18 +14,18 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
 
   // POST /api/v1/forecasts/generation/generate
   app.post(
-    '/generation/generate',
+    "/generation/generate",
     {
       schema: {
-        description: 'Generate power generation forecast using ML models',
-        tags: ['forecasts'],
+        description: "Generate power generation forecast using ML models",
+        tags: ["forecasts"],
         security: [{ bearerAuth: [] }],
         body: z.object({
           siteId: z.string().uuid(),
           assetId: z.string().uuid().optional(),
           forecastHorizonHours: z.number().min(1).max(168), // Max 7 days
-          modelType: z.enum(['arima', 'sarima', 'prophet']).optional(),
-          energyType: z.enum(['solar', 'wind']).optional(),
+          modelType: z.enum(["arima", "sarima", "prophet"]).optional(),
+          energyType: z.enum(["solar", "wind"]).optional(),
         }),
         response: {
           200: z.object({
@@ -34,7 +38,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
                 predictedGenerationMw: z.number(),
                 confidenceIntervalLowerMw: z.number().optional(),
                 confidenceIntervalUpperMw: z.number().optional(),
-              })
+              }),
             ),
           }),
         },
@@ -42,36 +46,37 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const { siteId, assetId, forecastHorizonHours, modelType, energyType } = request.body as any;
+      const { siteId, assetId, forecastHorizonHours, modelType, energyType } =
+        request.body as any;
 
       const forecasts = await forecastService.generateForecast({
         siteId,
         assetId,
         forecastHorizonHours,
-        modelType: modelType || 'sarima',
+        modelType: modelType || "sarima",
         energyType,
       });
 
       return reply.code(200).send({
-        message: 'Forecast generated successfully',
+        message: "Forecast generated successfully",
         forecastCount: forecasts.length,
-        forecasts: forecasts.map(f => ({
+        forecasts: forecasts.map((f) => ({
           ...f,
           forecastTimestamp: f.forecastTimestamp.toISOString(), // Ensure string for Zod
           confidenceIntervalLowerMw: f.confidenceIntervalLowerMw ?? undefined,
-          confidenceIntervalUpperMw: f.confidenceIntervalUpperMw ?? undefined
+          confidenceIntervalUpperMw: f.confidenceIntervalUpperMw ?? undefined,
         })),
       });
-    }
+    },
   );
 
   // GET /api/v1/forecasts/generation/:siteId
   app.get(
-    '/generation/:siteId',
+    "/generation/:siteId",
     {
       schema: {
-        description: 'Get generation forecasts for a site',
-        tags: ['forecasts'],
+        description: "Get generation forecasts for a site",
+        tags: ["forecasts"],
         security: [{ bearerAuth: [] }],
         params: z.object({
           siteId: z.string().uuid(),
@@ -96,7 +101,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
               actualGenerationMw: z.number().nullable().optional(),
               modelName: z.string(),
               algorithm: z.string(),
-            })
+            }),
           ),
         },
       },
@@ -111,24 +116,26 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         assetId,
         startDate ? new Date(startDate) : undefined,
         endDate ? new Date(endDate) : undefined,
-        activeOnly !== false
+        activeOnly !== false,
       );
 
-      return reply.code(200).send(forecasts.map(f => ({
-        ...f,
-        forecastTimestamp: f.forecastTimestamp.toISOString(),
-        actualGenerationMw: f.actualGenerationMw ?? null
-      })));
-    }
+      return reply.code(200).send(
+        forecasts.map((f) => ({
+          ...f,
+          forecastTimestamp: f.forecastTimestamp.toISOString(),
+          actualGenerationMw: f.actualGenerationMw ?? null,
+        })),
+      );
+    },
   );
 
   // PUT /api/v1/forecasts/generation/:forecastId/actual
   app.put(
-    '/generation/:forecastId/actual',
+    "/generation/:forecastId/actual",
     {
       schema: {
-        description: 'Update forecast with actual generation value',
-        tags: ['forecasts'],
+        description: "Update forecast with actual generation value",
+        tags: ["forecasts"],
         security: [{ bearerAuth: [] }],
         params: z.object({
           forecastId: z.string().uuid(),
@@ -148,21 +155,25 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
       const { forecastId } = request.params as any;
       const { actualGenerationMw } = request.body as any;
 
-      await forecastService.updateActualGeneration(forecastId, actualGenerationMw);
+      await forecastService.updateActualGeneration(
+        forecastId,
+        actualGenerationMw,
+      );
 
       return reply.code(200).send({
-        message: 'Forecast updated with actual generation value',
+        message: "Forecast updated with actual generation value",
       });
-    }
+    },
   );
 
   // POST /api/v1/forecasts/accuracy/calculate
   app.post(
-    '/accuracy/calculate',
+    "/accuracy/calculate",
     {
       schema: {
-        description: 'Calculate forecast accuracy metrics for a model over a time period',
-        tags: ['forecasts'],
+        description:
+          "Calculate forecast accuracy metrics for a model over a time period",
+        tags: ["forecasts"],
         security: [{ bearerAuth: [] }],
         body: z.object({
           siteId: z.string().uuid(),
@@ -188,7 +199,14 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const { siteId, modelName, modelVersion, periodStart, periodEnd, forecastHorizonHours } = request.body as any;
+      const {
+        siteId,
+        modelName,
+        modelVersion,
+        periodStart,
+        periodEnd,
+        forecastHorizonHours,
+      } = request.body as any;
 
       const metrics = await forecastService.calculateAccuracyMetrics(
         siteId,
@@ -196,20 +214,20 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         modelVersion,
         new Date(periodStart),
         new Date(periodEnd),
-        forecastHorizonHours
+        forecastHorizonHours,
       );
 
       return reply.code(200).send(metrics);
-    }
+    },
   );
 
   // GET /api/v1/forecasts/accuracy/:siteId
   app.get(
-    '/accuracy/:siteId',
+    "/accuracy/:siteId",
     {
       schema: {
-        description: 'Get forecast accuracy metrics for a site',
-        tags: ['forecasts'],
+        description: "Get forecast accuracy metrics for a site",
+        tags: ["forecasts"],
         security: [{ bearerAuth: [] }],
         params: z.object({
           siteId: z.string().uuid(),
@@ -227,7 +245,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
               rSquared: z.number(),
               periodStart: z.string(), // Date string
               periodEnd: z.string(), // Date string
-            })
+            }),
           ),
         },
       },
@@ -236,7 +254,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       // Implementation placeholder
       return reply.code(200).send([]);
-    }
+    },
   );
 };
 

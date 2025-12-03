@@ -1,73 +1,90 @@
-import { FastifyPluginAsync } from 'fastify';
-import { kafkaService } from '../services/kafka.service';
-import { Pool } from 'pg';
+import { FastifyPluginAsync } from "fastify";
+import { kafkaService } from "../services/kafka.service";
+import { Pool } from "pg";
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
   // QuestDB connection pool
   const questdb = new Pool({
-    host: process.env.QUESTDB_HOST || 'localhost',
-    port: parseInt(process.env.QUESTDB_PORT || '8812'),
-    user: process.env.QUESTDB_USER || 'admin',
-    password: process.env.QUESTDB_PASSWORD || 'quest',
-    database: process.env.QUESTDB_DATABASE || 'qdb',
+    host: process.env.QUESTDB_HOST || "localhost",
+    port: parseInt(process.env.QUESTDB_PORT || "8812"),
+    user: process.env.QUESTDB_USER || "admin",
+    password: process.env.QUESTDB_PASSWORD || "quest",
+    database: process.env.QUESTDB_DATABASE || "qdb",
   });
 
   // POST /api/v1/telemetry - Ingest telemetry events
   server.post(
-    '/',
+    "/",
     {
       schema: {
-        description: 'Ingest batch telemetry events',
-        tags: ['telemetry'],
+        description: "Ingest batch telemetry events",
+        tags: ["telemetry"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
-            required: ['timestamp', 'site_id', 'asset_id', 'sensor_type', 'sensor_id', 'value', 'unit'],
+            type: "object",
+            required: [
+              "timestamp",
+              "site_id",
+              "asset_id",
+              "sensor_type",
+              "sensor_id",
+              "value",
+              "unit",
+            ],
             properties: {
-              event_id: { type: 'string' },
-              timestamp: { type: 'number', description: 'Unix timestamp in milliseconds' },
-              site_id: { type: 'string' },
-              asset_id: { type: 'string' },
+              event_id: { type: "string" },
+              timestamp: {
+                type: "number",
+                description: "Unix timestamp in milliseconds",
+              },
+              site_id: { type: "string" },
+              asset_id: { type: "string" },
               sensor_type: {
-                type: 'string',
+                type: "string",
                 enum: [
-                  'TEMPERATURE',
-                  'VOLTAGE',
-                  'CURRENT',
-                  'POWER',
-                  'FREQUENCY',
-                  'PRESSURE',
-                  'HUMIDITY',
-                  'VIBRATION',
-                  'FLOW_RATE',
-                  'RPM',
-                  'TORQUE',
-                  'ENERGY',
-                  'STATUS',
-                  'OTHER',
+                  "TEMPERATURE",
+                  "VOLTAGE",
+                  "CURRENT",
+                  "POWER",
+                  "FREQUENCY",
+                  "PRESSURE",
+                  "HUMIDITY",
+                  "VIBRATION",
+                  "FLOW_RATE",
+                  "RPM",
+                  "TORQUE",
+                  "ENERGY",
+                  "STATUS",
+                  "OTHER",
                 ],
               },
-              sensor_id: { type: 'string' },
-              value: { type: 'number' },
-              unit: { type: 'string' },
+              sensor_id: { type: "string" },
+              value: { type: "number" },
+              unit: { type: "string" },
               quality_flag: {
-                type: 'string',
-                enum: ['GOOD', 'BAD', 'UNCERTAIN', 'OUT_OF_RANGE', 'SENSOR_FAULT'],
-                default: 'GOOD',
+                type: "string",
+                enum: [
+                  "GOOD",
+                  "BAD",
+                  "UNCERTAIN",
+                  "OUT_OF_RANGE",
+                  "SENSOR_FAULT",
+                ],
+                default: "GOOD",
               },
-              metadata: { type: 'object' },
+              metadata: { type: "object" },
             },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              accepted: { type: 'number' },
-              rejected: { type: 'number' },
-              errors: { type: 'array', items: { type: 'object' } },
+              accepted: { type: "number" },
+              rejected: { type: "number" },
+              errors: { type: "array", items: { type: "object" } },
             },
           },
         },
@@ -92,17 +109,17 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
 
           // Add metadata
           event.tenant_id = user.tenantId;
-          event.source = 'REST_API';
-          event.schema_version = '1.0.0';
+          event.source = "REST_API";
+          event.schema_version = "1.0.0";
           event.ingested_at = Date.now();
 
           // Basic validation
           if (event.value < -1e9 || event.value > 1e9) {
-            throw new Error('Value out of range');
+            throw new Error("Value out of range");
           }
 
           if (!event.quality_flag) {
-            event.quality_flag = 'GOOD';
+            event.quality_flag = "GOOD";
           }
 
           accepted.push(event);
@@ -118,13 +135,13 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       // Publish accepted events to Kafka
       if (accepted.length > 0) {
         try {
-          await kafkaService.publishTelemetry('raw_telemetry', accepted);
+          await kafkaService.publishTelemetry("raw_telemetry", accepted);
         } catch (error: any) {
-          server.log.error('Failed to publish to Kafka:', error);
+          server.log.error("Failed to publish to Kafka:", error);
           return reply.status(500).send({
             statusCode: 500,
-            error: 'Internal Server Error',
-            message: 'Failed to publish telemetry events',
+            error: "Internal Server Error",
+            message: "Failed to publish telemetry events",
           });
         }
       }
@@ -134,53 +151,59 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
         rejected: rejected.length,
         errors: errors.length > 0 ? errors : undefined,
       };
-    }
+    },
   );
 
   // GET /api/v1/telemetry - Query telemetry data
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        description: 'Query sensor readings from QuestDB',
-        tags: ['telemetry'],
+        description: "Query sensor readings from QuestDB",
+        tags: ["telemetry"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            site_id: { type: 'string' },
-            asset_id: { type: 'string' },
-            sensor_type: { type: 'string' },
-            sensor_id: { type: 'string' },
-            start_time: { type: 'string', description: 'ISO 8601 timestamp or Unix ms' },
-            end_time: { type: 'string', description: 'ISO 8601 timestamp or Unix ms' },
-            aggregation: {
-              type: 'string',
-              enum: ['raw', '1min', '5min', '15min', '1hour'],
-              default: 'raw',
+            site_id: { type: "string" },
+            asset_id: { type: "string" },
+            sensor_type: { type: "string" },
+            sensor_id: { type: "string" },
+            start_time: {
+              type: "string",
+              description: "ISO 8601 timestamp or Unix ms",
             },
-            limit: { type: 'number', default: 1000, maximum: 10000 },
+            end_time: {
+              type: "string",
+              description: "ISO 8601 timestamp or Unix ms",
+            },
+            aggregation: {
+              type: "string",
+              enum: ["raw", "1min", "5min", "15min", "1hour"],
+              default: "raw",
+            },
+            limit: { type: "number", default: 1000, maximum: 10000 },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
               data: {
-                type: 'array',
+                type: "array",
                 items: {
-                  type: 'object',
+                  type: "object",
                   properties: {
-                    timestamp: { type: 'string' },
-                    value: { type: 'number' },
-                    unit: { type: 'string' },
-                    sensor_id: { type: 'string' },
-                    quality_flag: { type: 'string' },
+                    timestamp: { type: "string" },
+                    value: { type: "number" },
+                    unit: { type: "string" },
+                    sensor_id: { type: "string" },
+                    quality_flag: { type: "string" },
                   },
                 },
               },
-              count: { type: 'number' },
-              aggregation: { type: 'string' },
+              count: { type: "number" },
+              aggregation: { type: "string" },
             },
           },
         },
@@ -194,25 +217,28 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       // DCMMS-059: Use pre-computed aggregation tables for better performance
       // Choose appropriate table based on aggregation level
       const aggregationTableMap: Record<string, string> = {
-        'raw': 'sensor_readings',
-        '1min': 'sensor_readings_1min',
-        '5min': 'sensor_readings_5min',
-        '15min': 'sensor_readings_15min',
-        '1hour': 'sensor_readings_1hour',
+        raw: "sensor_readings",
+        "1min": "sensor_readings_1min",
+        "5min": "sensor_readings_5min",
+        "15min": "sensor_readings_15min",
+        "1hour": "sensor_readings_1hour",
       };
 
-      const aggregationLevel = query.aggregation || 'raw';
-      const tableName = aggregationTableMap[aggregationLevel] || 'sensor_readings';
-      const useAggregationTable = aggregationLevel !== 'raw';
+      const aggregationLevel = query.aggregation || "raw";
+      const tableName =
+        aggregationTableMap[aggregationLevel] || "sensor_readings";
+      const useAggregationTable = aggregationLevel !== "raw";
 
       // Select appropriate columns based on table type
       let selectColumns: string;
       if (useAggregationTable) {
         // Aggregation tables have pre-computed metrics
-        selectColumns = 'timestamp, site_id, asset_id, sensor_type, sensor_id, value_avg as value, value_min, value_max, unit, good_count, bad_count, out_of_range_count';
+        selectColumns =
+          "timestamp, site_id, asset_id, sensor_type, sensor_id, value_avg as value, value_min, value_max, unit, good_count, bad_count, out_of_range_count";
       } else {
         // Raw table has individual readings
-        selectColumns = 'timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag';
+        selectColumns =
+          "timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag";
       }
 
       // Build SQL query
@@ -269,12 +295,15 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
         const queryDuration = Date.now() - queryStart;
 
         // Log performance metrics
-        server.log.info({
-          table: tableName,
-          aggregation: aggregationLevel,
-          rowCount: result.rows.length,
-          durationMs: queryDuration,
-        }, 'Telemetry query completed');
+        server.log.info(
+          {
+            table: tableName,
+            aggregation: aggregationLevel,
+            rowCount: result.rows.length,
+            durationMs: queryDuration,
+          },
+          "Telemetry query completed",
+        );
 
         // Map results based on table type
         const data = result.rows.map((row: any) => {
@@ -309,41 +338,41 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           query_duration_ms: queryDuration,
         };
       } catch (error: any) {
-        server.log.error('Failed to query QuestDB:', error);
+        server.log.error("Failed to query QuestDB:", error);
         return reply.status(500).send({
           statusCode: 500,
-          error: 'Internal Server Error',
-          message: 'Failed to query telemetry data',
+          error: "Internal Server Error",
+          message: "Failed to query telemetry data",
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/telemetry/stats - Get telemetry statistics
   server.get(
-    '/stats',
+    "/stats",
     {
       schema: {
-        description: 'Get telemetry statistics for an asset',
-        tags: ['telemetry'],
+        description: "Get telemetry statistics for an asset",
+        tags: ["telemetry"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
-          required: ['asset_id'],
+          type: "object",
+          required: ["asset_id"],
           properties: {
-            asset_id: { type: 'string' },
-            start_time: { type: 'string' },
-            end_time: { type: 'string' },
+            asset_id: { type: "string" },
+            start_time: { type: "string" },
+            end_time: { type: "string" },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              asset_id: { type: 'string' },
-              total_readings: { type: 'number' },
-              sensor_types: { type: 'array' },
-              time_range: { type: 'object' },
+              asset_id: { type: "string" },
+              total_readings: { type: "number" },
+              sensor_types: { type: "array" },
+              time_range: { type: "object" },
             },
           },
         },
@@ -384,7 +413,10 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
 
         return {
           asset_id: query.asset_id,
-          total_readings: result.rows.reduce((sum: number, row: any) => sum + parseInt(row.count), 0),
+          total_readings: result.rows.reduce(
+            (sum: number, row: any) => sum + parseInt(row.count),
+            0,
+          ),
           sensor_types: result.rows.map((row: any) => ({
             type: row.sensor_type,
             count: parseInt(row.count),
@@ -400,18 +432,18 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         };
       } catch (error: any) {
-        server.log.error('Failed to get telemetry stats:', error);
+        server.log.error("Failed to get telemetry stats:", error);
         return reply.status(500).send({
           statusCode: 500,
-          error: 'Internal Server Error',
-          message: 'Failed to get telemetry statistics',
+          error: "Internal Server Error",
+          message: "Failed to get telemetry statistics",
         });
       }
-    }
+    },
   );
 
   // Cleanup on server close
-  server.addHook('onClose', async () => {
+  server.addHook("onClose", async () => {
     await questdb.end();
     await kafkaService.disconnect();
   });

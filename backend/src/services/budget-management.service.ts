@@ -9,15 +9,15 @@ import {
   BudgetSpending,
   BudgetAlert,
   BudgetForecast,
-} from '../models/cost.models';
-import { CostCalculationService } from './cost-calculation.service';
+} from "../models/cost.models";
+import { CostCalculationService } from "./cost-calculation.service";
 
 export class BudgetManagementService {
   // In-memory storage (in production, use database)
   private budgets: Map<string, Budget> = new Map();
   private budgetAlerts: Map<string, BudgetAlert> = new Map();
 
-  constructor(private readonly costService: CostCalculationService) { }
+  constructor(private readonly costService: CostCalculationService) {}
 
   // ===== Budget CRUD =====
 
@@ -27,19 +27,19 @@ export class BudgetManagementService {
   async createBudget(request: CreateBudgetRequest): Promise<Budget> {
     console.log(
       `Creating budget: Site ${request.siteId}, ` +
-      `Period ${request.budgetPeriod} (${request.periodStart.toISOString().split('T')[0]} to ${request.periodEnd.toISOString().split('T')[0]}), ` +
-      `Category ${request.category}, ` +
-      `Amount $${request.allocatedAmount}`
+        `Period ${request.budgetPeriod} (${request.periodStart.toISOString().split("T")[0]} to ${request.periodEnd.toISOString().split("T")[0]}), ` +
+        `Category ${request.category}, ` +
+        `Amount $${request.allocatedAmount}`,
     );
 
     // Validate date range
     if (request.periodStart >= request.periodEnd) {
-      throw new Error('periodStart must be before periodEnd');
+      throw new Error("periodStart must be before periodEnd");
     }
 
     // Validate amount
     if (request.allocatedAmount <= 0) {
-      throw new Error('allocatedAmount must be positive');
+      throw new Error("allocatedAmount must be positive");
     }
 
     const budgetId = `budget_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -78,7 +78,7 @@ export class BudgetManagementService {
   async getBudgets(filters?: {
     siteId?: string;
     budgetPeriod?: BudgetPeriod;
-    category?: CostCategory | 'all';
+    category?: CostCategory | "all";
     status?: BudgetStatus;
   }): Promise<Budget[]> {
     let budgets = Array.from(this.budgets.values());
@@ -99,7 +99,9 @@ export class BudgetManagementService {
       budgets = budgets.filter((b) => b.status === filters.status);
     }
 
-    return budgets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return budgets.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 
   /**
@@ -123,7 +125,7 @@ export class BudgetManagementService {
    */
   async updateBudget(
     budgetId: string,
-    request: UpdateBudgetRequest
+    request: UpdateBudgetRequest,
   ): Promise<Budget> {
     console.log(`Updating budget: ${budgetId}`);
 
@@ -131,14 +133,14 @@ export class BudgetManagementService {
 
     if (request.allocatedAmount !== undefined) {
       if (request.allocatedAmount <= 0) {
-        throw new Error('allocatedAmount must be positive');
+        throw new Error("allocatedAmount must be positive");
       }
 
       const oldAmount = budget.allocatedAmount;
       budget.allocatedAmount = request.allocatedAmount;
 
       console.log(
-        `Budget ${budgetId} allocated amount updated: $${oldAmount} → $${request.allocatedAmount}`
+        `Budget ${budgetId} allocated amount updated: $${oldAmount} → $${request.allocatedAmount}`,
       );
     }
 
@@ -180,7 +182,10 @@ export class BudgetManagementService {
 
     // Calculate days remaining
     const now = new Date();
-    const totalDays = this.getDaysDifference(budget.periodStart, budget.periodEnd);
+    const totalDays = this.getDaysDifference(
+      budget.periodStart,
+      budget.periodEnd,
+    );
     const daysElapsed = this.getDaysDifference(budget.periodStart, now);
     const daysRemaining = Math.max(0, totalDays - daysElapsed);
 
@@ -199,22 +204,22 @@ export class BudgetManagementService {
     const alerts: string[] = [];
 
     if (budget.spentPercentage >= 100) {
-      alerts.push('Budget exhausted: Spending has exceeded allocated amount');
+      alerts.push("Budget exhausted: Spending has exceeded allocated amount");
     } else if (budget.spentPercentage >= 90) {
-      alerts.push('Critical: 90% of budget spent');
+      alerts.push("Critical: 90% of budget spent");
     } else if (budget.spentPercentage >= 80) {
-      alerts.push('Warning: 80% of budget spent');
+      alerts.push("Warning: 80% of budget spent");
     }
 
     if (projectedSpending > budget.allocatedAmount) {
       const overspend = projectedSpending - budget.allocatedAmount;
       alerts.push(
-        `Projected overspend: $${overspend.toFixed(2)} by end of period`
+        `Projected overspend: $${overspend.toFixed(2)} by end of period`,
       );
     }
 
     if (!isOnTrack && budget.spentPercentage < 80) {
-      alerts.push('Spending ahead of schedule');
+      alerts.push("Spending ahead of schedule");
     }
 
     return {
@@ -235,10 +240,10 @@ export class BudgetManagementService {
   async updateBudgetSpending(
     siteId: string,
     category: CostCategory,
-    amount: number
+    amount: number,
   ): Promise<void> {
     console.log(
-      `Updating budget spending: Site ${siteId}, Category ${category}, Amount $${amount}`
+      `Updating budget spending: Site ${siteId}, Category ${category}, Amount $${amount}`,
     );
 
     // Find matching budgets (category-specific and 'all')
@@ -255,7 +260,7 @@ export class BudgetManagementService {
       }
 
       // Check if category matches
-      if (budget.category !== 'all' && budget.category !== category) {
+      if (budget.category !== "all" && budget.category !== category) {
         continue;
       }
 
@@ -268,7 +273,7 @@ export class BudgetManagementService {
       this.budgets.set(budget.id, budget);
 
       console.log(
-        `Budget ${budget.id} updated: Spent $${budget.spentAmount} / $${budget.allocatedAmount} (${budget.spentPercentage.toFixed(1)}%)`
+        `Budget ${budget.id} updated: Spent $${budget.spentAmount} / $${budget.allocatedAmount} (${budget.spentPercentage.toFixed(1)}%)`,
       );
 
       // Check for alerts
@@ -285,35 +290,40 @@ export class BudgetManagementService {
     const budget = await this.getBudget(budgetId);
 
     const now = new Date();
-    const totalDays = this.getDaysDifference(budget.periodStart, budget.periodEnd);
+    const totalDays = this.getDaysDifference(
+      budget.periodStart,
+      budget.periodEnd,
+    );
     const daysElapsed = this.getDaysDifference(budget.periodStart, now);
     const daysRemaining = Math.max(0, totalDays - daysElapsed);
 
     // Linear extrapolation
-    const dailyBurnRate = daysElapsed > 0 ? budget.spentAmount / daysElapsed : 0;
-    const forecastedSpending = budget.spentAmount + dailyBurnRate * daysRemaining;
+    const dailyBurnRate =
+      daysElapsed > 0 ? budget.spentAmount / daysElapsed : 0;
+    const forecastedSpending =
+      budget.spentAmount + dailyBurnRate * daysRemaining;
 
     // Calculate confidence (higher if more days have elapsed)
     const confidence = Math.min(daysElapsed / totalDays, 0.95); // Max 95% confidence
 
     // Assumptions and warnings
     const assumptions = [
-      'Assumes linear spending pattern',
+      "Assumes linear spending pattern",
       `Based on ${daysElapsed} days of data`,
-      'Does not account for scheduled large expenses',
+      "Does not account for scheduled large expenses",
     ];
 
     const warnings: string[] = [];
 
     if (daysElapsed < totalDays * 0.2) {
-      warnings.push('Low confidence: Less than 20% of period elapsed');
+      warnings.push("Low confidence: Less than 20% of period elapsed");
     }
 
     if (forecastedSpending > budget.allocatedAmount) {
       const overspend = forecastedSpending - budget.allocatedAmount;
       const overspendPercentage = (overspend / budget.allocatedAmount) * 100;
       warnings.push(
-        `Projected to exceed budget by $${overspend.toFixed(2)} (${overspendPercentage.toFixed(1)}%)`
+        `Projected to exceed budget by $${overspend.toFixed(2)} (${overspendPercentage.toFixed(1)}%)`,
       );
     }
 
@@ -322,7 +332,7 @@ export class BudgetManagementService {
       currentSpending: budget.spentAmount,
       forecastedEndOfPeriodSpending: forecastedSpending,
       confidence,
-      method: 'linear',
+      method: "linear",
       assumptions,
       warnings,
     };
@@ -336,21 +346,21 @@ export class BudgetManagementService {
   private async checkBudgetAlerts(budget: Budget): Promise<void> {
     // Check if alert already exists for this budget
     const existingAlerts = Array.from(this.budgetAlerts.values()).filter(
-      (alert) => alert.budgetId === budget.id && !alert.acknowledged
+      (alert) => alert.budgetId === budget.id && !alert.acknowledged,
     );
 
     // Determine alert type
-    let alertType: BudgetAlert['alertType'] | null = null;
-    let message = '';
+    let alertType: BudgetAlert["alertType"] | null = null;
+    let message = "";
 
     if (budget.spentPercentage >= 100) {
-      alertType = 'over_budget';
+      alertType = "over_budget";
       message = `Budget exhausted: $${budget.spentAmount.toFixed(2)} spent of $${budget.allocatedAmount.toFixed(2)} allocated`;
     } else if (budget.spentPercentage >= 90) {
-      alertType = 'critical';
+      alertType = "critical";
       message = `Critical: ${budget.spentPercentage.toFixed(1)}% of budget spent`;
     } else if (budget.spentPercentage >= 80) {
-      alertType = 'warning';
+      alertType = "warning";
       message = `Warning: ${budget.spentPercentage.toFixed(1)}% of budget spent`;
     }
 
@@ -382,7 +392,7 @@ export class BudgetManagementService {
     this.budgetAlerts.set(alertId, alert);
 
     console.warn(
-      `[BUDGET ALERT] ${alertType.toUpperCase()}: ${message} (Budget ${budget.id})`
+      `[BUDGET ALERT] ${alertType.toUpperCase()}: ${message} (Budget ${budget.id})`,
     );
 
     // Send email notification
@@ -394,7 +404,7 @@ export class BudgetManagementService {
    */
   async getBudgetAlerts(budgetId?: string): Promise<BudgetAlert[]> {
     let alerts = Array.from(this.budgetAlerts.values()).filter(
-      (alert) => !alert.acknowledged
+      (alert) => !alert.acknowledged,
     );
 
     if (budgetId) {
@@ -409,7 +419,7 @@ export class BudgetManagementService {
    */
   async acknowledgeBudgetAlert(
     alertId: string,
-    acknowledgedBy: string
+    acknowledgedBy: string,
   ): Promise<BudgetAlert> {
     const alert = this.budgetAlerts.get(alertId);
 
@@ -446,7 +456,9 @@ export class BudgetManagementService {
     // Variance
     budget.variance =
       budget.allocatedAmount > 0
-        ? ((budget.spentAmount - budget.allocatedAmount) / budget.allocatedAmount) * 100
+        ? ((budget.spentAmount - budget.allocatedAmount) /
+            budget.allocatedAmount) *
+          100
         : 0;
 
     // Status
@@ -477,7 +489,7 @@ export class BudgetManagementService {
   private async sendBudgetAlertEmail(alert: BudgetAlert): Promise<void> {
     // TODO: Integrate with email service
     console.log(
-      `[EMAIL] Budget alert: ${alert.alertType.toUpperCase()} - ${alert.message}`
+      `[EMAIL] Budget alert: ${alert.alertType.toUpperCase()} - ${alert.message}`,
     );
 
     // In production:

@@ -1,27 +1,30 @@
-import { FastifyPluginAsync } from 'fastify';
-import { pool } from '../db';
-import { z } from 'zod';
+import { FastifyPluginAsync } from "fastify";
+import { pool } from "../db";
+import { z } from "zod";
 
 const alarmsRoutes: FastifyPluginAsync = async (server) => {
   // GET /api/v1/alarms
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'List alarms',
-        tags: ['Alarms'],
+        summary: "List alarms",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            status: { type: 'string', enum: ['active', 'acknowledged', 'resolved'] },
-            severity: { type: 'string', enum: ['INFO', 'WARNING', 'CRITICAL'] },
-            siteId: { type: 'string', format: 'uuid' },
-            assetId: { type: 'string', format: 'uuid' },
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            limit: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
-            offset: { type: 'integer', minimum: 0, default: 0 },
+            status: {
+              type: "string",
+              enum: ["active", "acknowledged", "resolved"],
+            },
+            severity: { type: "string", enum: ["INFO", "WARNING", "CRITICAL"] },
+            siteId: { type: "string", format: "uuid" },
+            assetId: { type: "string", format: "uuid" },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
@@ -29,7 +32,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
         const {
           status,
           severity,
@@ -112,7 +115,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
         const result = await pool.query(query, params);
 
         // Get total count
-        let countQuery = 'SELECT COUNT(*) FROM alarms a WHERE a.tenant_id = $1';
+        let countQuery = "SELECT COUNT(*) FROM alarms a WHERE a.tenant_id = $1";
         const countParams: any[] = [tenantId];
         let countParamIndex = 2;
 
@@ -151,30 +154,30 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           offset: parseInt(offset as string),
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error listing alarms');
+        request.log.error({ error }, "Error listing alarms");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to list alarms',
+          error: "Failed to list alarms",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/alarms/active
   server.get(
-    '/active',
+    "/active",
     {
       schema: {
-        summary: 'Get active alarms',
-        tags: ['Alarms'],
+        summary: "Get active alarms",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
 
         const result = await pool.query(
           `
@@ -205,7 +208,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
             END,
             a.first_occurrence DESC
         `,
-          [tenantId]
+          [tenantId],
         );
 
         return {
@@ -214,29 +217,29 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           count: result.rows.length,
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error getting active alarms');
+        request.log.error({ error }, "Error getting active alarms");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get active alarms',
+          error: "Failed to get active alarms",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/alarms/stats
   server.get(
-    '/stats',
+    "/stats",
     {
       schema: {
-        summary: 'Get alarm statistics',
-        tags: ['Alarms'],
+        summary: "Get alarm statistics",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
           },
         },
       },
@@ -244,15 +247,22 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
         const { startDate, endDate } = request.query as any;
 
         // Date range (default: last 30 days)
-        const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const start =
+          startDate ||
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const end = endDate || new Date().toISOString();
 
         // Get statistics
-        const [overallResult, severityBreakdownResult, statusBreakdownResult, topAssetsResult] = await Promise.all([
+        const [
+          overallResult,
+          severityBreakdownResult,
+          statusBreakdownResult,
+          topAssetsResult,
+        ] = await Promise.all([
           // Overall stats
           pool.query(
             `
@@ -268,7 +278,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
               AND first_occurrence >= $2
               AND first_occurrence <= $3
           `,
-            [tenantId, start, end]
+            [tenantId, start, end],
           ),
 
           // Severity breakdown
@@ -290,7 +300,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
                 WHEN 'INFO' THEN 3
               END
           `,
-            [tenantId, start, end]
+            [tenantId, start, end],
           ),
 
           // Status breakdown
@@ -305,7 +315,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
               AND first_occurrence <= $3
             GROUP BY status
           `,
-            [tenantId, start, end]
+            [tenantId, start, end],
           ),
 
           // Top assets with most alarms
@@ -326,7 +336,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
             ORDER BY "alarmCount" DESC
             LIMIT 10
           `,
-            [tenantId, start, end]
+            [tenantId, start, end],
           ),
         ]);
 
@@ -339,28 +349,28 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           topAssets: topAssetsResult.rows,
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error getting alarm stats');
+        request.log.error({ error }, "Error getting alarm stats");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get alarm statistics',
+          error: "Failed to get alarm statistics",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/alarms/:id
   server.get(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Get alarm details',
-        tags: ['Alarms'],
+        summary: "Get alarm details",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
+            id: { type: "string", format: "uuid" },
           },
         },
       },
@@ -369,7 +379,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
 
         const result = await pool.query(
           `
@@ -410,13 +420,13 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           LEFT JOIN users u_res ON a.resolved_by = u_res.id
           WHERE a.id = $1 AND a.tenant_id = $2
         `,
-          [id, tenantId]
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Alarm not found',
+            error: "Alarm not found",
           });
         }
 
@@ -425,34 +435,34 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           alarm: result.rows[0],
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error getting alarm');
+        request.log.error({ error }, "Error getting alarm");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to get alarm',
+          error: "Failed to get alarm",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/alarms/:id/acknowledge
   server.post(
-    '/:id/acknowledge',
+    "/:id/acknowledge",
     {
       schema: {
-        summary: 'Acknowledge alarm',
-        tags: ['Alarms'],
+        summary: "Acknowledge alarm",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
+            id: { type: "string", format: "uuid" },
           },
         },
         body: {
-          type: 'object',
+          type: "object",
           properties: {
-            comment: { type: 'string' },
+            comment: { type: "string" },
           },
         },
       },
@@ -462,33 +472,33 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { id } = request.params as { id: string };
         const { comment } = request.body as { comment?: string };
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
         const userId = (request.user as any)?.id;
 
         if (!userId) {
           return reply.status(401).send({
             success: false,
-            error: 'User authentication required',
+            error: "User authentication required",
           });
         }
 
         // Check if alarm exists and belongs to tenant
         const alarmCheck = await pool.query(
-          'SELECT id, status, acknowledged_at FROM alarms WHERE id = $1 AND tenant_id = $2',
-          [id, tenantId]
+          "SELECT id, status, acknowledged_at FROM alarms WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
         );
 
         if (alarmCheck.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Alarm not found',
+            error: "Alarm not found",
           });
         }
 
         if (alarmCheck.rows[0].acknowledged_at) {
           return reply.status(400).send({
             success: false,
-            error: 'Alarm already acknowledged',
+            error: "Alarm already acknowledged",
             acknowledgedAt: alarmCheck.rows[0].acknowledged_at,
           });
         }
@@ -513,7 +523,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
             acknowledged_at AS "acknowledgedAt",
             acknowledged_by AS "acknowledgedBy"
         `,
-          [userId, comment || '', id, tenantId]
+          [userId, comment || "", id, tenantId],
         );
 
         request.log.info(`Alarm ${id} acknowledged by user ${userId}`);
@@ -521,38 +531,38 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
         return {
           success: true,
           alarm: result.rows[0],
-          message: 'Alarm acknowledged successfully',
+          message: "Alarm acknowledged successfully",
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error acknowledging alarm');
+        request.log.error({ error }, "Error acknowledging alarm");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to acknowledge alarm',
+          error: "Failed to acknowledge alarm",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/alarms/:id/resolve
   server.post(
-    '/:id/resolve',
+    "/:id/resolve",
     {
       schema: {
-        summary: 'Resolve alarm',
-        tags: ['Alarms'],
+        summary: "Resolve alarm",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
+            id: { type: "string", format: "uuid" },
           },
         },
         body: {
-          type: 'object',
+          type: "object",
           properties: {
-            comment: { type: 'string' },
-            rootCause: { type: 'string' },
+            comment: { type: "string" },
+            rootCause: { type: "string" },
           },
         },
       },
@@ -561,34 +571,37 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const { comment, rootCause } = request.body as { comment?: string; rootCause?: string };
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const { comment, rootCause } = request.body as {
+          comment?: string;
+          rootCause?: string;
+        };
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
         const userId = (request.user as any)?.id;
 
         if (!userId) {
           return reply.status(401).send({
             success: false,
-            error: 'User authentication required',
+            error: "User authentication required",
           });
         }
 
         // Check if alarm exists
         const alarmCheck = await pool.query(
-          'SELECT id, status, resolved_at FROM alarms WHERE id = $1 AND tenant_id = $2',
-          [id, tenantId]
+          "SELECT id, status, resolved_at FROM alarms WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
         );
 
         if (alarmCheck.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Alarm not found',
+            error: "Alarm not found",
           });
         }
 
         if (alarmCheck.rows[0].resolved_at) {
           return reply.status(400).send({
             success: false,
-            error: 'Alarm already resolved',
+            error: "Alarm already resolved",
             resolvedAt: alarmCheck.rows[0].resolved_at,
           });
         }
@@ -617,7 +630,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
             resolved_at AS "resolvedAt",
             resolved_by AS "resolvedBy"
         `,
-          [userId, comment || '', rootCause || '', id, tenantId]
+          [userId, comment || "", rootCause || "", id, tenantId],
         );
 
         request.log.info(`Alarm ${id} resolved by user ${userId}`);
@@ -625,38 +638,38 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
         return {
           success: true,
           alarm: result.rows[0],
-          message: 'Alarm resolved successfully',
+          message: "Alarm resolved successfully",
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error resolving alarm');
+        request.log.error({ error }, "Error resolving alarm");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to resolve alarm',
+          error: "Failed to resolve alarm",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/alarms/:id/comment
   server.post(
-    '/:id/comment',
+    "/:id/comment",
     {
       schema: {
-        summary: 'Add comment to alarm',
-        tags: ['Alarms'],
+        summary: "Add comment to alarm",
+        tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string', format: 'uuid' },
+            id: { type: "string", format: "uuid" },
           },
         },
         body: {
-          type: 'object',
-          required: ['comment'],
+          type: "object",
+          required: ["comment"],
           properties: {
-            comment: { type: 'string' },
+            comment: { type: "string" },
           },
         },
       },
@@ -666,26 +679,26 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { id } = request.params as { id: string };
         const { comment } = request.body as { comment: string };
-        const tenantId = (request.user as any)?.tenantId || 'default-tenant';
+        const tenantId = (request.user as any)?.tenantId || "default-tenant";
         const userId = (request.user as any)?.id;
 
         if (!userId) {
           return reply.status(401).send({
             success: false,
-            error: 'User authentication required',
+            error: "User authentication required",
           });
         }
 
         // Check if alarm exists
         const alarmCheck = await pool.query(
-          'SELECT id FROM alarms WHERE id = $1 AND tenant_id = $2',
-          [id, tenantId]
+          "SELECT id FROM alarms WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
         );
 
         if (alarmCheck.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Alarm not found',
+            error: "Alarm not found",
           });
         }
 
@@ -706,22 +719,22 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           )
           WHERE id = $2 AND tenant_id = $3
         `,
-          [JSON.stringify(commentData), id, tenantId]
+          [JSON.stringify(commentData), id, tenantId],
         );
 
         return {
           success: true,
-          message: 'Comment added successfully',
+          message: "Comment added successfully",
         };
       } catch (error: any) {
-        request.log.error({ error }, 'Error adding comment');
+        request.log.error({ error }, "Error adding comment");
         return reply.status(500).send({
           success: false,
-          error: 'Failed to add comment',
+          error: "Failed to add comment",
           message: error.message,
         });
       }
-    }
+    },
   );
 };
 

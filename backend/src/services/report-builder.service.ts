@@ -1,24 +1,28 @@
-import { FastifyInstance } from 'fastify';
-import { createClient } from '@clickhouse/client';
-import { db } from '../db';
-import { eq } from 'drizzle-orm';
+import { FastifyInstance } from "fastify";
+import { createClient } from "@clickhouse/client";
+import { db } from "../db";
+import { eq } from "drizzle-orm";
 
-export type ReportDataSource = 'work_orders' | 'assets' | 'telemetry' | 'alarms';
-export type AggregationType = 'count' | 'sum' | 'avg' | 'min' | 'max';
+export type ReportDataSource =
+  | "work_orders"
+  | "assets"
+  | "telemetry"
+  | "alarms";
+export type AggregationType = "count" | "sum" | "avg" | "min" | "max";
 export type GroupByType =
-  | 'day'
-  | 'week'
-  | 'month'
-  | 'site'
-  | 'asset_type'
-  | 'status'
-  | 'type'
-  | 'severity'
-  | 'priority';
+  | "day"
+  | "week"
+  | "month"
+  | "site"
+  | "asset_type"
+  | "status"
+  | "type"
+  | "severity"
+  | "priority";
 
 export interface ReportFilter {
   field: string;
-  operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'like';
+  operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "like";
   value: any;
 }
 
@@ -37,12 +41,12 @@ export interface ReportDefinition {
   filters: ReportFilter[];
   groupBy?: GroupByType[];
   aggregations?: ReportAggregation[];
-  orderBy?: Array<{ field: string; direction: 'asc' | 'desc' }>;
+  orderBy?: Array<{ field: string; direction: "asc" | "desc" }>;
   limit?: number;
 }
 
 export interface ReportExecutionOptions {
-  format?: 'json' | 'csv' | 'pdf';
+  format?: "json" | "csv" | "pdf";
   limit?: number;
 }
 
@@ -56,67 +60,67 @@ export class ReportBuilderService {
 
   // Field mappings for each datasource
   private readonly DATASOURCE_TABLES: Record<ReportDataSource, string> = {
-    work_orders: 'wo_metrics',
-    assets: 'asset_metrics',
-    telemetry: 'telemetry_aggregates',
-    alarms: 'alarm_metrics',
+    work_orders: "wo_metrics",
+    assets: "asset_metrics",
+    telemetry: "telemetry_aggregates",
+    alarms: "alarm_metrics",
   };
 
   private readonly DATASOURCE_FIELDS: Record<ReportDataSource, string[]> = {
     work_orders: [
-      'wo_id',
-      'tenant_id',
-      'site_id',
-      'asset_id',
-      'type',
-      'priority',
-      'status',
-      'created_at',
-      'scheduled_start',
-      'completed_at',
-      'duration_hours',
-      'mttr_hours',
-      'cost',
+      "wo_id",
+      "tenant_id",
+      "site_id",
+      "asset_id",
+      "type",
+      "priority",
+      "status",
+      "created_at",
+      "scheduled_start",
+      "completed_at",
+      "duration_hours",
+      "mttr_hours",
+      "cost",
     ],
     assets: [
-      'asset_id',
-      'tenant_id',
-      'site_id',
-      'asset_name',
-      'asset_type',
-      'status',
-      'health_score',
-      'uptime_hours',
-      'downtime_hours',
-      'availability_percent',
-      'mtbf_hours',
-      'recorded_at',
+      "asset_id",
+      "tenant_id",
+      "site_id",
+      "asset_name",
+      "asset_type",
+      "status",
+      "health_score",
+      "uptime_hours",
+      "downtime_hours",
+      "availability_percent",
+      "mtbf_hours",
+      "recorded_at",
     ],
     telemetry: [
-      'asset_id',
-      'tenant_id',
-      'site_id',
-      'metric_name',
-      'time_bucket',
-      'avg_value',
-      'min_value',
-      'max_value',
-      'count',
-      'anomaly_count',
+      "asset_id",
+      "tenant_id",
+      "site_id",
+      "metric_name",
+      "time_bucket",
+      "avg_value",
+      "min_value",
+      "max_value",
+      "count",
+      "anomaly_count",
     ],
     alarms: [
-      'alarm_id',
-      'tenant_id',
-      'site_id',
-      'asset_id',
-      'severity',
-      'status',
-      'alarm_type',
-      'created_at',
-      'acknowledged_at',
-      'resolved_at',
-      'time_to_acknowledge_seconds',
-      'time_to_resolve_seconds',
+      "alarm_id",
+      "tenant_id",
+      "site_id",
+      "asset_id",
+      "severity",
+      "status",
+      "alarm_type",
+      "created_at",
+      "acknowledged_at",
+      "resolved_at",
+      "time_to_acknowledge_seconds",
+      "time_to_resolve_seconds",
     ],
   };
 
@@ -125,10 +129,10 @@ export class ReportBuilderService {
 
     // Initialize ClickHouse client
     this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-      username: process.env.CLICKHOUSE_USER || 'clickhouse_user',
-      password: process.env.CLICKHOUSE_PASSWORD || 'clickhouse_password_dev',
-      database: process.env.CLICKHOUSE_DATABASE || 'dcmms_analytics',
+      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
+      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
+      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
     });
   }
 
@@ -138,9 +142,9 @@ export class ReportBuilderService {
   async executeReport(
     definition: ReportDefinition,
     tenantId: string,
-    options: ReportExecutionOptions = {}
+    options: ReportExecutionOptions = {},
   ): Promise<any[]> {
-    this.fastify.log.info({ definition, tenantId }, 'Executing report');
+    this.fastify.log.info({ definition, tenantId }, "Executing report");
 
     try {
       // Validate datasource and columns
@@ -149,24 +153,24 @@ export class ReportBuilderService {
       // Build SQL query
       const query = this.buildQuery(definition, tenantId);
 
-      this.fastify.log.debug({ query }, 'Generated ClickHouse query');
+      this.fastify.log.debug({ query }, "Generated ClickHouse query");
 
       // Execute query
       const result = await this.clickhouse.query({
         query,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       const data = (await result.json()) as any[];
 
       this.fastify.log.info(
         { rows: data.length, datasource: definition.datasource },
-        'Report executed successfully'
+        "Report executed successfully",
       );
 
       return data;
     } catch (error) {
-      this.fastify.log.error({ error, definition }, 'Failed to execute report');
+      this.fastify.log.error({ error, definition }, "Failed to execute report");
       throw error;
     }
   }
@@ -175,7 +179,15 @@ export class ReportBuilderService {
    * Build SQL query from report definition
    */
   private buildQuery(definition: ReportDefinition, tenantId: string): string {
-    const { datasource, columns, filters, groupBy, aggregations, orderBy, limit } = definition;
+    const {
+      datasource,
+      columns,
+      filters,
+      groupBy,
+      aggregations,
+      orderBy,
+      limit,
+    } = definition;
 
     const table = this.DATASOURCE_TABLES[datasource];
 
@@ -189,12 +201,13 @@ export class ReportBuilderService {
         return `${agg.type}(${agg.field}) AS ${alias}`;
       });
 
-      const groupFields = groupBy?.map((gb) => this.mapGroupByField(gb, datasource)) || [];
+      const groupFields =
+        groupBy?.map((gb) => this.mapGroupByField(gb, datasource)) || [];
 
-      selectClause = [...groupFields, ...aggFields].join(', ');
+      selectClause = [...groupFields, ...aggFields].join(", ");
     } else {
       // Simple select query
-      selectClause = columns.join(', ');
+      selectClause = columns.join(", ");
     }
 
     // Build WHERE clause
@@ -206,24 +219,30 @@ export class ReportBuilderService {
       }
     }
 
-    const whereClause = whereClauses.join(' AND ');
+    const whereClause = whereClauses.join(" AND ");
 
     // Build GROUP BY clause
-    let groupByClause = '';
+    let groupByClause = "";
     if (groupBy && groupBy.length > 0) {
-      const groupFields = groupBy.map((gb) => this.mapGroupByField(gb, datasource));
-      groupByClause = `GROUP BY ${groupFields.join(', ')}`;
+      const groupFields = groupBy.map((gb) =>
+        this.mapGroupByField(gb, datasource),
+      );
+      groupByClause = `GROUP BY ${groupFields.join(", ")}`;
     }
 
     // Build ORDER BY clause
-    let orderByClause = '';
+    let orderByClause = "";
     if (orderBy && orderBy.length > 0) {
-      const orderFields = orderBy.map((ob) => `${ob.field} ${ob.direction.toUpperCase()}`);
-      orderByClause = `ORDER BY ${orderFields.join(', ')}`;
+      const orderFields = orderBy.map(
+        (ob) => `${ob.field} ${ob.direction.toUpperCase()}`,
+      );
+      orderByClause = `ORDER BY ${orderFields.join(", ")}`;
     }
 
     // Build LIMIT clause
-    const limitClause = limit ? `LIMIT ${Math.min(limit, 10000)}` : 'LIMIT 1000';
+    const limitClause = limit
+      ? `LIMIT ${Math.min(limit, 10000)}`
+      : "LIMIT 1000";
 
     // Combine all clauses
     const query = `
@@ -245,23 +264,23 @@ export class ReportBuilderService {
     const { field, operator, value } = filter;
 
     switch (operator) {
-      case 'eq':
+      case "eq":
         return `${field} = '${value}'`;
-      case 'ne':
+      case "ne":
         return `${field} != '${value}'`;
-      case 'gt':
+      case "gt":
         return `${field} > ${value}`;
-      case 'gte':
+      case "gte":
         return `${field} >= ${value}`;
-      case 'lt':
+      case "lt":
         return `${field} < ${value}`;
-      case 'lte':
+      case "lte":
         return `${field} <= ${value}`;
-      case 'in':
+      case "in":
         const values = Array.isArray(value) ? value : [value];
-        const quotedValues = values.map((v) => `'${v}'`).join(', ');
+        const quotedValues = values.map((v) => `'${v}'`).join(", ");
         return `${field} IN (${quotedValues})`;
-      case 'like':
+      case "like":
         return `${field} LIKE '%${value}%'`;
       default:
         throw new Error(`Unsupported operator: ${operator}`);
@@ -271,29 +290,32 @@ export class ReportBuilderService {
   /**
    * Map groupBy type to SQL expression
    */
-  private mapGroupByField(groupBy: GroupByType, datasource: ReportDataSource): string {
+  private mapGroupByField(
+    groupBy: GroupByType,
+    datasource: ReportDataSource,
+  ): string {
     switch (groupBy) {
-      case 'day':
+      case "day":
         const dateField = this.getDateField(datasource);
         return `toDate(${dateField}) AS day`;
-      case 'week':
+      case "week":
         const weekDateField = this.getDateField(datasource);
         return `toStartOfWeek(${weekDateField}) AS week`;
-      case 'month':
+      case "month":
         const monthDateField = this.getDateField(datasource);
         return `toStartOfMonth(${monthDateField}) AS month`;
-      case 'site':
-        return 'site_id';
-      case 'asset_type':
-        return datasource === 'assets' ? 'asset_type' : 'site_id';
-      case 'status':
-        return 'status';
-      case 'type':
-        return 'type';
-      case 'severity':
-        return datasource === 'alarms' ? 'severity' : 'status';
-      case 'priority':
-        return datasource === 'work_orders' ? 'priority' : 'status';
+      case "site":
+        return "site_id";
+      case "asset_type":
+        return datasource === "assets" ? "asset_type" : "site_id";
+      case "status":
+        return "status";
+      case "type":
+        return "type";
+      case "severity":
+        return datasource === "alarms" ? "severity" : "status";
+      case "priority":
+        return datasource === "work_orders" ? "priority" : "status";
       default:
         throw new Error(`Unsupported groupBy: ${groupBy}`);
     }
@@ -304,10 +326,10 @@ export class ReportBuilderService {
    */
   private getDateField(datasource: ReportDataSource): string {
     const dateFields: Record<ReportDataSource, string> = {
-      work_orders: 'created_at',
-      assets: 'recorded_at',
-      telemetry: 'time_bucket',
-      alarms: 'created_at',
+      work_orders: "created_at",
+      assets: "recorded_at",
+      telemetry: "time_bucket",
+      alarms: "created_at",
     };
 
     return dateFields[datasource];
@@ -329,7 +351,9 @@ export class ReportBuilderService {
 
     for (const column of columns) {
       if (!validFields.includes(column)) {
-        throw new Error(`Invalid column '${column}' for datasource '${datasource}'`);
+        throw new Error(
+          `Invalid column '${column}' for datasource '${datasource}'`,
+        );
       }
     }
   }
@@ -339,30 +363,35 @@ export class ReportBuilderService {
    */
   async exportToCSV(data: any[]): Promise<string> {
     if (data.length === 0) {
-      return '';
+      return "";
     }
 
     // Get column names from first row
     const columns = Object.keys(data[0]);
 
     // Build CSV header
-    const header = columns.join(',');
+    const header = columns.join(",");
 
     // Build CSV rows
     const rows = data.map((row) => {
-      return columns.map((col) => {
-        const value = row[col];
+      return columns
+        .map((col) => {
+          const value = row[col];
 
-        // Escape values that contain commas or quotes
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
+          // Escape values that contain commas or quotes
+          if (
+            typeof value === "string" &&
+            (value.includes(",") || value.includes('"'))
+          ) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
 
-        return value;
-      }).join(',');
+          return value;
+        })
+        .join(",");
     });
 
-    return [header, ...rows].join('\n');
+    return [header, ...rows].join("\n");
   }
 
   /**
@@ -384,10 +413,12 @@ export class ReportBuilderService {
    */
   async close(): Promise<void> {
     await this.clickhouse.close();
-    this.fastify.log.info('Report builder ClickHouse connection closed');
+    this.fastify.log.info("Report builder ClickHouse connection closed");
   }
 }
 
-export function createReportBuilderService(fastify: FastifyInstance): ReportBuilderService {
+export function createReportBuilderService(
+  fastify: FastifyInstance,
+): ReportBuilderService {
   return new ReportBuilderService(fastify);
 }

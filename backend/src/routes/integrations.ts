@@ -1,7 +1,10 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createSlackProviderService } from '../services/slack-provider.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createSlackProviderService } from "../services/slack-provider.service";
 
 // Validation schemas
 const slackOAuthCallbackSchema = z.object({
@@ -36,26 +39,26 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     Querystring: {
       tenantId: string;
     };
-  }>('/integrations/slack/install', async (request, reply) => {
+  }>("/integrations/slack/install", async (request, reply) => {
     try {
       const { tenantId } = request.query;
 
       // Generate state parameter to verify the callback
-      const state = Buffer.from(JSON.stringify({ tenantId, timestamp: Date.now() })).toString(
-        'base64'
-      );
+      const state = Buffer.from(
+        JSON.stringify({ tenantId, timestamp: Date.now() }),
+      ).toString("base64");
 
       // Get authorization URL
       const authUrl = slackService.getAuthorizationUrl(state);
 
       return reply.send({
         authUrl,
-        message: 'Redirect user to this URL to complete Slack installation',
+        message: "Redirect user to this URL to complete Slack installation",
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to generate Slack auth URL');
+      fastify.log.error({ error }, "Failed to generate Slack auth URL");
       return reply.status(500).send({
-        error: 'Failed to generate Slack authorization URL',
+        error: "Failed to generate Slack authorization URL",
       });
     }
   });
@@ -67,13 +70,13 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
       state?: string;
       error?: string;
     };
-  }>('/integrations/slack/callback', async (request, reply) => {
+  }>("/integrations/slack/callback", async (request, reply) => {
     try {
       const { code, state, error } = request.query;
 
       // Check for OAuth errors
       if (error) {
-        fastify.log.warn({ error }, 'Slack OAuth error');
+        fastify.log.warn({ error }, "Slack OAuth error");
         return reply.status(400).send({
           error: `Slack OAuth error: ${error}`,
         });
@@ -81,25 +84,27 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
 
       if (!code) {
         return reply.status(400).send({
-          error: 'Missing authorization code',
+          error: "Missing authorization code",
         });
       }
 
       // Verify state parameter
       let tenantId: string;
       try {
-        const stateData = JSON.parse(Buffer.from(state || '', 'base64').toString());
+        const stateData = JSON.parse(
+          Buffer.from(state || "", "base64").toString(),
+        );
         tenantId = stateData.tenantId;
 
         // Check if state is not too old (15 minutes)
         const stateAge = Date.now() - stateData.timestamp;
         if (stateAge > 15 * 60 * 1000) {
-          throw new Error('State parameter expired');
+          throw new Error("State parameter expired");
         }
       } catch (error) {
-        fastify.log.error({ error }, 'Invalid state parameter');
+        fastify.log.error({ error }, "Invalid state parameter");
         return reply.status(400).send({
-          error: 'Invalid or expired state parameter',
+          error: "Invalid or expired state parameter",
         });
       }
 
@@ -118,28 +123,32 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
       });
 
       fastify.log.info(
-        { tenantId, teamId: oauthResult.teamId, teamName: oauthResult.teamName },
-        'Slack installation completed'
+        {
+          tenantId,
+          teamId: oauthResult.teamId,
+          teamName: oauthResult.teamName,
+        },
+        "Slack installation completed",
       );
 
       // Redirect to success page or return success response
       return reply.send({
         success: true,
-        message: 'Slack integration installed successfully',
+        message: "Slack integration installed successfully",
         team: {
           id: oauthResult.teamId,
           name: oauthResult.teamName,
         },
         webhook: oauthResult.incomingWebhook
           ? {
-            channel: oauthResult.incomingWebhook.channel,
-          }
+              channel: oauthResult.incomingWebhook.channel,
+            }
           : null,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to complete Slack OAuth');
+      fastify.log.error({ error }, "Failed to complete Slack OAuth");
       return reply.status(500).send({
-        error: 'Failed to complete Slack installation',
+        error: "Failed to complete Slack installation",
       });
     }
   });
@@ -148,7 +157,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof slackTestSchema>;
   }>(
-    '/integrations/slack/test',
+    "/integrations/slack/test",
     {
       schema: {
         body: slackTestSchema,
@@ -161,25 +170,25 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         // Test connection
         const result = await slackService.testConnection(tenantId, channel);
 
-        if (result.status === 'sent') {
+        if (result.status === "sent") {
           return reply.send({
             success: true,
-            message: 'Test message sent successfully',
+            message: "Test message sent successfully",
             messageId: result.messageId,
           });
         } else {
           return reply.status(400).send({
             success: false,
-            error: result.error || 'Failed to send test message',
+            error: result.error || "Failed to send test message",
           });
         }
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to test Slack connection');
+        fastify.log.error({ error }, "Failed to test Slack connection");
         return reply.status(500).send({
-          error: 'Failed to test Slack connection',
+          error: "Failed to test Slack connection",
         });
       }
-    }
+    },
   );
 
   // Get Slack installation status
@@ -187,7 +196,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     Querystring: {
       tenantId: string;
     };
-  }>('/integrations/slack/status', async (request, reply) => {
+  }>("/integrations/slack/status", async (request, reply) => {
     try {
       const { tenantId } = request.query;
 
@@ -196,7 +205,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
       if (!installation) {
         return reply.send({
           installed: false,
-          message: 'Slack is not installed for this tenant',
+          message: "Slack is not installed for this tenant",
         });
       }
 
@@ -208,14 +217,14 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         },
         webhook: installation.incomingWebhookUrl
           ? {
-            channel: installation.incomingWebhookChannel,
-          }
+              channel: installation.incomingWebhookChannel,
+            }
           : null,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get Slack status');
+      fastify.log.error({ error }, "Failed to get Slack status");
       return reply.status(500).send({
-        error: 'Failed to get Slack installation status',
+        error: "Failed to get Slack installation status",
       });
     }
   });
@@ -225,39 +234,42 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     Body: {
       tenantId: string;
     };
-  }>('/integrations/slack/uninstall', async (request, reply) => {
+  }>("/integrations/slack/uninstall", async (request, reply) => {
     try {
       const { tenantId } = request.body;
 
       await slackService.removeInstallation(tenantId);
 
-      fastify.log.info({ tenantId }, 'Slack integration uninstalled');
+      fastify.log.info({ tenantId }, "Slack integration uninstalled");
 
       return reply.send({
         success: true,
-        message: 'Slack integration uninstalled successfully',
+        message: "Slack integration uninstalled successfully",
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to uninstall Slack integration');
+      fastify.log.error({ error }, "Failed to uninstall Slack integration");
       return reply.status(500).send({
-        error: 'Failed to uninstall Slack integration',
+        error: "Failed to uninstall Slack integration",
       });
     }
   });
 
   // Slack interactive endpoint (for button clicks)
-  fastify.post('/integrations/slack/interactive', async (request, reply) => {
+  fastify.post("/integrations/slack/interactive", async (request, reply) => {
     try {
       // Slack sends the payload as URL-encoded form data
-      const payload = JSON.parse((request.body as any).payload || '{}');
+      const payload = JSON.parse((request.body as any).payload || "{}");
 
       const { type, user, actions, response_url, trigger_id } = payload;
 
-      fastify.log.info({ type, userId: user?.id, actions }, 'Slack interactive event received');
+      fastify.log.info(
+        { type, userId: user?.id, actions },
+        "Slack interactive event received",
+      );
 
       // Handle different interaction types
       switch (type) {
-        case 'block_actions':
+        case "block_actions":
           // Handle button clicks
           if (actions && actions.length > 0) {
             for (const action of actions) {
@@ -266,18 +278,18 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
           }
           break;
 
-        case 'view_submission':
+        case "view_submission":
           // Handle modal submissions
-          fastify.log.info('View submission received');
+          fastify.log.info("View submission received");
           break;
 
-        case 'shortcut':
+        case "shortcut":
           // Handle shortcuts
-          fastify.log.info('Shortcut received');
+          fastify.log.info("Shortcut received");
           break;
 
         default:
-          fastify.log.warn({ type }, 'Unknown interaction type');
+          fastify.log.warn({ type }, "Unknown interaction type");
       }
 
       // Acknowledge the interaction
@@ -285,9 +297,9 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         ok: true,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to handle Slack interactive event');
+      fastify.log.error({ error }, "Failed to handle Slack interactive event");
       return reply.status(500).send({
-        error: 'Failed to handle interactive event',
+        error: "Failed to handle interactive event",
       });
     }
   });
@@ -298,74 +310,86 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
   async function handleSlackAction(
     action: any,
     user: any,
-    responseUrl: string
+    responseUrl: string,
   ): Promise<void> {
     const { action_id, value } = action;
 
-    fastify.log.info({ action_id, value, userId: user?.id }, 'Handling Slack action');
+    fastify.log.info(
+      { action_id, value, userId: user?.id },
+      "Handling Slack action",
+    );
 
     try {
       // Parse action value (format: "acknowledge_alert_<alertId>" or "view_wo_<woId>")
-      const [actionType, entityType, entityId] = value.split('_');
+      const [actionType, entityType, entityId] = value.split("_");
 
-      if (actionType === 'acknowledge' && entityType === 'alert') {
+      if (actionType === "acknowledge" && entityType === "alert") {
         // Handle alert acknowledgment
-        fastify.log.info({ alertId: entityId, userId: user?.id }, 'Acknowledging alert from Slack');
+        fastify.log.info(
+          { alertId: entityId, userId: user?.id },
+          "Acknowledging alert from Slack",
+        );
 
         // TODO: Call alert acknowledgment API
         // For now, send a response message
         await fetch(responseUrl, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             text: `Alert ${entityId} has been acknowledged by ${user?.name || user?.username}`,
             replace_original: false,
           }),
         });
-      } else if (actionType === 'view' && entityType === 'wo') {
+      } else if (actionType === "view" && entityType === "wo") {
         // Handle work order view
-        fastify.log.info({ woId: entityId }, 'Viewing work order from Slack');
+        fastify.log.info({ woId: entityId }, "Viewing work order from Slack");
 
         // The button should have a URL, so this is just logging
       } else {
-        fastify.log.warn({ actionType, entityType }, 'Unknown action type');
+        fastify.log.warn({ actionType, entityType }, "Unknown action type");
       }
     } catch (error) {
-      fastify.log.error({ error, action }, 'Failed to handle Slack action');
+      fastify.log.error({ error, action }, "Failed to handle Slack action");
     }
   }
 
   // Slack events endpoint (for mentions, messages, etc.)
-  fastify.post('/integrations/slack/events', async (request, reply) => {
+  fastify.post("/integrations/slack/events", async (request, reply) => {
     try {
       const body = request.body as any;
 
       // Handle URL verification challenge
-      if (body.type === 'url_verification') {
+      if (body.type === "url_verification") {
         return reply.send({
           challenge: body.challenge,
         });
       }
 
       // Handle events
-      if (body.type === 'event_callback') {
+      if (body.type === "event_callback") {
         const { event } = body;
-        fastify.log.info({ eventType: event.type }, 'Slack event received');
+        fastify.log.info({ eventType: event.type }, "Slack event received");
 
         // Handle different event types
         switch (event.type) {
-          case 'app_mention':
-            fastify.log.info({ user: event.user, text: event.text }, 'App mentioned');
+          case "app_mention":
+            fastify.log.info(
+              { user: event.user, text: event.text },
+              "App mentioned",
+            );
             break;
 
-          case 'message':
-            fastify.log.info({ user: event.user, channel: event.channel }, 'Message received');
+          case "message":
+            fastify.log.info(
+              { user: event.user, channel: event.channel },
+              "Message received",
+            );
             break;
 
           default:
-            fastify.log.info({ eventType: event.type }, 'Unhandled event type');
+            fastify.log.info({ eventType: event.type }, "Unhandled event type");
         }
       }
 
@@ -374,9 +398,9 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
         ok: true,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to handle Slack event');
+      fastify.log.error({ error }, "Failed to handle Slack event");
       return reply.status(500).send({
-        error: 'Failed to handle Slack event',
+        error: "Failed to handle Slack event",
       });
     }
   });

@@ -1,8 +1,14 @@
-import { FastifyPluginAsync } from 'fastify';
-import { BudgetManagementService } from '../services/budget-management.service';
-import { CreateBudgetRequest, UpdateBudgetRequest, BudgetPeriod, BudgetStatus, CostCategory } from '../models/cost.models';
+import { FastifyPluginAsync } from "fastify";
+import { BudgetManagementService } from "../services/budget-management.service";
+import {
+  CreateBudgetRequest,
+  UpdateBudgetRequest,
+  BudgetPeriod,
+  BudgetStatus,
+  CostCategory,
+} from "../models/cost.models";
 
-import { CostCalculationService } from '../services/cost-calculation.service';
+import { CostCalculationService } from "../services/cost-calculation.service";
 
 const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
   const costService = new CostCalculationService();
@@ -10,24 +16,38 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
 
   // POST /api/v1/budgets
   server.post(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'Create a budget for a site/period',
-        tags: ['Budget Management'],
+        summary: "Create a budget for a site/period",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['siteId', 'budgetPeriod', 'periodStart', 'periodEnd', 'category', 'allocatedAmount', 'createdBy'],
+          type: "object",
+          required: [
+            "siteId",
+            "budgetPeriod",
+            "periodStart",
+            "periodEnd",
+            "category",
+            "allocatedAmount",
+            "createdBy",
+          ],
           properties: {
-            siteId: { type: 'string' },
-            budgetPeriod: { type: 'string', enum: ['monthly', 'quarterly', 'yearly'] },
-            periodStart: { type: 'string', format: 'date-time' },
-            periodEnd: { type: 'string', format: 'date-time' },
-            category: { type: 'string', enum: ['labor', 'parts', 'equipment', 'other', 'all'] },
-            allocatedAmount: { type: 'number' },
-            currency: { type: 'string', default: 'USD' },
-            createdBy: { type: 'string' },
+            siteId: { type: "string" },
+            budgetPeriod: {
+              type: "string",
+              enum: ["monthly", "quarterly", "yearly"],
+            },
+            periodStart: { type: "string", format: "date-time" },
+            periodEnd: { type: "string", format: "date-time" },
+            category: {
+              type: "string",
+              enum: ["labor", "parts", "equipment", "other", "all"],
+            },
+            allocatedAmount: { type: "number" },
+            currency: { type: "string", default: "USD" },
+            createdBy: { type: "string" },
           },
         },
       },
@@ -45,39 +65,51 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
         const budget = await budgetService.createBudget(reqData);
 
         return {
-          message: 'Budget created successfully',
+          message: "Budget created successfully",
           budget,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('must be') || error.message.includes('Invalid')) {
+        if (
+          error.message.includes("must be") ||
+          error.message.includes("Invalid")
+        ) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to create budget',
+          error: "Failed to create budget",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/budgets
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        summary: 'Get budgets with filters',
-        tags: ['Budget Management'],
+        summary: "Get budgets with filters",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            siteId: { type: 'string' },
-            budgetPeriod: { type: 'string', enum: ['monthly', 'quarterly', 'yearly'] },
-            category: { type: 'string', enum: ['labor', 'parts', 'equipment', 'other', 'all'] },
-            status: { type: 'string', enum: ['on_track', 'at_risk', 'over_budget'] },
+            siteId: { type: "string" },
+            budgetPeriod: {
+              type: "string",
+              enum: ["monthly", "quarterly", "yearly"],
+            },
+            category: {
+              type: "string",
+              enum: ["labor", "parts", "equipment", "other", "all"],
+            },
+            status: {
+              type: "string",
+              enum: ["on_track", "at_risk", "over_budget"],
+            },
           },
         },
       },
@@ -90,7 +122,7 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
         const budgets = await budgetService.getBudgets({
           siteId: siteId as string,
           budgetPeriod: budgetPeriod as BudgetPeriod,
-          category: category as CostCategory | 'all',
+          category: category as CostCategory | "all",
           status: status as BudgetStatus,
         });
 
@@ -101,25 +133,25 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get budgets',
+          error: "Failed to get budgets",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/budgets/:id
   server.get(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Get a single budget',
-        tags: ['Budget Management'],
+        summary: "Get a single budget",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -135,38 +167,38 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to get budget',
+          error: "Failed to get budget",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // PATCH /api/v1/budgets/:id
   server.patch(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Update budget allocated amount',
-        tags: ['Budget Management'],
+        summary: "Update budget allocated amount",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['updatedBy'],
+          type: "object",
+          required: ["updatedBy"],
           properties: {
-            allocatedAmount: { type: 'number' },
-            updatedBy: { type: 'string' },
+            allocatedAmount: { type: "number" },
+            updatedBy: { type: "string" },
           },
         },
       },
@@ -180,47 +212,47 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
         const budget = await budgetService.updateBudget(id, reqData);
 
         return {
-          message: 'Budget updated successfully',
+          message: "Budget updated successfully",
           budget,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
-        if (error.message.includes('must be')) {
+        if (error.message.includes("must be")) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to update budget',
+          error: "Failed to update budget",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // DELETE /api/v1/budgets/:id
   server.delete(
-    '/:id',
+    "/:id",
     {
       schema: {
-        summary: 'Delete a budget',
-        tags: ['Budget Management'],
+        summary: "Delete a budget",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['deletedBy'],
+          type: "object",
+          required: ["deletedBy"],
           properties: {
-            deletedBy: { type: 'string' },
+            deletedBy: { type: "string" },
           },
         },
       },
@@ -232,41 +264,41 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
         const { deletedBy } = request.body as any;
 
         if (!deletedBy) {
-          return reply.status(400).send({ error: 'deletedBy is required' });
+          return reply.status(400).send({ error: "deletedBy is required" });
         }
 
         await budgetService.deleteBudget(id, deletedBy);
 
         return {
-          message: 'Budget deleted successfully',
+          message: "Budget deleted successfully",
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to delete budget',
+          error: "Failed to delete budget",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/budgets/:id/spending
   server.get(
-    '/:id/spending',
+    "/:id/spending",
     {
       schema: {
-        summary: 'Get current spending vs allocated',
-        tags: ['Budget Management'],
+        summary: "Get current spending vs allocated",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -282,30 +314,30 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to get budget spending',
+          error: "Failed to get budget spending",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/budgets/:id/forecast
   server.get(
-    '/:id/forecast',
+    "/:id/forecast",
     {
       schema: {
-        summary: 'Predict end-of-period spending (linear extrapolation)',
-        tags: ['Budget Management'],
+        summary: "Predict end-of-period spending (linear extrapolation)",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -321,30 +353,30 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to get budget forecast',
+          error: "Failed to get budget forecast",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/budgets/alerts
   server.get(
-    '/alerts',
+    "/alerts",
     {
       schema: {
-        summary: 'Get active budget alerts (>80% spent)',
-        tags: ['Budget Management'],
+        summary: "Get active budget alerts (>80% spent)",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            budgetId: { type: 'string' },
+            budgetId: { type: "string" },
           },
         },
       },
@@ -363,32 +395,32 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get budget alerts',
+          error: "Failed to get budget alerts",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/budgets/alerts/:alertId/acknowledge
   server.post(
-    '/alerts/:alertId/acknowledge',
+    "/alerts/:alertId/acknowledge",
     {
       schema: {
-        summary: 'Acknowledge a budget alert',
-        tags: ['Budget Management'],
+        summary: "Acknowledge a budget alert",
+        tags: ["Budget Management"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            alertId: { type: 'string' },
+            alertId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['acknowledgedBy'],
+          type: "object",
+          required: ["acknowledgedBy"],
           properties: {
-            acknowledgedBy: { type: 'string' },
+            acknowledgedBy: { type: "string" },
           },
         },
       },
@@ -400,28 +432,33 @@ const budgetManagementRoutes: FastifyPluginAsync = async (server) => {
         const { acknowledgedBy } = request.body as any;
 
         if (!acknowledgedBy) {
-          return reply.status(400).send({ error: 'acknowledgedBy is required' });
+          return reply
+            .status(400)
+            .send({ error: "acknowledgedBy is required" });
         }
 
-        const alert = await budgetService.acknowledgeBudgetAlert(alertId, acknowledgedBy);
+        const alert = await budgetService.acknowledgeBudgetAlert(
+          alertId,
+          acknowledgedBy,
+        );
 
         return {
-          message: 'Budget alert acknowledged successfully',
+          message: "Budget alert acknowledged successfully",
           alert,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to acknowledge budget alert',
+          error: "Failed to acknowledge budget alert",
           details: error.message,
         });
       }
-    }
+    },
   );
 };
 

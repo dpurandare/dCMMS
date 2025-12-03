@@ -1,28 +1,41 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { db } from '../db';
-import { notificationPreferences, notificationHistory, deviceTokens } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { db } from "../db";
+import {
+  notificationPreferences,
+  notificationHistory,
+  deviceTokens,
+} from "../db/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 // Validation schemas
 const notificationPreferenceSchema = z.object({
   eventType: z.enum([
-    'work_order_assigned',
-    'work_order_overdue',
-    'work_order_completed',
-    'alert_critical',
-    'alert_high',
-    'alert_medium',
-    'alert_acknowledged',
-    'alert_resolved',
-    'asset_down',
-    'maintenance_due',
+    "work_order_assigned",
+    "work_order_overdue",
+    "work_order_completed",
+    "alert_critical",
+    "alert_high",
+    "alert_medium",
+    "alert_acknowledged",
+    "alert_resolved",
+    "asset_down",
+    "maintenance_due",
   ]),
-  channel: z.enum(['email', 'sms', 'push', 'webhook', 'slack']),
+  channel: z.enum(["email", "sms", "push", "webhook", "slack"]),
   isEnabled: z.boolean(),
-  quietHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
-  quietHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  quietHoursStart: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
+  quietHoursEnd: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/)
+    .optional(),
 });
 
 const updatePreferencesSchema = z.object({
@@ -31,7 +44,7 @@ const updatePreferencesSchema = z.object({
 
 const deviceTokenSchema = z.object({
   token: z.string().min(10),
-  deviceType: z.enum(['ios', 'android']),
+  deviceType: z.enum(["ios", "android"]),
   deviceId: z.string().optional(),
   appVersion: z.string().optional(),
 });
@@ -43,7 +56,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   // Get user notification preferences
   fastify.get<{
     Params: { userId: string };
-  }>('/users/:userId/notification-preferences', async (request, reply) => {
+  }>("/users/:userId/notification-preferences", async (request, reply) => {
     try {
       const { userId } = request.params;
 
@@ -66,9 +79,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         preferences,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get notification preferences');
+      fastify.log.error({ error }, "Failed to get notification preferences");
       return reply.status(500).send({
-        error: 'Failed to get notification preferences',
+        error: "Failed to get notification preferences",
       });
     }
   });
@@ -78,7 +91,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     Params: { userId: string };
     Body: z.infer<typeof updatePreferencesSchema>;
   }>(
-    '/users/:userId/notification-preferences',
+    "/users/:userId/notification-preferences",
     {
       schema: {
         body: updatePreferencesSchema,
@@ -104,7 +117,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
               isEnabled: pref.isEnabled,
               quietHoursStart: pref.quietHoursStart || null,
               quietHoursEnd: pref.quietHoursEnd || null,
-            }))
+            })),
           );
         }
 
@@ -113,20 +126,26 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
           where: eq(notificationPreferences.userId, userId),
         });
 
-        fastify.log.info({ userId, count: updated.length }, 'Updated notification preferences');
+        fastify.log.info(
+          { userId, count: updated.length },
+          "Updated notification preferences",
+        );
 
         return reply.send({
           userId,
           preferences: updated,
-          message: 'Notification preferences updated successfully',
+          message: "Notification preferences updated successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to update notification preferences');
+        fastify.log.error(
+          { error },
+          "Failed to update notification preferences",
+        );
         return reply.status(500).send({
-          error: 'Failed to update notification preferences',
+          error: "Failed to update notification preferences",
         });
       }
-    }
+    },
   );
 
   // Get notification history
@@ -141,15 +160,15 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       startDate?: string;
       endDate?: string;
     };
-  }>('/users/:userId/notification-history', async (request, reply) => {
+  }>("/users/:userId/notification-history", async (request, reply) => {
     try {
       const { userId } = request.params;
-      const limit = parseInt(request.query.limit || '50');
-      const offset = parseInt(request.query.offset || '0');
+      const limit = parseInt(request.query.limit || "50");
+      const offset = parseInt(request.query.offset || "0");
       const { status, channel, eventType, startDate, endDate } = request.query;
 
       // Build where clause
-      let whereConditions = [eq(notificationHistory.userId, userId)];
+      const whereConditions = [eq(notificationHistory.userId, userId)];
 
       if (status) {
         whereConditions.push(eq(notificationHistory.status, status as any));
@@ -160,7 +179,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       }
 
       if (eventType) {
-        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+        whereConditions.push(
+          eq(notificationHistory.eventType, eventType as any),
+        );
       }
 
       const history = await db.query.notificationHistory.findMany({
@@ -180,9 +201,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get notification history');
+      fastify.log.error({ error }, "Failed to get notification history");
       return reply.status(500).send({
-        error: 'Failed to get notification history',
+        error: "Failed to get notification history",
       });
     }
   });
@@ -196,22 +217,25 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       channel?: string;
       eventType?: string;
     };
-  }>('/notifications/metrics', async (request, reply) => {
+  }>("/notifications/metrics", async (request, reply) => {
     try {
-      const { tenantId, startDate, endDate, channel, eventType } = request.query;
+      const { tenantId, startDate, endDate, channel, eventType } =
+        request.query;
 
       // TODO: Add RBAC check - only admin users should access this endpoint
       // For now, we'll allow all authenticated users
 
       // Build where clause
-      let whereConditions = [eq(notificationHistory.tenantId, tenantId)];
+      const whereConditions = [eq(notificationHistory.tenantId, tenantId)];
 
       if (channel) {
         whereConditions.push(eq(notificationHistory.channel, channel as any));
       }
 
       if (eventType) {
-        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+        whereConditions.push(
+          eq(notificationHistory.eventType, eventType as any),
+        );
       }
 
       // Get all notifications for metrics
@@ -221,20 +245,29 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
 
       // Calculate metrics
       const totalSent = notifications.length;
-      const successfulDeliveries = notifications.filter((n) => n.status === 'sent' || n.status === 'delivered').length;
-      const failedDeliveries = notifications.filter((n) => n.status === 'failed').length;
-      const pendingDeliveries = notifications.filter((n) => n.status === 'pending').length;
-      const bouncedDeliveries = notifications.filter((n) => n.status === 'bounced').length;
+      const successfulDeliveries = notifications.filter(
+        (n) => n.status === "sent" || n.status === "delivered",
+      ).length;
+      const failedDeliveries = notifications.filter(
+        (n) => n.status === "failed",
+      ).length;
+      const pendingDeliveries = notifications.filter(
+        (n) => n.status === "pending",
+      ).length;
+      const bouncedDeliveries = notifications.filter(
+        (n) => n.status === "bounced",
+      ).length;
 
-      const deliveryRate = totalSent > 0 ? (successfulDeliveries / totalSent) * 100 : 0;
+      const deliveryRate =
+        totalSent > 0 ? (successfulDeliveries / totalSent) * 100 : 0;
 
       // Group by channel
       const byChannel = {
-        email: notifications.filter((n) => n.channel === 'email').length,
-        sms: notifications.filter((n) => n.channel === 'sms').length,
-        push: notifications.filter((n) => n.channel === 'push').length,
-        webhook: notifications.filter((n) => n.channel === 'webhook').length,
-        slack: notifications.filter((n) => n.channel === 'slack').length,
+        email: notifications.filter((n) => n.channel === "email").length,
+        sms: notifications.filter((n) => n.channel === "sms").length,
+        push: notifications.filter((n) => n.channel === "push").length,
+        webhook: notifications.filter((n) => n.channel === "webhook").length,
+        slack: notifications.filter((n) => n.channel === "slack").length,
       };
 
       // Group by event type
@@ -247,8 +280,8 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       // Group by status
       const byStatus = {
         pending: pendingDeliveries,
-        sent: notifications.filter((n) => n.status === 'sent').length,
-        delivered: notifications.filter((n) => n.status === 'delivered').length,
+        sent: notifications.filter((n) => n.status === "sent").length,
+        delivered: notifications.filter((n) => n.status === "delivered").length,
         failed: failedDeliveries,
         bounced: bouncedDeliveries,
       };
@@ -266,14 +299,14 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
           byStatus,
         },
         period: {
-          startDate: startDate || 'all time',
-          endDate: endDate || 'now',
+          startDate: startDate || "all time",
+          endDate: endDate || "now",
         },
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get notification metrics');
+      fastify.log.error({ error }, "Failed to get notification metrics");
       return reply.status(500).send({
-        error: 'Failed to get notification metrics',
+        error: "Failed to get notification metrics",
       });
     }
   });
@@ -291,16 +324,16 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       limit?: string;
       offset?: string;
     };
-  }>('/notifications/history', async (request, reply) => {
+  }>("/notifications/history", async (request, reply) => {
     try {
       const { tenantId, userId, status, channel, eventType } = request.query;
-      const limit = parseInt(request.query.limit || '100');
-      const offset = parseInt(request.query.offset || '0');
+      const limit = parseInt(request.query.limit || "100");
+      const offset = parseInt(request.query.offset || "0");
 
       // TODO: Add RBAC check - only admin users should access this endpoint
 
       // Build where clause
-      let whereConditions = [eq(notificationHistory.tenantId, tenantId)];
+      const whereConditions = [eq(notificationHistory.tenantId, tenantId)];
 
       if (userId) {
         whereConditions.push(eq(notificationHistory.userId, userId));
@@ -315,7 +348,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       }
 
       if (eventType) {
-        whereConditions.push(eq(notificationHistory.eventType, eventType as any));
+        whereConditions.push(
+          eq(notificationHistory.eventType, eventType as any),
+        );
       }
 
       const history = await db.query.notificationHistory.findMany({
@@ -344,9 +379,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get notification history');
+      fastify.log.error({ error }, "Failed to get notification history");
       return reply.status(500).send({
-        error: 'Failed to get notification history',
+        error: "Failed to get notification history",
       });
     }
   });
@@ -355,7 +390,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof deviceTokenSchema> & { userId: string };
   }>(
-    '/users/device-token',
+    "/users/device-token",
     {
       schema: {
         body: deviceTokenSchema.extend({
@@ -365,12 +400,12 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { userId, token, deviceType, deviceId, appVersion } = request.body;
+        const { userId, token, deviceType, deviceId, appVersion } =
+          request.body;
 
         // Import push notification service
-        const { createPushNotificationService } = await import(
-          '../services/push-notification.service'
-        );
+        const { createPushNotificationService } =
+          await import("../services/push-notification.service");
         const pushService = createPushNotificationService(fastify);
 
         // Register device token
@@ -379,48 +414,50 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
           token,
           deviceType,
           deviceId,
-          appVersion
+          appVersion,
         );
 
-        fastify.log.info({ userId, deviceType }, 'Device token registered');
+        fastify.log.info({ userId, deviceType }, "Device token registered");
 
         return reply.status(201).send({
-          message: 'Device token registered successfully',
+          message: "Device token registered successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to register device token');
+        fastify.log.error({ error }, "Failed to register device token");
         return reply.status(500).send({
-          error: 'Failed to register device token',
+          error: "Failed to register device token",
         });
       }
-    }
+    },
   );
 
   // Unregister device token
   fastify.delete<{
     Body: { token: string };
-  }>('/users/device-token', async (request, reply) => {
+  }>("/users/device-token", async (request, reply) => {
     try {
       const { token } = request.body;
 
       // Import push notification service
-      const { createPushNotificationService } = await import(
-        '../services/push-notification.service'
-      );
+      const { createPushNotificationService } =
+        await import("../services/push-notification.service");
       const pushService = createPushNotificationService(fastify);
 
       // Unregister device token
       await pushService.unregisterDeviceToken(token);
 
-      fastify.log.info({ token: token.substring(0, 20) }, 'Device token unregistered');
+      fastify.log.info(
+        { token: token.substring(0, 20) },
+        "Device token unregistered",
+      );
 
       return reply.send({
-        message: 'Device token unregistered successfully',
+        message: "Device token unregistered successfully",
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to unregister device token');
+      fastify.log.error({ error }, "Failed to unregister device token");
       return reply.status(500).send({
-        error: 'Failed to unregister device token',
+        error: "Failed to unregister device token",
       });
     }
   });
@@ -432,32 +469,31 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       eventType: string;
       data: Record<string, any>;
     };
-  }>('/notifications/test', async (request, reply) => {
+  }>("/notifications/test", async (request, reply) => {
     try {
       const { userId, eventType, data } = request.body;
 
       // Import notification service
-      const { createNotificationService } = await import(
-        '../services/notification.service'
-      );
+      const { createNotificationService } =
+        await import("../services/notification.service");
       const notificationService = createNotificationService(fastify);
 
       // Send test notification
       await notificationService.sendNotification({
-        tenantId: 'default-tenant-id', // TODO: Get from auth context
+        tenantId: "default-tenant-id", // TODO: Get from auth context
         userId,
         templateCode: eventType,
         variables: data,
-        channels: ['email', 'push'], // Default channels for test
+        channels: ["email", "push"], // Default channels for test
       });
 
       return reply.send({
-        message: 'Test notification sent successfully',
+        message: "Test notification sent successfully",
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to send test notification');
+      fastify.log.error({ error }, "Failed to send test notification");
       return reply.status(500).send({
-        error: 'Failed to send test notification',
+        error: "Failed to send test notification",
       });
     }
   });
@@ -468,30 +504,30 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
  */
 function getDefaultPreferences() {
   const eventTypes: Array<
-    | 'work_order_assigned'
-    | 'work_order_overdue'
-    | 'work_order_completed'
-    | 'alert_critical'
-    | 'alert_high'
-    | 'alert_medium'
-    | 'alert_acknowledged'
-    | 'alert_resolved'
-    | 'asset_down'
-    | 'maintenance_due'
+    | "work_order_assigned"
+    | "work_order_overdue"
+    | "work_order_completed"
+    | "alert_critical"
+    | "alert_high"
+    | "alert_medium"
+    | "alert_acknowledged"
+    | "alert_resolved"
+    | "asset_down"
+    | "maintenance_due"
   > = [
-      'work_order_assigned',
-      'work_order_overdue',
-      'work_order_completed',
-      'alert_critical',
-      'alert_high',
-      'alert_medium',
-      'alert_acknowledged',
-      'alert_resolved',
-      'asset_down',
-      'maintenance_due',
-    ];
+    "work_order_assigned",
+    "work_order_overdue",
+    "work_order_completed",
+    "alert_critical",
+    "alert_high",
+    "alert_medium",
+    "alert_acknowledged",
+    "alert_resolved",
+    "asset_down",
+    "maintenance_due",
+  ];
 
-  const channels: Array<'email' | 'sms' | 'push'> = ['email', 'sms', 'push'];
+  const channels: Array<"email" | "sms" | "push"> = ["email", "sms", "push"];
 
   const defaults = [];
 
@@ -499,11 +535,11 @@ function getDefaultPreferences() {
     for (const channel of channels) {
       // Default: Enable email and push, disable SMS (to avoid costs)
       const isEnabled =
-        (channel === 'email' || channel === 'push') &&
-        (eventType === 'work_order_assigned' ||
-          eventType === 'work_order_overdue' ||
-          eventType === 'alert_critical' ||
-          eventType === 'alert_high');
+        (channel === "email" || channel === "push") &&
+        (eventType === "work_order_assigned" ||
+          eventType === "work_order_overdue" ||
+          eventType === "alert_critical" ||
+          eventType === "alert_high");
 
       defaults.push({
         eventType,
