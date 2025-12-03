@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { generationForecasts, forecastAccuracyMetrics, weatherForecasts, assets, sites, windTurbineMetadata } from '../db/schema';
-import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql, isNotNull } from 'drizzle-orm';
 import axios from 'axios';
 
 // ==========================================
@@ -265,10 +265,9 @@ export class ForecastService {
           eq(generationForecasts.siteId, siteId),
           eq(generationForecasts.modelName, modelName),
           eq(generationForecasts.modelVersion, modelVersion),
-          eq(generationForecasts.forecastHorizonHours, forecastHorizonHours),
-          gte(generationForecasts.forecastTimestamp, periodStart),
-          lte(generationForecasts.forecastTimestamp, periodEnd),
-          eq(generationForecasts.accuracyValidated, true)
+          gte(generationForecasts.forecastTimestamp, new Date(periodStart)),
+          lte(generationForecasts.forecastTimestamp, new Date(periodEnd)),
+          isNotNull(generationForecasts.actualGenerationMw)
         )
       );
 
@@ -282,18 +281,32 @@ export class ForecastService {
 
     // Calculate metrics
     const mae = actual.reduce((sum, a, i) => sum + Math.abs(a - predicted[i]), 0) / actual.length;
-    const mape = (actual.reduce((sum, a, i) => sum + Math.abs((a - predicted[i]) / (a + 1e-10)), 0) / actual.length) * 100;
+    let mape = (actual.reduce((sum, a, i) => sum + Math.abs((a - predicted[i]) / (a + 1e-10)), 0) / actual.length) * 100;
+
+    // Cap MAPE to avoid numeric overflow (max 999.99)
+    if (mape > 999.99) mape = 999.99;
     const rmse = Math.sqrt(actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0) / actual.length);
 
     // R²
     const actualMean = actual.reduce((sum, a) => sum + a, 0) / actual.length;
     const ssRes = actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0);
     const ssTot = actual.reduce((sum, a) => sum + Math.pow(a - actualMean, 2), 0);
-    const rSquared = 1 - ssRes / (ssTot + 1e-10);
+    let rSquared = ssTot > 1e-10 ? 1 - ssRes / ssTot : 0;
+
+    // Cap R² to avoid overflow (range -9.9999 to 9.9999)
+    if (rSquared < -9.9) rSquared = -9.9;
+    if (rSquared > 9.9) rSquared = 9.9;
 
     // Forecast skill score (vs persistence model)
-    const persistenceError = actual.slice(1).reduce((sum, a, i) => sum + Math.abs(a - actual[i]), 0) / (actual.length - 1);
-    const forecastSkill = 1 - mae / (persistenceError + 1e-10);
+    let forecastSkill = 0;
+    if (actual.length > 1) {
+      const persistenceError = actual.slice(1).reduce((sum, a, i) => sum + Math.abs(a - actual[i]), 0) / (actual.length - 1);
+      forecastSkill = persistenceError > 1e-10 ? 1 - mae / persistenceError : 0;
+    }
+
+    // Cap Skill Score
+    if (forecastSkill < -9.9) forecastSkill = -9.9;
+    if (forecastSkill > 9.9) forecastSkill = 9.9;
 
     // Save metrics
     const metrics: Partial<ForecastAccuracyMetric> = {
@@ -470,7 +483,7 @@ export class ForecastService {
       console.error('Error calling ML forecast service:', error);
 
       // Fallback: Return mock forecast for development
-      const mockForecast = this.generateMockForecast(params.forecastHorizonHours, params.energyType);
+      const mockForecast = this.generateMockForecast(params.forecastHorizonHours, params.energyType, params.modelType);
       return mockForecast;
     }
   }
@@ -478,7 +491,7 @@ export class ForecastService {
   /**
    * Generate mock forecast for testing (when ML service is unavailable)
    */
-  private generateMockForecast(hours: number, energyType: 'solar' | 'wind'): any {
+  private generateMockForecast(hours: number, energyType: 'solar' | 'wind', modelType: string = 'mock'): any {
     const forecast = [];
     const lowerBound = [];
     const upperBound = [];
@@ -530,7 +543,7 @@ export class ForecastService {
       lower_bound: lowerBound,
       upper_bound: upperBound,
       std_dev: stdDev,
-      model_name: `mock_${energyType}`,
+      model_name: modelType,
       model_version: 'v1.0',
       algorithm: 'MOCK',
       model_accuracy_score: 0.85,

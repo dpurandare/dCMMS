@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createETLSchedulerService } from '../services/etl-scheduler.service';
 import { createClickHouseETLService } from '../services/clickhouse-etl.service';
 
@@ -17,6 +18,8 @@ const calculateKPISchema = z.object({
  * Admin endpoints for managing ClickHouse ETL and analytics
  */
 export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const etlScheduler = createETLSchedulerService(fastify);
   const clickhouseETL = createClickHouseETLService(fastify);
 

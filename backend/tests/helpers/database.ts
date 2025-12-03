@@ -37,11 +37,11 @@ export class DatabaseHelper {
 
     const tables = [
       'audit_logs',
-      'work_order_parts',
+      // 'work_order_parts',
       'work_order_tasks',
       'work_orders',
       'alerts',
-      'parts',
+      // 'parts',
       'assets',
       'sites',
       'users',
@@ -67,7 +67,9 @@ export class DatabaseHelper {
    * Insert a record
    */
   async insert(table: string, data: Record<string, any>): Promise<any> {
-    const keys = Object.keys(data);
+    const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
+    const keys = Object.keys(data).map(toSnakeCase);
     const values = Object.values(data);
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
 

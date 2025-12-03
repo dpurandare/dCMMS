@@ -7,15 +7,13 @@ module.exports = {
   testEnvironment: 'node',
 
   // Roots
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  // Roots
+  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/test'],
 
   // TypeScript transformation
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
+      tsconfig: 'tsconfig.test.json',
     }],
   },
 
@@ -40,7 +38,7 @@ module.exports = {
 
   coverageDirectory: 'coverage',
 
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 80,
       functions: 80,

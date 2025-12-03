@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { db } from '../db';
 import { reportDefinitions } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -55,6 +56,8 @@ const executeReportSchema = z.object({
  * Create, manage, and execute custom reports
  */
 export default async function reportRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const reportBuilder = createReportBuilderService(fastify);
 
   // ==========================================

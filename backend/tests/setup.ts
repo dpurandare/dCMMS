@@ -3,13 +3,14 @@
  * Runs before each test file
  */
 
-import 'reflect-metadata'; // Required for TypeORM decorators
+// import 'reflect-metadata'; // Required for TypeORM decorators
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test_user:test_password@localhost:5432/dcmms_test';
-process.env.REDIS_HOST = process.env.TEST_REDIS_HOST || 'localhost';
-process.env.REDIS_PORT = process.env.TEST_REDIS_PORT || '6379';
+process.env.REDIS_HOST = process.env.REDIS_HOST = 'localhost';
+process.env.REDIS_PORT = '6379';
+process.env.REDIS_PASSWORD = 'redis_password_dev'; process.env.TEST_REDIS_PORT || '6379';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
 process.env.LOG_LEVEL = 'error'; // Suppress logs during tests
 
@@ -53,26 +54,24 @@ expect.extend({
 });
 
 // Declare custom matchers for TypeScript
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toBeValidUUID(): R;
-      toBeISO8601DateString(): R;
-      toHaveStatus(expected: number): R;
-    }
+declare namespace jest {
+  interface Matchers<R> {
+    toBeValidUUID(): R;
+    toBeISO8601DateString(): R;
+    toHaveStatus(expected: number): R;
   }
 }
 
 // Mock external services by default
-jest.mock('@sendgrid/mail');
-jest.mock('twilio');
-jest.mock('aws-sdk');
+// jest.mock('@sendgrid/mail');
+// jest.mock('twilio');
+// jest.mock('aws-sdk');
 
 // Global test utilities
-global.sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+(global as any).sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Suppress console during tests (can be overridden per test)
-global.console = {
+(global as any).console = {
   ...console,
   log: jest.fn(),
   debug: jest.fn(),

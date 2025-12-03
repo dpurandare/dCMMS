@@ -1,122 +1,110 @@
 import { FastifyPluginAsync } from 'fastify';
+import { ZodTypeProvider, validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { forecastService } from '../services/forecast.service';
 
 const forecastRoutes: FastifyPluginAsync = async (server) => {
+  server.setValidatorCompiler(validatorCompiler);
+  server.setSerializerCompiler(serializerCompiler);
+  const app = server.withTypeProvider<ZodTypeProvider>();
+
   // POST /api/v1/forecasts/generation/generate
-  server.post(
+  app.post(
     '/generation/generate',
     {
       schema: {
         description: 'Generate power generation forecast using ML models',
         tags: ['forecasts'],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['siteId', 'forecastHorizonHours'],
-          properties: {
-            siteId: { type: 'string', format: 'uuid' },
-            assetId: { type: 'string', format: 'uuid' },
-            forecastHorizonHours: { type: 'number', minimum: 1, maximum: 168 }, // Max 7 days
-            modelType: { type: 'string', enum: ['arima', 'sarima', 'prophet'] },
-            energyType: { type: 'string', enum: ['solar', 'wind'] },
-          },
-        },
+        body: z.object({
+          siteId: z.string().uuid(),
+          assetId: z.string().uuid().optional(),
+          forecastHorizonHours: z.number().min(1).max(168), // Max 7 days
+          modelType: z.enum(['arima', 'sarima', 'prophet']).optional(),
+          energyType: z.enum(['solar', 'wind']).optional(),
+        }),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              message: { type: 'string' },
-              forecastCount: { type: 'number' },
-              forecasts: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    forecastTimestamp: { type: 'string', format: 'date-time' },
-                    predictedGenerationMw: { type: 'number' },
-                    confidenceIntervalLowerMw: { type: 'number' },
-                    confidenceIntervalUpperMw: { type: 'number' },
-                  },
-                },
-              },
-            },
-          },
+          200: z.object({
+            message: z.string(),
+            forecastCount: z.number(),
+            forecasts: z.array(
+              z.object({
+                id: z.string(),
+                forecastTimestamp: z.string(), // Date string
+                predictedGenerationMw: z.number(),
+                confidenceIntervalLowerMw: z.number().optional(),
+                confidenceIntervalUpperMw: z.number().optional(),
+              })
+            ),
+          }),
         },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const body = request.body as any;
+      const { siteId, assetId, forecastHorizonHours, modelType, energyType } = request.body as any;
 
       const forecasts = await forecastService.generateForecast({
-        siteId: body.siteId,
-        assetId: body.assetId,
-        forecastHorizonHours: body.forecastHorizonHours,
-        modelType: body.modelType || 'sarima',
-        energyType: body.energyType,
+        siteId,
+        assetId,
+        forecastHorizonHours,
+        modelType: modelType || 'sarima',
+        energyType,
       });
 
       return reply.code(200).send({
         message: 'Forecast generated successfully',
         forecastCount: forecasts.length,
-        forecasts,
+        forecasts: forecasts.map(f => ({
+          ...f,
+          forecastTimestamp: f.forecastTimestamp.toISOString(), // Ensure string for Zod
+          confidenceIntervalLowerMw: f.confidenceIntervalLowerMw ?? undefined,
+          confidenceIntervalUpperMw: f.confidenceIntervalUpperMw ?? undefined
+        })),
       });
     }
   );
 
   // GET /api/v1/forecasts/generation/:siteId
-  server.get(
+  app.get(
     '/generation/:siteId',
     {
       schema: {
         description: 'Get generation forecasts for a site',
         tags: ['forecasts'],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['siteId'],
-          properties: {
-            siteId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            assetId: { type: 'string', format: 'uuid' },
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            activeOnly: { type: 'boolean', default: true },
-          },
-        },
+        params: z.object({
+          siteId: z.string().uuid(),
+        }),
+        querystring: z.object({
+          assetId: z.string().uuid().optional(),
+          startDate: z.string().datetime().optional(),
+          endDate: z.string().datetime().optional(),
+          activeOnly: z.boolean().optional().default(true), // Zod boolean coercion might be needed if query param is string "true"
+          // Fastify handles coercion if configured? fastify-type-provider-zod usually handles it.
+          // But for query strings, "true" is a string.
+          // Let's use z.preprocess or z.string().transform if needed.
+          // But usually fastify-type-provider-zod handles basic coercion.
+        }),
         response: {
-          200: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                siteId: { type: 'string' },
-                forecastTimestamp: { type: 'string', format: 'date-time' },
-                predictedGenerationMw: { type: 'number' },
-                actualGenerationMw: { type: 'number' },
-                modelName: { type: 'string' },
-                algorithm: { type: 'string' },
-              },
-            },
-          },
+          200: z.array(
+            z.object({
+              id: z.string(),
+              siteId: z.string(),
+              forecastTimestamp: z.string(),
+              predictedGenerationMw: z.number(),
+              actualGenerationMw: z.number().nullable().optional(),
+              modelName: z.string(),
+              algorithm: z.string(),
+            })
+          ),
         },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const { siteId } = request.params as { siteId: string };
-      const { assetId, startDate, endDate, activeOnly } = request.query as {
-        assetId?: string;
-        startDate?: string;
-        endDate?: string;
-        activeOnly?: boolean;
-      };
+      const { siteId } = request.params as any;
+      const { assetId, startDate, endDate, activeOnly } = request.query as any;
 
       const forecasts = await forecastService.getForecasts(
         siteId,
@@ -126,46 +114,39 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         activeOnly !== false
       );
 
-      return reply.code(200).send(forecasts);
+      return reply.code(200).send(forecasts.map(f => ({
+        ...f,
+        forecastTimestamp: f.forecastTimestamp.toISOString(),
+        actualGenerationMw: f.actualGenerationMw ?? null
+      })));
     }
   );
 
   // PUT /api/v1/forecasts/generation/:forecastId/actual
-  server.put(
+  app.put(
     '/generation/:forecastId/actual',
     {
       schema: {
         description: 'Update forecast with actual generation value',
         tags: ['forecasts'],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['forecastId'],
-          properties: {
-            forecastId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['actualGenerationMw'],
-          properties: {
-            actualGenerationMw: { type: 'number', minimum: 0 },
-          },
-        },
+        params: z.object({
+          forecastId: z.string().uuid(),
+        }),
+        body: z.object({
+          actualGenerationMw: z.number().min(0),
+        }),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              message: { type: 'string' },
-            },
-          },
+          200: z.object({
+            message: z.string(),
+          }),
         },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const { forecastId } = request.params as { forecastId: string };
-      const { actualGenerationMw } = request.body as { actualGenerationMw: number };
+      const { forecastId } = request.params as any;
+      const { actualGenerationMw } = request.body as any;
 
       await forecastService.updateActualGeneration(forecastId, actualGenerationMw);
 
@@ -176,53 +157,46 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
   );
 
   // POST /api/v1/forecasts/accuracy/calculate
-  server.post(
+  app.post(
     '/accuracy/calculate',
     {
       schema: {
         description: 'Calculate forecast accuracy metrics for a model over a time period',
         tags: ['forecasts'],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['siteId', 'modelName', 'modelVersion', 'periodStart', 'periodEnd', 'forecastHorizonHours'],
-          properties: {
-            siteId: { type: 'string', format: 'uuid' },
-            modelName: { type: 'string' },
-            modelVersion: { type: 'string' },
-            periodStart: { type: 'string', format: 'date-time' },
-            periodEnd: { type: 'string', format: 'date-time' },
-            forecastHorizonHours: { type: 'number' },
-          },
-        },
+        body: z.object({
+          siteId: z.string().uuid(),
+          modelName: z.string(),
+          modelVersion: z.string(),
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          forecastHorizonHours: z.number(),
+        }),
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              modelName: { type: 'string' },
-              meanAbsolutePercentageError: { type: 'number' },
-              rootMeanSquaredErrorMw: { type: 'number' },
-              rSquared: { type: 'number' },
-              forecastSkillScore: { type: 'number' },
-              numForecasts: { type: 'number' },
-              numValidated: { type: 'number' },
-            },
-          },
+          200: z.object({
+            id: z.string().optional(), // ID might be missing if not saved? Service returns metrics object.
+            modelName: z.string(),
+            meanAbsolutePercentageError: z.number(),
+            rootMeanSquaredErrorMw: z.number(),
+            rSquared: z.number(),
+            forecastSkillScore: z.number(),
+            numForecasts: z.number(),
+            numValidated: z.number(),
+          }),
         },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const body = request.body as any;
+      const { siteId, modelName, modelVersion, periodStart, periodEnd, forecastHorizonHours } = request.body as any;
 
       const metrics = await forecastService.calculateAccuracyMetrics(
-        body.siteId,
-        body.modelName,
-        body.modelVersion,
-        new Date(body.periodStart),
-        new Date(body.periodEnd),
-        body.forecastHorizonHours
+        siteId,
+        modelName,
+        modelVersion,
+        new Date(periodStart),
+        new Date(periodEnd),
+        forecastHorizonHours
       );
 
       return reply.code(200).send(metrics);
@@ -230,53 +204,37 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
   );
 
   // GET /api/v1/forecasts/accuracy/:siteId
-  server.get(
+  app.get(
     '/accuracy/:siteId',
     {
       schema: {
         description: 'Get forecast accuracy metrics for a site',
         tags: ['forecasts'],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['siteId'],
-          properties: {
-            siteId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            modelName: { type: 'string' },
-            limit: { type: 'number', default: 10 },
-          },
-        },
+        params: z.object({
+          siteId: z.string().uuid(),
+        }),
+        querystring: z.object({
+          modelName: z.string().optional(),
+          limit: z.number().optional().default(10), // Zod coercion needed?
+        }),
         response: {
-          200: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                modelName: { type: 'string' },
-                meanAbsolutePercentageError: { type: 'number' },
-                rSquared: { type: 'number' },
-                periodStart: { type: 'string', format: 'date-time' },
-                periodEnd: { type: 'string', format: 'date-time' },
-              },
-            },
-          },
+          200: z.array(
+            z.object({
+              id: z.string(),
+              modelName: z.string(),
+              meanAbsolutePercentageError: z.number(),
+              rSquared: z.number(),
+              periodStart: z.string(), // Date string
+              periodEnd: z.string(), // Date string
+            })
+          ),
         },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const { siteId } = request.params as { siteId: string };
-      const { modelName, limit } = request.query as { modelName?: string; limit?: number };
-
-      // Query accuracy metrics from database
-      // (Implementation would query forecastAccuracyMetrics table)
-      // For now, return empty array
+      // Implementation placeholder
       return reply.code(200).send([]);
     }
   );

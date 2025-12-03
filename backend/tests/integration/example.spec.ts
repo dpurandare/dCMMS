@@ -27,10 +27,12 @@ describe('Example Integration Test Suite', () => {
     await db.disconnect();
   });
 
+  let defaultTenant: any;
+
   beforeEach(async () => {
     // Clean database before each test
     await db.cleanAll();
-    await db.seedDefaultTenant();
+    defaultTenant = await db.seedDefaultTenant();
     UserFactory.reset();
   });
 
@@ -41,7 +43,7 @@ describe('Example Integration Test Suite', () => {
         url: '/health',
       });
 
-      expect(response).toHaveStatus(200);
+      expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
       expect(body).toHaveProperty('status', 'ok');
@@ -54,6 +56,7 @@ describe('Example Integration Test Suite', () => {
       // Create test user
       const user = await UserFactory.build({
         email: 'test@example.com',
+        tenantId: defaultTenant.id,
       });
 
       // Insert into database
@@ -66,13 +69,15 @@ describe('Example Integration Test Suite', () => {
       expect(users[0]).toMatchObject({
         email: 'test@example.com',
         role: 'viewer',
-        isActive: true,
+        is_active: true,
       });
     });
 
     it('should count users correctly', async () => {
       // Create multiple users
-      const users = await UserFactory.buildList(5);
+      const users = await UserFactory.buildList(5, {
+        tenantId: defaultTenant.id,
+      });
 
       for (const user of users) {
         await db.insert('users', user);

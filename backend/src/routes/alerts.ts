@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { db } from '../db';
 import { alerts } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -35,6 +36,8 @@ const suppressAlertSchema = z.object({
 });
 
 export default async function alertRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   // Initialize alert notification handler
   const alertNotificationHandler = createAlertNotificationHandler(fastify);
 

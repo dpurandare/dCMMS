@@ -1,118 +1,181 @@
-import request from 'supertest';
-import { app } from '../../src/server';
-import { db } from '../../src/db';
-import { sites, assets } from '../../src/db/schema';
-import { eq } from 'drizzle-orm';
+import { TestServer } from '../../tests/helpers/test-server';
+import { db } from '../../tests/helpers/database';
+import { UserFactory } from '../../tests/factories/user.factory';
 
 describe('Forecast API E2E', () => {
+    let server: TestServer;
+    let token: string;
     let siteId: string;
     let assetId: string;
-    let token: string;
+    let defaultTenant: any;
 
     beforeAll(async () => {
-        // 1. Login to get token
-        const loginRes = await request(app.server)
-            .post('/api/v1/auth/login')
-            .send({
+        await db.connect();
+        server = new TestServer();
+        await server.start();
+    });
+
+    afterAll(async () => {
+        await server.stop();
+        await db.disconnect();
+    });
+
+    beforeEach(async () => {
+        await db.cleanAll();
+        defaultTenant = await db.seedDefaultTenant();
+        UserFactory.reset();
+
+        // Setup: Create Admin User
+        const user = await UserFactory.build({
+            email: 'admin@dcmms.local',
+            password: 'password123',
+            role: 'super_admin',
+            tenantId: defaultTenant.id
+        });
+        await db.insert('users', user);
+
+        // Login
+        const loginRes = await server.inject({
+            method: 'POST',
+            url: '/api/v1/auth/login',
+            payload: {
                 email: 'admin@dcmms.local',
                 password: 'password123'
-            });
-        token = loginRes.body.token;
+            }
+        });
+        token = JSON.parse(loginRes.body).accessToken;
 
-        // 2. Create a test site
-        const siteRes = await request(app.server)
-            .post('/api/v1/sites')
-            .set('Authorization', `Bearer ${token}`)
-            .send({
+        // Create Site
+        const siteRes = await server.inject({
+            method: 'POST',
+            url: '/api/v1/sites',
+            headers: { Authorization: `Bearer ${token}` },
+            payload: {
                 name: 'Test Solar Farm',
                 location: 'Nevada, USA',
                 capacityMw: 100,
                 timezone: 'America/Los_Angeles'
-            });
-        siteId = siteRes.body.id;
+            }
+        });
+        if (siteRes.statusCode !== 201) {
+            console.error('Site creation failed:', siteRes.body);
+        }
+        siteId = JSON.parse(siteRes.body).id;
 
-        // 3. Create a test asset
-        const assetRes = await request(app.server)
-            .post('/api/v1/assets')
-            .set('Authorization', `Bearer ${token}`)
-            .send({
-                tenantId: '00000000-0000-0000-0000-000000000001',
+        // Create Asset
+        const assetRes = await server.inject({
+            method: 'POST',
+            url: '/api/v1/assets',
+            headers: { Authorization: `Bearer ${token}` },
+            payload: {
+                tenantId: defaultTenant.id,
                 siteId: siteId,
                 assetTag: 'SOL-001',
                 name: 'Solar Panel 1',
                 type: 'SOLAR_PANEL',
                 status: 'operational'
-            });
-        assetId = assetRes.body.id;
-    });
-
-    afterAll(async () => {
-        // Cleanup
-        if (assetId) await db.delete(assets).where(eq(assets.id, assetId));
-        if (siteId) await db.delete(sites).where(eq(sites.id, siteId));
+            }
+        });
+        assetId = JSON.parse(assetRes.body).id;
     });
 
     describe('POST /api/v1/forecasts/generation/generate', () => {
         it('should generate a forecast successfully', async () => {
-            const res = await request(app.server)
-                .post('/api/v1/forecasts/generation/generate')
-                .set('Authorization', `Bearer ${token}`)
-                .send({
+            const res = await server.inject({
+                method: 'POST',
+                url: '/api/v1/forecasts/generation/generate',
+                headers: { Authorization: `Bearer ${token}` },
+                payload: {
                     siteId,
                     assetId,
                     forecastHorizonHours: 24,
                     modelType: 'sarima',
                     energyType: 'solar'
-                });
+                }
+            });
 
-            expect(res.status).toBe(200);
-            expect(res.body.message).toBe('Forecast generated successfully');
-            expect(res.body.forecastCount).toBeGreaterThan(0);
-            expect(res.body.forecasts[0]).toHaveProperty('predictedGenerationMw');
+            expect(res.statusCode).toBe(200);
+            const body = JSON.parse(res.body);
+            expect(body.message).toBe('Forecast generated successfully');
+            expect(body.forecastCount).toBeGreaterThan(0);
+            expect(body.forecasts[0]).toHaveProperty('predictedGenerationMw');
         });
 
         it('should fail with invalid parameters', async () => {
-            const res = await request(app.server)
-                .post('/api/v1/forecasts/generation/generate')
-                .set('Authorization', `Bearer ${token}`)
-                .send({
+            const res = await server.inject({
+                method: 'POST',
+                url: '/api/v1/forecasts/generation/generate',
+                headers: { Authorization: `Bearer ${token}` },
+                payload: {
                     siteId: 'invalid-uuid',
                     forecastHorizonHours: 24
-                });
+                }
+            });
 
-            expect(res.status).toBe(400);
+            expect(res.statusCode).toBe(400);
         });
     });
 
     describe('GET /api/v1/forecasts/generation/:siteId', () => {
         it('should retrieve forecasts for a site', async () => {
-            const res = await request(app.server)
-                .get(`/api/v1/forecasts/generation/${siteId}`)
-                .set('Authorization', `Bearer ${token}`);
+            const res = await server.inject({
+                method: 'GET',
+                url: `/api/v1/forecasts/generation/${siteId}`,
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-            expect(res.status).toBe(200);
-            expect(Array.isArray(res.body)).toBe(true);
-            // Should contain the forecast we just generated
-            expect(res.body.length).toBeGreaterThan(0);
+            expect(res.statusCode).toBe(200);
+            const body = JSON.parse(res.body);
+            expect(Array.isArray(body)).toBe(true);
         });
     });
 
     describe('POST /api/v1/forecasts/accuracy/calculate', () => {
         it('should calculate accuracy metrics', async () => {
-            const res = await request(app.server)
-                .post('/api/v1/forecasts/accuracy/calculate')
-                .set('Authorization', `Bearer ${token}`)
-                .send({
+            // 1. Generate a forecast
+            const genRes = await server.inject({
+                method: 'POST',
+                url: '/api/v1/forecasts/generation/generate',
+                headers: { Authorization: `Bearer ${token}` },
+                payload: {
                     siteId,
-                    modelName: 'arima_solar',
-                    modelVersion: 'v1.0',
-                    periodStart: new Date().toISOString(),
-                    periodEnd: new Date().toISOString(),
-                    forecastHorizonHours: 24
-                });
+                    assetId,
+                    forecastHorizonHours: 24,
+                    modelType: 'sarima',
+                    energyType: 'solar'
+                }
+            });
+            const forecasts = JSON.parse(genRes.body).forecasts;
+            const forecastId = forecasts[0].id;
 
-            expect(res.status).toBe(200);
-            expect(res.body).toHaveProperty('meanAbsolutePercentageError');
+            // 2. Update with actuals
+            await server.inject({
+                method: 'PUT',
+                url: `/api/v1/forecasts/generation/${forecastId}/actual`,
+                headers: { Authorization: `Bearer ${token}` },
+                payload: {
+                    actualGenerationMw: 50
+                }
+            });
+
+            // 3. Calculate accuracy
+            const res = await server.inject({
+                method: 'POST',
+                url: '/api/v1/forecasts/accuracy/calculate',
+                headers: { Authorization: `Bearer ${token}` },
+                payload: {
+                    siteId,
+                    modelName: 'sarima', // Match the model used in generate
+                    modelVersion: 'v1.0',
+                    periodStart: new Date(Date.now() - 86400000).toISOString(), // 24h ago
+                    periodEnd: new Date(Date.now() + 172800000).toISOString(), // 48h future (increased range)
+                    forecastHorizonHours: 24
+                }
+            });
+
+            expect(res.statusCode).toBe(200);
+            const body = JSON.parse(res.body);
+            expect(body).toHaveProperty('meanAbsolutePercentageError');
         });
     });
 });

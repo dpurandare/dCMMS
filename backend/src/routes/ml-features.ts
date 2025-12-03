@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createFeastFeatureService } from '../services/feast-feature.service';
 
 // Validation schemas
@@ -16,6 +17,9 @@ const triggerMaterializationSchema = z.object({
  * Feast feature store integration for ML model serving
  */
 export default async function mlFeatureRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
+
   const featureService = createFeastFeatureService(fastify);
 
   // ==========================================

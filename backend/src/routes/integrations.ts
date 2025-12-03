@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createSlackProviderService } from '../services/slack-provider.service';
 
 // Validation schemas
@@ -26,6 +27,8 @@ const slackInteractionSchema = z.object({
 });
 
 export default async function integrationRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const slackService = createSlackProviderService(fastify);
 
   // Get Slack OAuth authorization URL

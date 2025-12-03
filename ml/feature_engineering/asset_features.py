@@ -9,17 +9,18 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 
-def calculate_asset_age(created_at: pd.Series) -> pd.Series:
+def calculate_asset_age(created_at: pd.Series, reference_date: Optional[pd.Timestamp] = None) -> pd.Series:
     """
     Calculate asset age in months
 
     Args:
         created_at: Asset creation timestamp
+        reference_date: Reference date for age calculation (default: now)
 
     Returns:
         Age in months
     """
-    now = pd.Timestamp.now()
+    now = reference_date if reference_date is not None else pd.Timestamp.now()
     age_delta = now - pd.to_datetime(created_at)
     age_months = (age_delta.dt.days / 30.44).astype(int)
     return age_months.clip(lower=0)

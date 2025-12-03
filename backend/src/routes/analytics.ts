@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createKPICalculationService } from '../services/kpi-calculation.service';
 
 // Validation schemas
@@ -14,6 +15,8 @@ const kpiQuerySchema = z.object({
  * Public endpoints for analytics dashboards and KPIs
  */
 export default async function analyticsRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const kpiService = createKPICalculationService(fastify);
 
   // Get KPIs for dashboard

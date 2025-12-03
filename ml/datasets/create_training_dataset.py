@@ -9,13 +9,16 @@ import os
 import sys
 import argparse
 import yaml
+import logging
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import sqlalchemy
+from sqlalchemy import create_engine, text
 from clickhouse_driver import Client
 
 # Add parent directory to path for imports
@@ -79,28 +82,29 @@ class TrainingDatasetBuilder:
         query = """
         SELECT
             a.id AS asset_id,
-            a.asset_type,
+            a.type AS asset_type,
+            a.created_at,
             a.status,
-            a.installed_date,
+            a.installation_date,
             a.site_id,
             a.manufacturer,
             a.model,
             a.serial_number,
-            a.capacity_kw AS installed_capacity_kw,
+            NULL AS installed_capacity_kw,
             COALESCE(
-                (SELECT health_score FROM asset_health
+                (SELECT score FROM asset_health_scores
                  WHERE asset_id = a.id
                  ORDER BY calculated_at DESC LIMIT 1),
                 70.0
             ) AS health_score,
             COALESCE(
-                (SELECT COUNT(*) FROM alarms
+                (SELECT COUNT(*) FROM alerts
                  WHERE asset_id = a.id
                  AND created_at >= CURRENT_DATE - INTERVAL '30 days'),
                 0
             ) AS recent_alarms_30d,
             COALESCE(
-                (SELECT COUNT(*) FROM alarms
+                (SELECT COUNT(*) FROM alerts
                  WHERE asset_id = a.id
                  AND severity = 'critical'
                  AND created_at >= CURRENT_DATE - INTERVAL '30 days'),
@@ -108,8 +112,8 @@ class TrainingDatasetBuilder:
             ) AS recent_critical_alarms_30d
         FROM assets a
         WHERE a.status != 'decommissioned'
-        AND a.installed_date IS NOT NULL
-        AND a.installed_date < %(end_date)s
+        AND a.installation_date IS NOT NULL
+        AND a.installation_date < %(end_date)s
         ORDER BY a.id
         """
 
@@ -137,15 +141,15 @@ class TrainingDatasetBuilder:
         SELECT
             wo.id AS work_order_id,
             wo.asset_id,
-            wo.work_order_type,
+            wo.type AS work_order_type,
             wo.priority,
             wo.status,
             wo.created_at,
             wo.scheduled_start,
             wo.actual_start,
-            wo.completed_at,
+            wo.actual_end AS completed_at,
             wo.description,
-            EXTRACT(EPOCH FROM (wo.completed_at - wo.actual_start)) / 3600.0 AS duration_hours
+            EXTRACT(EPOCH FROM (wo.actual_end - wo.actual_start)) / 3600.0 AS duration_hours
         FROM work_orders wo
         WHERE wo.created_at >= %(start_date)s
         AND wo.created_at < %(end_date)s
@@ -285,13 +289,24 @@ class TrainingDatasetBuilder:
         """
         print("Creating features...")
 
+        # Aggregate work orders
+        print("  - Aggregating work orders...")
+        wo_stats = work_orders_df.groupby('asset_id').agg(
+            total_work_orders=('work_order_id', 'count'),
+            corrective_work_orders=('work_order_type', lambda x: (x == 'corrective').sum()),
+            preventive_work_orders=('work_order_type', lambda x: (x == 'preventive').sum())
+        ).reset_index()
+
+        # Merge into asset_df
+        asset_df_prep = asset_df.merge(wo_stats, on='asset_id', how='left')
+        
+        # Fill NaN for assets with no work orders
+        cols_to_fill = ['total_work_orders', 'corrective_work_orders', 'preventive_work_orders']
+        asset_df_prep[cols_to_fill] = asset_df_prep[cols_to_fill].fillna(0)
+
         # Asset features
         print("  - Asset features...")
-        asset_features = create_asset_features(
-            asset_df,
-            work_orders_df,
-            current_date=reference_date
-        )
+        asset_features = create_asset_features(asset_df_prep)
 
         # Telemetry features (per asset)
         print("  - Telemetry features...")
@@ -399,8 +414,6 @@ class TrainingDatasetBuilder:
                 random_state=random_state,
                 stratify=y
             )
-
-        print(f"  ✓ Train: {len(X_train)} samples ({1-test_size:.0%})")
         print(f"  ✓ Test: {len(X_test)} samples ({test_size:.0%})")
         print(f"  Train positive rate: {y_train.mean():.2%}")
         print(f"  Test positive rate: {y_test.mean():.2%}")
@@ -434,22 +447,49 @@ class TrainingDatasetBuilder:
         # Save train/test splits
         train_df = X_train.copy()
         train_df['target'] = y_train.values
+
+        # Convert UUID columns to strings for Parquet compatibility
+        for col in train_df.columns:
+            if train_df[col].dtype == 'object':
+                # Check if first non-null value is UUID
+                first_valid = train_df[col].dropna().iloc[0] if not train_df[col].dropna().empty else None
+                if isinstance(first_valid, uuid.UUID):
+                    train_df[col] = train_df[col].astype(str)
+
         train_df.to_parquet(version_dir / 'train.parquet', index=False)
 
         test_df = X_test.copy()
         test_df['target'] = y_test.values
+
+        # Convert UUID columns to strings for Parquet compatibility
+        for col in test_df.columns:
+            if test_df[col].dtype == 'object':
+                # Check if first non-null value is UUID
+                first_valid = test_df[col].dropna().iloc[0] if not test_df[col].dropna().empty else None
+                if isinstance(first_valid, uuid.UUID):
+                    test_df[col] = test_df[col].astype(str)
+
         test_df.to_parquet(version_dir / 'test.parquet', index=False)
 
         # Save metadata
         import json
         metadata_path = version_dir / 'metadata.json'
+        def default_converter(o):
+            if isinstance(o, datetime):
+                return o.isoformat()
+            if isinstance(o, (np.int64, np.int32, np.int16, np.int8,
+                            np.uint64, np.uint32, np.uint16, np.uint8)):
+                return int(o)
+            if isinstance(o, (np.float64, np.float32, np.float16)):
+                return float(o)
+            if isinstance(o, (bool, np.bool)):
+                return bool(o)
+            if isinstance(o, (np.ndarray,)):
+                return o.tolist()
+            raise TypeError(f'Object of type {o.__class__.__name__} is not JSON serializable')
+
         with open(metadata_path, 'w') as f:
-            # Convert datetime to string for JSON serialization
-            metadata_serializable = {
-                k: v.isoformat() if isinstance(v, datetime) else v
-                for k, v in metadata.items()
-            }
-            json.dump(metadata_serializable, f, indent=2)
+            json.dump(metadata, f, indent=2, default=default_converter)
 
         # Save feature names
         feature_names_path = version_dir / 'feature_names.txt'

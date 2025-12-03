@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createAuditLogService } from '../services/audit-log.service';
 
 // Validation schemas
@@ -28,6 +29,8 @@ const exportAuditLogsSchema = z.object({
  * Query and export tamper-proof audit logs for compliance
  */
 export default async function auditLogRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const auditService = createAuditLogService(fastify);
 
   // Hook to check admin permissions

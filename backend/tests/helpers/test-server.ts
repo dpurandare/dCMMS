@@ -2,8 +2,8 @@
  * Test server helper for integration tests
  */
 
-import Fastify, { FastifyInstance } from 'fastify';
-import { v4 as uuidv4 } from 'uuid';
+import { FastifyInstance } from 'fastify';
+import { buildServer } from '../../src/server';
 
 export class TestServer {
   private app: FastifyInstance | null = null;
@@ -13,10 +13,7 @@ export class TestServer {
    * Start test server
    */
   async start(): Promise<FastifyInstance> {
-    this.app = Fastify({
-      logger: false, // Disable logging in tests
-      genReqId: () => uuidv4(),
-    });
+    this.app = await buildServer();
 
     // Register plugins (will be implemented in Sprint 1)
     // await this.app.register(routes);

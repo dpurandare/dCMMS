@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 import { pool } from '../db';
 
 const healthRoutes: FastifyPluginAsync = async (server) => {
@@ -8,17 +9,6 @@ const healthRoutes: FastifyPluginAsync = async (server) => {
       schema: {
         description: 'Health check endpoint',
         tags: ['health'],
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              status: { type: 'string' },
-              timestamp: { type: 'string' },
-              uptime: { type: 'number' },
-              database: { type: 'string' },
-            },
-          },
-        },
       },
     },
     async (request, reply) => {

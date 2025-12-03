@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { db } from '../db';
 import { notificationPreferences, notificationHistory, deviceTokens } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -36,6 +37,9 @@ const deviceTokenSchema = z.object({
 });
 
 export default async function notificationRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
+
   // Get user notification preferences
   fastify.get<{
     Params: { userId: string };

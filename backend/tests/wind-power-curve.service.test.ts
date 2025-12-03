@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+// import { describe, it, expect } from 'vitest';
 import { windPowerCurveService, PowerCurveData } from '../src/services/wind-power-curve.service';
 
 describe('WindPowerCurveService', () => {

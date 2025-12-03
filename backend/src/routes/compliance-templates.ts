@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createComplianceTemplateService } from '../services/compliance-template.service';
 
 // Validation schemas
@@ -18,6 +19,8 @@ const validateReportSchema = z.object({
  * Manage compliance report templates and auto-population
  */
 export default async function complianceTemplateRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const complianceService = createComplianceTemplateService(fastify);
 
   // ==========================================

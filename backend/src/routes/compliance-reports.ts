@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
 import { createComplianceReportGenerationService } from '../services/compliance-report-generation.service';
 import { createAuditLogService } from '../services/audit-log.service';
 import { createReadStream, existsSync } from 'fs';
@@ -24,6 +25,8 @@ const updateStatusSchema = z.object({
  * Generate, list, and download compliance reports
  */
 export default async function complianceReportRoutes(fastify: FastifyInstance) {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
   const reportService = createComplianceReportGenerationService(fastify);
   const auditService = createAuditLogService(fastify);
 
