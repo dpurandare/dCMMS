@@ -1,7 +1,10 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createAuditLogService } from '../services/audit-log.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createAuditLogService } from "../services/audit-log.service";
 
 // Validation schemas
 const queryAuditLogsSchema = z.object({
@@ -37,10 +40,10 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
   const checkAdminPermission = async (request: any, reply: any) => {
     const userRole = request.user?.role;
 
-    if (userRole !== 'super_admin' && userRole !== 'tenant_admin') {
+    if (userRole !== "super_admin" && userRole !== "tenant_admin") {
       return reply.status(403).send({
-        error: 'Forbidden',
-        message: 'Only administrators can access audit logs',
+        error: "Forbidden",
+        message: "Only administrators can access audit logs",
       });
     }
   };
@@ -53,13 +56,13 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
   fastify.get<{
     Querystring: z.infer<typeof queryAuditLogsSchema>;
   }>(
-    '/audit-logs',
+    "/audit-logs",
     {
       preHandler: checkAdminPermission,
       schema: {
         querystring: queryAuditLogsSchema,
-        tags: ['Audit'],
-        description: 'Query audit logs (admin-only)',
+        tags: ["Audit"],
+        description: "Query audit logs (admin-only)",
       },
     },
     async (request, reply) => {
@@ -68,12 +71,20 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
-        const { userId, action, entityType, entityId, startDate, endDate, limit, offset } =
-          request.query;
+        const {
+          userId,
+          action,
+          entityType,
+          entityId,
+          startDate,
+          endDate,
+          limit,
+          offset,
+        } = request.query;
 
         const filters = {
           userId,
@@ -93,12 +104,12 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
           logs,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to query audit logs');
+        fastify.log.error({ error }, "Failed to query audit logs");
         return reply.status(500).send({
-          error: 'Failed to query audit logs',
+          error: "Failed to query audit logs",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -109,13 +120,13 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
   fastify.get<{
     Querystring: z.infer<typeof exportAuditLogsSchema>;
   }>(
-    '/audit-logs/export',
+    "/audit-logs/export",
     {
       preHandler: checkAdminPermission,
       schema: {
         querystring: exportAuditLogsSchema,
-        tags: ['Audit'],
-        description: 'Export audit logs to CSV (admin-only)',
+        tags: ["Audit"],
+        description: "Export audit logs to CSV (admin-only)",
       },
     },
     async (request, reply) => {
@@ -124,11 +135,12 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
-        const { userId, action, entityType, entityId, startDate, endDate } = request.query;
+        const { userId, action, entityType, entityId, startDate, endDate } =
+          request.query;
 
         const filters = {
           userId,
@@ -142,20 +154,23 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
         const csv = await auditService.exportToCSV(tenantId, filters);
 
         // Generate filename
-        const timestamp = new Date().toISOString().split('T')[0];
+        const timestamp = new Date().toISOString().split("T")[0];
         const fileName = `audit-logs-${timestamp}.csv`;
 
-        reply.header('Content-Type', 'text/csv');
-        reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
+        reply.header("Content-Type", "text/csv");
+        reply.header(
+          "Content-Disposition",
+          `attachment; filename="${fileName}"`,
+        );
 
         return reply.send(csv);
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to export audit logs');
+        fastify.log.error({ error }, "Failed to export audit logs");
         return reply.status(500).send({
-          error: 'Failed to export audit logs',
+          error: "Failed to export audit logs",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -169,7 +184,7 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
       endDate?: string;
     };
   }>(
-    '/audit-logs/statistics',
+    "/audit-logs/statistics",
     {
       preHandler: checkAdminPermission,
       schema: {
@@ -177,8 +192,8 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
           startDate: z.string().datetime().optional(),
           endDate: z.string().datetime().optional(),
         }),
-        tags: ['Audit'],
-        description: 'Get audit log statistics (admin-only)',
+        tags: ["Audit"],
+        description: "Get audit log statistics (admin-only)",
       },
     },
     async (request, reply) => {
@@ -187,7 +202,7 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -202,11 +217,11 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
 
         return reply.send(statistics);
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to get audit log statistics');
+        fastify.log.error({ error }, "Failed to get audit log statistics");
         return reply.status(500).send({
-          error: 'Failed to get audit log statistics',
+          error: "Failed to get audit log statistics",
         });
       }
-    }
+    },
   );
 }

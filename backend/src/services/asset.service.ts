@@ -1,6 +1,6 @@
-import { db } from '../db';
-import { assets } from '../db/schema';
-import { eq, and, desc, asc, sql, like, or, isNull } from 'drizzle-orm';
+import { db } from "../db";
+import { assets } from "../db/schema";
+import { eq, and, desc, asc, sql, like, or, isNull } from "drizzle-orm";
 
 export interface AssetFilters {
   siteId?: string;
@@ -14,7 +14,7 @@ export interface PaginationParams {
   page: number;
   limit: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface CreateAssetData {
@@ -29,8 +29,8 @@ export interface CreateAssetData {
   serialNumber?: string;
   location?: string;
   parentAssetId?: string;
-  status?: 'operational' | 'down' | 'maintenance' | 'retired';
-  criticality?: 'critical' | 'high' | 'medium' | 'low';
+  status?: "operational" | "down" | "maintenance" | "retired";
+  criticality?: "critical" | "high" | "medium" | "low";
   installationDate?: Date;
   warrantyExpiryDate?: Date;
   specifications?: any;
@@ -44,8 +44,8 @@ export interface UpdateAssetData {
   model?: string;
   serialNumber?: string;
   location?: string;
-  status?: 'operational' | 'down' | 'maintenance' | 'retired';
-  criticality?: 'critical' | 'high' | 'medium' | 'low';
+  status?: "operational" | "down" | "maintenance" | "retired";
+  criticality?: "critical" | "high" | "medium" | "low";
   installationDate?: Date;
   warrantyExpiryDate?: Date;
   specifications?: any;
@@ -56,7 +56,11 @@ export class AssetService {
   /**
    * Generate asset tag in format SITE-TYPE-XXXX
    */
-  static async generateAssetTag(tenantId: string, siteId: string, type: string): Promise<string> {
+  static async generateAssetTag(
+    tenantId: string,
+    siteId: string,
+    type: string,
+  ): Promise<string> {
     // Get site code (first 4 chars of site ID)
     const siteCode = siteId.slice(0, 4).toUpperCase();
 
@@ -71,12 +75,12 @@ export class AssetService {
         and(
           eq(assets.tenantId, tenantId),
           eq(assets.siteId, siteId),
-          like(assets.type, `${type}%`)
-        )
+          like(assets.type, `${type}%`),
+        ),
       );
 
     const count = Number(result?.count || 0) + 1;
-    const sequence = count.toString().padStart(4, '0');
+    const sequence = count.toString().padStart(4, "0");
 
     return `${siteCode}-${typeCode}-${sequence}`;
   }
@@ -87,9 +91,14 @@ export class AssetService {
   static async list(
     tenantId: string,
     filters: AssetFilters,
-    pagination: PaginationParams
+    pagination: PaginationParams,
   ) {
-    const { page, limit, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+    const {
+      page,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
     const offset = (page - 1) * limit;
 
     // Build where conditions
@@ -107,8 +116,8 @@ export class AssetService {
       conditions.push(
         or(
           like(assets.name, `%${filters.search}%`),
-          like(assets.serialNumber, `%${filters.search}%`)
-        )!
+          like(assets.serialNumber, `%${filters.search}%`),
+        )!,
       );
     }
 
@@ -121,8 +130,9 @@ export class AssetService {
     const total = Number(countResult?.count || 0);
 
     // Get paginated results
-    const orderByColumn = assets[sortBy as keyof typeof assets] || assets.createdAt;
-    const orderFn = sortOrder === 'asc' ? asc : desc;
+    const orderByColumn =
+      assets[sortBy as keyof typeof assets] || assets.createdAt;
+    const orderFn = sortOrder === "asc" ? asc : desc;
 
     const results = await db
       .select()
@@ -179,7 +189,7 @@ export class AssetService {
       .values({
         ...assetData,
         assetId: assetTag,
-        status: (data.status || 'operational') as any,
+        status: (data.status || "operational") as any,
         // criticality: data.criticality || 'medium',
       })
       .returning()) as any[];
@@ -205,14 +215,14 @@ export class AssetService {
    * Update asset
    */
   static async update(id: string, tenantId: string, data: UpdateAssetData) {
-    const [updated] = await db
+    const [updated] = (await db
       .update(assets)
       .set({
         ...data,
         updatedAt: new Date(),
       } as any)
       .where(and(eq(assets.id, id), eq(assets.tenantId, tenantId)))
-      .returning() as any[];
+      .returning()) as any[];
 
     return updated || null;
   }
@@ -237,13 +247,13 @@ export class AssetService {
       .where(and(eq(assets.parentAssetId, id), eq(assets.tenantId, tenantId)));
 
     if (Number(childCount?.count || 0) > 0) {
-      throw new Error('Cannot delete asset with child assets');
+      throw new Error("Cannot delete asset with child assets");
     }
 
-    const [deleted] = await db
+    const [deleted] = (await db
       .delete(assets)
       .where(and(eq(assets.id, id), eq(assets.tenantId, tenantId)))
-      .returning() as any[];
+      .returning()) as any[];
 
     return deleted || null;
   }
@@ -252,7 +262,7 @@ export class AssetService {
    * Get asset hierarchy (parent + children)
    */
   static async getHierarchy(id: string, tenantId: string) {
-    const asset = await this.getById(id, tenantId) as any;
+    const asset = (await this.getById(id, tenantId)) as any;
 
     if (!asset) {
       return null;
@@ -264,7 +274,12 @@ export class AssetService {
       [parent] = await db
         .select()
         .from(assets)
-        .where(and(eq(assets.id, asset.parentAssetId), eq(assets.tenantId, tenantId)))
+        .where(
+          and(
+            eq(assets.id, asset.parentAssetId),
+            eq(assets.tenantId, tenantId),
+          ),
+        )
         .limit(1);
     }
 

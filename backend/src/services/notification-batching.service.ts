@@ -1,20 +1,23 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
 import {
   notificationQueue,
   notificationPreferences,
   notificationHistory,
   users,
-} from '../db/schema';
-import { eq, and, lte } from 'drizzle-orm';
-import { NotificationChannel, NotificationEventType } from './notification.service';
+} from "../db/schema";
+import { eq, and, lte } from "drizzle-orm";
+import {
+  NotificationChannel,
+  NotificationEventType,
+} from "./notification.service";
 
 export interface QueuedNotification {
   tenantId: string;
   userId: string;
   eventType: NotificationEventType;
   channel: NotificationChannel;
-  priority: 'critical' | 'high' | 'medium' | 'low';
+  priority: "critical" | "high" | "medium" | "low";
   subject?: string;
   body: string;
   templateId?: string;
@@ -38,20 +41,23 @@ export class NotificationBatchingService {
    * Start the batch processing scheduler
    */
   start(): void {
-    this.fastify.log.info('Starting notification batching scheduler');
+    this.fastify.log.info("Starting notification batching scheduler");
 
     // Process batches every 15 minutes
     this.batchInterval = setInterval(async () => {
       try {
         await this.processBatches();
       } catch (error) {
-        this.fastify.log.error({ error }, 'Failed to process notification batches');
+        this.fastify.log.error(
+          { error },
+          "Failed to process notification batches",
+        );
       }
     }, this.DEFAULT_BATCH_INTERVAL_MS);
 
     // Process immediately on start
     this.processBatches().catch((error) => {
-      this.fastify.log.error({ error }, 'Failed to process initial batches');
+      this.fastify.log.error({ error }, "Failed to process initial batches");
     });
   }
 
@@ -62,7 +68,7 @@ export class NotificationBatchingService {
     if (this.batchInterval) {
       clearInterval(this.batchInterval);
       this.batchInterval = null;
-      this.fastify.log.info('Stopped notification batching scheduler');
+      this.fastify.log.info("Stopped notification batching scheduler");
     }
   }
 
@@ -70,12 +76,21 @@ export class NotificationBatchingService {
    * Queue a notification for batching
    */
   async queueNotification(notification: QueuedNotification): Promise<void> {
-    const { tenantId, userId, eventType, channel, priority, subject, body, templateId, data } =
-      notification;
+    const {
+      tenantId,
+      userId,
+      eventType,
+      channel,
+      priority,
+      subject,
+      body,
+      templateId,
+      data,
+    } = notification;
 
     // Critical notifications should never be batched
-    if (priority === 'critical') {
-      throw new Error('Critical notifications should not be batched');
+    if (priority === "critical") {
+      throw new Error("Critical notifications should not be batched");
     }
 
     // Check if user has batching enabled for this event type and channel
@@ -83,7 +98,7 @@ export class NotificationBatchingService {
       where: and(
         eq(notificationPreferences.userId, userId),
         eq(notificationPreferences.eventType, eventType),
-        eq(notificationPreferences.channel, channel)
+        eq(notificationPreferences.channel, channel),
       ),
     });
 
@@ -91,7 +106,7 @@ export class NotificationBatchingService {
     if (preference && !preference.enableBatching) {
       this.fastify.log.info(
         { userId, eventType, channel },
-        'Batching disabled for this notification'
+        "Batching disabled for this notification",
       );
       return;
     }
@@ -116,10 +131,13 @@ export class NotificationBatchingService {
 
       this.fastify.log.info(
         { userId, eventType, channel, batchKey },
-        'Notification queued for batching'
+        "Notification queued for batching",
       );
     } catch (error) {
-      this.fastify.log.error({ error, notification }, 'Failed to queue notification');
+      this.fastify.log.error(
+        { error, notification },
+        "Failed to queue notification",
+      );
       throw error;
     }
   }
@@ -128,7 +146,7 @@ export class NotificationBatchingService {
    * Process all pending batches
    */
   async processBatches(): Promise<void> {
-    this.fastify.log.info('Processing notification batches');
+    this.fastify.log.info("Processing notification batches");
 
     try {
       // Get all unbatched notifications older than 15 minutes
@@ -137,13 +155,15 @@ export class NotificationBatchingService {
       const unbatchedNotifications = await db.query.notificationQueue.findMany({
         where: and(
           eq(notificationQueue.isBatched, false),
-          lte(notificationQueue.createdAt, cutoffTime)
+          lte(notificationQueue.createdAt, cutoffTime),
         ),
-        orderBy: (notificationQueue, { asc }) => [asc(notificationQueue.createdAt)],
+        orderBy: (notificationQueue, { asc }) => [
+          asc(notificationQueue.createdAt),
+        ],
       });
 
       if (unbatchedNotifications.length === 0) {
-        this.fastify.log.info('No notifications to batch');
+        this.fastify.log.info("No notifications to batch");
         return;
       }
 
@@ -156,23 +176,29 @@ export class NotificationBatchingService {
         batches.set(notification.batchKey, existing);
       }
 
-      this.fastify.log.info({ batchCount: batches.size }, 'Processing batches');
+      this.fastify.log.info({ batchCount: batches.size }, "Processing batches");
 
       // Process each batch
       for (const [batchKey, notifications] of batches.entries()) {
         try {
           await this.processBatch(batchKey, notifications);
         } catch (error) {
-          this.fastify.log.error({ error, batchKey }, 'Failed to process batch');
+          this.fastify.log.error(
+            { error, batchKey },
+            "Failed to process batch",
+          );
         }
       }
 
       this.fastify.log.info(
-        { totalNotifications: unbatchedNotifications.length, batchCount: batches.size },
-        'Batch processing complete'
+        {
+          totalNotifications: unbatchedNotifications.length,
+          batchCount: batches.size,
+        },
+        "Batch processing complete",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to process batches');
+      this.fastify.log.error({ error }, "Failed to process batches");
       throw error;
     }
   }
@@ -197,7 +223,7 @@ export class NotificationBatchingService {
       isBatched: boolean;
       batchedAt: Date | null;
       createdAt: Date;
-    }>
+    }>,
   ): Promise<void> {
     if (notifications.length === 0) {
       return;
@@ -208,7 +234,7 @@ export class NotificationBatchingService {
 
     this.fastify.log.info(
       { batchKey, count: notifications.length, userId, eventType, channel },
-      'Processing batch'
+      "Processing batch",
     );
 
     try {
@@ -218,12 +244,18 @@ export class NotificationBatchingService {
       });
 
       if (!user || !user.isActive) {
-        this.fastify.log.warn({ userId }, 'User not found or inactive, skipping batch');
+        this.fastify.log.warn(
+          { userId },
+          "User not found or inactive, skipping batch",
+        );
         return;
       }
 
       // Generate digest message
-      const digestSubject = this.generateDigestSubject(eventType, notifications.length);
+      const digestSubject = this.generateDigestSubject(
+        eventType,
+        notifications.length,
+      );
       const digestBody = this.generateDigestBody(eventType, notifications);
 
       // Send digest notification
@@ -248,9 +280,12 @@ export class NotificationBatchingService {
           .where(eq(notificationQueue.id, notification.id));
       }
 
-      this.fastify.log.info({ batchKey, count: notifications.length }, 'Batch processed successfully');
+      this.fastify.log.info(
+        { batchKey, count: notifications.length },
+        "Batch processed successfully",
+      );
     } catch (error) {
-      this.fastify.log.error({ error, batchKey }, 'Failed to process batch');
+      this.fastify.log.error({ error, batchKey }, "Failed to process batch");
       throw error;
     }
   }
@@ -258,18 +293,21 @@ export class NotificationBatchingService {
   /**
    * Generate digest subject based on event type and count
    */
-  private generateDigestSubject(eventType: NotificationEventType, count: number): string {
+  private generateDigestSubject(
+    eventType: NotificationEventType,
+    count: number,
+  ): string {
     const eventTypeLabels: Record<NotificationEventType, string> = {
-      work_order_assigned: 'Work Orders Assigned',
-      work_order_overdue: 'Work Orders Overdue',
-      work_order_completed: 'Work Orders Completed',
-      alert_critical: 'Critical Alerts',
-      alert_high: 'High Priority Alerts',
-      alert_medium: 'Medium Priority Alerts',
-      alert_acknowledged: 'Alerts Acknowledged',
-      alert_resolved: 'Alerts Resolved',
-      asset_down: 'Assets Down',
-      maintenance_due: 'Maintenance Due',
+      work_order_assigned: "Work Orders Assigned",
+      work_order_overdue: "Work Orders Overdue",
+      work_order_completed: "Work Orders Completed",
+      alert_critical: "Critical Alerts",
+      alert_high: "High Priority Alerts",
+      alert_medium: "Medium Priority Alerts",
+      alert_acknowledged: "Alerts Acknowledged",
+      alert_resolved: "Alerts Resolved",
+      asset_down: "Assets Down",
+      maintenance_due: "Maintenance Due",
     };
 
     const label = eventTypeLabels[eventType] || eventType;
@@ -286,7 +324,7 @@ export class NotificationBatchingService {
       body: string;
       data: string | null;
       createdAt: Date;
-    }>
+    }>,
   ): string {
     let digest = `<html>
 <head>
@@ -307,12 +345,12 @@ export class NotificationBatchingService {
 
     // Add each notification
     for (const notification of notifications) {
-      const data = JSON.parse(notification.data || '{}');
+      const data = JSON.parse(notification.data || "{}");
       const time = new Date(notification.createdAt).toLocaleString();
 
       digest += `
   <div class="notification">
-    <div class="notification-title">${notification.subject || 'Notification'}</div>
+    <div class="notification-title">${notification.subject || "Notification"}</div>
     <div>${notification.body}</div>
     <div class="notification-time">Received: ${time}</div>
   </div>
@@ -335,11 +373,11 @@ export class NotificationBatchingService {
    */
   private getRecipient(user: any, channel: NotificationChannel): string {
     switch (channel) {
-      case 'email':
+      case "email":
         return user.email;
-      case 'sms':
-        return user.phone || '';
-      case 'push':
+      case "sms":
+        return user.phone || "";
+      case "push":
         return user.id;
       default:
         return user.email;
@@ -358,7 +396,8 @@ export class NotificationBatchingService {
     subject: string;
     body: string;
   }): Promise<void> {
-    const { tenantId, userId, eventType, channel, recipient, subject, body } = params;
+    const { tenantId, userId, eventType, channel, recipient, subject, body } =
+      params;
 
     // Create notification history record
     const [historyRecord] = await db
@@ -371,27 +410,35 @@ export class NotificationBatchingService {
         recipient,
         subject,
         body,
-        status: 'pending',
+        status: "pending",
       })
       .returning();
 
     try {
       switch (channel) {
-        case 'email':
+        case "email":
           await this.sendEmail(recipient, subject, body, historyRecord.id);
           break;
-        case 'sms':
+        case "sms":
           await this.sendSMS(recipient, subject, historyRecord.id);
           break;
-        case 'push':
-          await this.sendPushNotification(userId, subject, body, historyRecord.id);
+        case "push":
+          await this.sendPushNotification(
+            userId,
+            subject,
+            body,
+            historyRecord.id,
+          );
           break;
         default:
-          this.fastify.log.warn({ channel }, 'Unsupported channel for digest');
+          this.fastify.log.warn({ channel }, "Unsupported channel for digest");
       }
     } catch (error) {
-      this.fastify.log.error({ error, channel, recipient }, 'Failed to send digest');
-      await this.updateNotificationStatus(historyRecord.id, 'failed', error);
+      this.fastify.log.error(
+        { error, channel, recipient },
+        "Failed to send digest",
+      );
+      await this.updateNotificationStatus(historyRecord.id, "failed", error);
     }
   }
 
@@ -402,10 +449,11 @@ export class NotificationBatchingService {
     to: string,
     subject: string,
     body: string,
-    historyId: string
+    historyId: string,
   ): Promise<void> {
     try {
-      const { createEmailProviderService } = await import('./email-provider.service');
+      const { createEmailProviderService } =
+        await import("./email-provider.service");
       const emailProvider = createEmailProviderService(this.fastify);
 
       const result = await emailProvider.send({
@@ -414,15 +462,18 @@ export class NotificationBatchingService {
         html: body,
       });
 
-      if (result.status === 'sent') {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info({ to, messageId: result.messageId }, 'Digest email sent');
+      if (result.status === "sent") {
+        await this.updateNotificationStatus(historyId, "sent");
+        this.fastify.log.info(
+          { to, messageId: result.messageId },
+          "Digest email sent",
+        );
       } else {
-        throw new Error(result.error || 'Failed to send digest email');
+        throw new Error(result.error || "Failed to send digest email");
       }
     } catch (error) {
-      this.fastify.log.error({ error, to }, 'Failed to send digest email');
-      await this.updateNotificationStatus(historyId, 'failed', error);
+      this.fastify.log.error({ error, to }, "Failed to send digest email");
+      await this.updateNotificationStatus(historyId, "failed", error);
       throw error;
     }
   }
@@ -430,9 +481,14 @@ export class NotificationBatchingService {
   /**
    * Send SMS digest (short summary)
    */
-  private async sendSMS(to: string, message: string, historyId: string): Promise<void> {
+  private async sendSMS(
+    to: string,
+    message: string,
+    historyId: string,
+  ): Promise<void> {
     try {
-      const { createSMSProviderService } = await import('./sms-provider.service');
+      const { createSMSProviderService } =
+        await import("./sms-provider.service");
       const smsProvider = createSMSProviderService(this.fastify);
 
       const result = await smsProvider.send({
@@ -440,15 +496,18 @@ export class NotificationBatchingService {
         body: message,
       });
 
-      if (result.status === 'sent') {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info({ to, messageId: result.messageId }, 'Digest SMS sent');
+      if (result.status === "sent") {
+        await this.updateNotificationStatus(historyId, "sent");
+        this.fastify.log.info(
+          { to, messageId: result.messageId },
+          "Digest SMS sent",
+        );
       } else {
-        throw new Error(result.error || 'Failed to send digest SMS');
+        throw new Error(result.error || "Failed to send digest SMS");
       }
     } catch (error) {
-      this.fastify.log.error({ error, to }, 'Failed to send digest SMS');
-      await this.updateNotificationStatus(historyId, 'failed', error);
+      this.fastify.log.error({ error, to }, "Failed to send digest SMS");
+      await this.updateNotificationStatus(historyId, "failed", error);
       throw error;
     }
   }
@@ -460,10 +519,11 @@ export class NotificationBatchingService {
     userId: string,
     title: string,
     body: string,
-    historyId: string
+    historyId: string,
   ): Promise<void> {
     try {
-      const { createPushNotificationService } = await import('./push-notification.service');
+      const { createPushNotificationService } =
+        await import("./push-notification.service");
       const pushService = createPushNotificationService(this.fastify);
 
       const result = await pushService.send({
@@ -472,20 +532,25 @@ export class NotificationBatchingService {
         body,
         data: {
           historyId,
-          type: 'digest',
+          type: "digest",
           timestamp: new Date().toISOString(),
         },
       });
 
-      if (result.status === 'sent' && (result.successCount || 0) > 0) {
-        await this.updateNotificationStatus(historyId, 'sent');
-        this.fastify.log.info({ userId, messageId: result.messageId }, 'Digest push sent');
+      if (result.status === "sent" && (result.successCount || 0) > 0) {
+        await this.updateNotificationStatus(historyId, "sent");
+        this.fastify.log.info(
+          { userId, messageId: result.messageId },
+          "Digest push sent",
+        );
       } else {
-        throw new Error(result.error || 'Failed to send digest push notification');
+        throw new Error(
+          result.error || "Failed to send digest push notification",
+        );
       }
     } catch (error) {
-      this.fastify.log.error({ error, userId }, 'Failed to send digest push');
-      await this.updateNotificationStatus(historyId, 'failed', error);
+      this.fastify.log.error({ error, userId }, "Failed to send digest push");
+      await this.updateNotificationStatus(historyId, "failed", error);
       throw error;
     }
   }
@@ -495,21 +560,21 @@ export class NotificationBatchingService {
    */
   private async updateNotificationStatus(
     historyId: string,
-    status: 'sent' | 'delivered' | 'failed',
-    error?: any
+    status: "sent" | "delivered" | "failed",
+    error?: any,
   ): Promise<void> {
     const updateData: any = {
       status,
       updatedAt: new Date(),
     };
 
-    if (status === 'sent') {
+    if (status === "sent") {
       updateData.sentAt = new Date();
-    } else if (status === 'delivered') {
+    } else if (status === "delivered") {
       updateData.deliveredAt = new Date();
-    } else if (status === 'failed') {
+    } else if (status === "failed") {
       updateData.failedAt = new Date();
-      updateData.errorMessage = error?.message || 'Unknown error';
+      updateData.errorMessage = error?.message || "Unknown error";
     }
 
     await db
@@ -522,7 +587,7 @@ export class NotificationBatchingService {
    * Clean up old batched notifications (older than 30 days)
    */
   async cleanup(): Promise<void> {
-    this.fastify.log.info('Cleaning up old batched notifications');
+    this.fastify.log.info("Cleaning up old batched notifications");
 
     try {
       const cutoffDate = new Date();
@@ -531,18 +596,21 @@ export class NotificationBatchingService {
       const deleted = await db
         .delete(notificationQueue)
         .where(
-          and(eq(notificationQueue.isBatched, true), lte(notificationQueue.batchedAt, cutoffDate))
+          and(
+            eq(notificationQueue.isBatched, true),
+            lte(notificationQueue.batchedAt, cutoffDate),
+          ),
         );
 
-      this.fastify.log.info('Old batched notifications cleaned up');
+      this.fastify.log.info("Old batched notifications cleaned up");
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to clean up old notifications');
+      this.fastify.log.error({ error }, "Failed to clean up old notifications");
     }
   }
 }
 
 export function createNotificationBatchingService(
-  fastify: FastifyInstance
+  fastify: FastifyInstance,
 ): NotificationBatchingService {
   return new NotificationBatchingService(fastify);
 }

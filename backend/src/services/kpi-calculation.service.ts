@@ -1,6 +1,6 @@
-import { FastifyInstance } from 'fastify';
-import { createClient } from '@clickhouse/client';
-import Redis from 'ioredis';
+import { FastifyInstance } from "fastify";
+import { createClient } from "@clickhouse/client";
+import Redis from "ioredis";
 
 export interface KPIFilters {
   tenantId: string;
@@ -44,18 +44,18 @@ export class KPICalculationService {
 
     // Initialize ClickHouse client
     this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-      username: process.env.CLICKHOUSE_USER || 'clickhouse_user',
-      password: process.env.CLICKHOUSE_PASSWORD || 'clickhouse_password_dev',
-      database: process.env.CLICKHOUSE_DATABASE || 'dcmms_analytics',
+      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
+      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
+      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
     });
 
     // Initialize Redis client
     this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379"),
       password: process.env.REDIS_PASSWORD || undefined,
-      db: parseInt(process.env.REDIS_DB || '0'),
+      db: parseInt(process.env.REDIS_DB || "0"),
     });
   }
 
@@ -63,7 +63,7 @@ export class KPICalculationService {
    * Calculate KPIs for given filters
    */
   async calculateKPIs(filters: KPIFilters): Promise<KPIResult> {
-    this.fastify.log.info({ filters }, 'Calculating KPIs');
+    this.fastify.log.info({ filters }, "Calculating KPIs");
 
     try {
       // Check cache first
@@ -71,7 +71,7 @@ export class KPICalculationService {
       const cached = await this.redis.get(cacheKey);
 
       if (cached) {
-        this.fastify.log.info({ cacheKey }, 'KPIs returned from cache');
+        this.fastify.log.info({ cacheKey }, "KPIs returned from cache");
         const result = JSON.parse(cached);
         return {
           ...result,
@@ -89,11 +89,14 @@ export class KPICalculationService {
       // Cache result
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
 
-      this.fastify.log.info({ cacheKey, ttl: this.CACHE_TTL }, 'KPIs calculated and cached');
+      this.fastify.log.info(
+        { cacheKey, ttl: this.CACHE_TTL },
+        "KPIs calculated and cached",
+      );
 
       return result;
     } catch (error) {
-      this.fastify.log.error({ error, filters }, 'Failed to calculate KPIs');
+      this.fastify.log.error({ error, filters }, "Failed to calculate KPIs");
       throw error;
     }
   }
@@ -101,12 +104,15 @@ export class KPICalculationService {
   /**
    * Calculate KPIs from ClickHouse
    */
-  private async calculateFromClickHouse(filters: KPIFilters): Promise<KPIResult> {
+  private async calculateFromClickHouse(
+    filters: KPIFilters,
+  ): Promise<KPIResult> {
     const { tenantId, siteId, startDate, endDate } = filters;
 
     // Default to last 30 days if no dates provided
     const end = endDate || new Date();
-    const start = startDate || new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const start =
+      startDate || new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Build WHERE clause
     const whereClauses = [`tenant_id = '${tenantId}'`];
@@ -118,7 +124,7 @@ export class KPICalculationService {
     whereClauses.push(`created_at >= '${start.toISOString()}'`);
     whereClauses.push(`created_at <= '${end.toISOString()}'`);
 
-    const whereClause = whereClauses.join(' AND ');
+    const whereClause = whereClauses.join(" AND ");
 
     // Calculate MTTR (Mean Time To Repair) - corrective work orders only
     const mttrQuery = `
@@ -133,7 +139,7 @@ export class KPICalculationService {
 
     const mttrResult = await this.clickhouse.query({
       query: mttrQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
     const mttrData = await mttrResult.json<{ mttr: number }[]>();
@@ -153,13 +159,15 @@ export class KPICalculationService {
 
     const mtbfResult = await this.clickhouse.query({
       query: mtbfQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
-    const mtbfData = await mtbfResult.json<{
-      failure_count: number;
-      total_operating_hours: number;
-    }[]>();
+    const mtbfData = await mtbfResult.json<
+      {
+        failure_count: number;
+        total_operating_hours: number;
+      }[]
+    >();
     const mtbf =
       mtbfData[0]?.failure_count > 0
         ? mtbfData[0].total_operating_hours / mtbfData[0].failure_count
@@ -177,14 +185,16 @@ export class KPICalculationService {
 
     const completionResult = await this.clickhouse.query({
       query: completionQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
-    const completionData = await completionResult.json<{
-      total_wo: number;
-      completed_wo: number;
-      overdue_wo: number;
-    }[]>();
+    const completionData = await completionResult.json<
+      {
+        total_wo: number;
+        completed_wo: number;
+        overdue_wo: number;
+      }[]
+    >();
 
     const totalWO = completionData[0]?.total_wo || 0;
     const completedWO = completionData[0]?.completed_wo || 0;
@@ -202,17 +212,20 @@ export class KPICalculationService {
 
     const pmResult = await this.clickhouse.query({
       query: pmQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
-    const pmData = await pmResult.json<{
-      scheduled_pm: number;
-      completed_pm: number;
-    }[]>();
+    const pmData = await pmResult.json<
+      {
+        scheduled_pm: number;
+        completed_pm: number;
+      }[]
+    >();
 
     const scheduledPM = pmData[0]?.scheduled_pm || 0;
     const completedPM = pmData[0]?.completed_pm || 0;
-    const pmCompliance = scheduledPM > 0 ? (completedPM / scheduledPM) * 100 : 0;
+    const pmCompliance =
+      scheduledPM > 0 ? (completedPM / scheduledPM) * 100 : 0;
 
     // Calculate First Time Fix Rate
     // Assuming a work order is "first time fix" if it's completed and not reopened
@@ -226,20 +239,22 @@ export class KPICalculationService {
         sum(downtime_hours) AS total_downtime
       FROM asset_metrics
       WHERE tenant_id = '${tenantId}'
-        ${siteId ? `AND site_id = '${siteId}'` : ''}
+        ${siteId ? `AND site_id = '${siteId}'` : ""}
         AND recorded_at >= '${start.toISOString()}'
         AND recorded_at <= '${end.toISOString()}'
     `;
 
     const availabilityResult = await this.clickhouse.query({
       query: availabilityQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
-    const availabilityData = await availabilityResult.json<{
-      avg_availability: number;
-      total_downtime: number;
-    }[]>();
+    const availabilityData = await availabilityResult.json<
+      {
+        avg_availability: number;
+        total_downtime: number;
+      }[]
+    >();
 
     const availability = availabilityData[0]?.avg_availability || 100;
     const totalDowntime = availabilityData[0]?.total_downtime || 0;
@@ -254,7 +269,7 @@ export class KPICalculationService {
 
     const alarmResult = await this.clickhouse.query({
       query: alarmQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
     const alarmData = await alarmResult.json<{ critical_alarms: number }[]>();
@@ -270,7 +285,7 @@ export class KPICalculationService {
 
     const costResult = await this.clickhouse.query({
       query: costQuery,
-      format: 'JSONEachRow',
+      format: "JSONEachRow",
     });
 
     const costData = await costResult.json<{ total_cost: number }[]>();
@@ -303,21 +318,21 @@ export class KPICalculationService {
   private getCacheKey(filters: KPIFilters): string {
     const { tenantId, siteId, startDate, endDate } = filters;
 
-    const parts = ['kpis', tenantId];
+    const parts = ["kpis", tenantId];
 
     if (siteId) {
       parts.push(siteId);
     }
 
     if (startDate) {
-      parts.push(startDate.toISOString().split('T')[0]);
+      parts.push(startDate.toISOString().split("T")[0]);
     }
 
     if (endDate) {
-      parts.push(endDate.toISOString().split('T')[0]);
+      parts.push(endDate.toISOString().split("T")[0]);
     }
 
-    return parts.join(':');
+    return parts.join(":");
   }
 
   /**
@@ -325,16 +340,21 @@ export class KPICalculationService {
    */
   async invalidateCache(tenantId: string, siteId?: string): Promise<void> {
     try {
-      const pattern = siteId ? `kpis:${tenantId}:${siteId}:*` : `kpis:${tenantId}:*`;
+      const pattern = siteId
+        ? `kpis:${tenantId}:${siteId}:*`
+        : `kpis:${tenantId}:*`;
 
       const keys = await this.redis.keys(pattern);
 
       if (keys.length > 0) {
         await this.redis.del(...keys);
-        this.fastify.log.info({ pattern, count: keys.length }, 'KPI cache invalidated');
+        this.fastify.log.info(
+          { pattern, count: keys.length },
+          "KPI cache invalidated",
+        );
       }
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to invalidate KPI cache');
+      this.fastify.log.error({ error }, "Failed to invalidate KPI cache");
     }
   }
 
@@ -344,10 +364,12 @@ export class KPICalculationService {
   async close(): Promise<void> {
     await this.clickhouse.close();
     this.redis.disconnect();
-    this.fastify.log.info('KPI service connections closed');
+    this.fastify.log.info("KPI service connections closed");
   }
 }
 
-export function createKPICalculationService(fastify: FastifyInstance): KPICalculationService {
+export function createKPICalculationService(
+  fastify: FastifyInstance,
+): KPICalculationService {
   return new KPICalculationService(fastify);
 }

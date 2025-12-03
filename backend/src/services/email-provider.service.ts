@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance } from "fastify";
 
 export interface EmailOptions {
   to: string;
@@ -9,7 +9,7 @@ export interface EmailOptions {
 
 export interface EmailDeliveryStatus {
   messageId: string;
-  status: 'sent' | 'failed';
+  status: "sent" | "failed";
   error?: string;
 }
 
@@ -19,15 +19,15 @@ export interface EmailDeliveryStatus {
  */
 export class EmailProviderService {
   private fastify: FastifyInstance;
-  private provider: 'sendgrid' | 'ses' | 'smtp' | 'console';
+  private provider: "sendgrid" | "ses" | "smtp" | "console";
   private fromEmail: string;
   private fromName: string;
 
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
-    this.provider = (process.env.EMAIL_PROVIDER as any) || 'console';
-    this.fromEmail = process.env.EMAIL_FROM || 'noreply@dcmms.local';
-    this.fromName = process.env.EMAIL_FROM_NAME || 'dCMMS System';
+    this.provider = (process.env.EMAIL_PROVIDER as any) || "console";
+    this.fromEmail = process.env.EMAIL_FROM || "noreply@dcmms.local";
+    this.fromName = process.env.EMAIL_FROM_NAME || "dCMMS System";
   }
 
   /**
@@ -38,26 +38,26 @@ export class EmailProviderService {
 
     this.fastify.log.info(
       { to, subject, provider: this.provider },
-      'Sending email'
+      "Sending email",
     );
 
     try {
       switch (this.provider) {
-        case 'sendgrid':
+        case "sendgrid":
           return await this.sendViaSendGrid(to, subject, html, text);
-        case 'ses':
+        case "ses":
           return await this.sendViaSES(to, subject, html, text);
-        case 'smtp':
+        case "smtp":
           return await this.sendViaSMTP(to, subject, html, text);
-        case 'console':
+        case "console":
         default:
           return await this.sendViaConsole(to, subject, html, text);
       }
     } catch (error) {
-      this.fastify.log.error({ error, to, subject }, 'Failed to send email');
+      this.fastify.log.error({ error, to, subject }, "Failed to send email");
       return {
-        messageId: '',
-        status: 'failed',
+        messageId: "",
+        status: "failed",
         error: (error as Error).message,
       };
     }
@@ -70,7 +70,7 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string
+    text?: string,
   ): Promise<EmailDeliveryStatus> {
     try {
       // TODO: Implement SendGrid integration
@@ -85,11 +85,14 @@ export class EmailProviderService {
       // };
       // const [response] = await sgMail.send(msg);
 
-      this.fastify.log.info({ to, subject }, '[SendGrid] Email would be sent here');
+      this.fastify.log.info(
+        { to, subject },
+        "[SendGrid] Email would be sent here",
+      );
 
       return {
         messageId: `sendgrid-${Date.now()}`,
-        status: 'sent',
+        status: "sent",
       };
     } catch (error) {
       throw new Error(`SendGrid error: ${(error as Error).message}`);
@@ -103,7 +106,7 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string
+    text?: string,
   ): Promise<EmailDeliveryStatus> {
     try {
       // TODO: Implement AWS SES integration
@@ -124,11 +127,14 @@ export class EmailProviderService {
       // };
       // const result = await ses.sendEmail(params).promise();
 
-      this.fastify.log.info({ to, subject }, '[AWS SES] Email would be sent here');
+      this.fastify.log.info(
+        { to, subject },
+        "[AWS SES] Email would be sent here",
+      );
 
       return {
         messageId: `ses-${Date.now()}`,
-        status: 'sent',
+        status: "sent",
       };
     } catch (error) {
       throw new Error(`AWS SES error: ${(error as Error).message}`);
@@ -142,7 +148,7 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string
+    text?: string,
   ): Promise<EmailDeliveryStatus> {
     try {
       // TODO: Implement SMTP integration using Nodemailer
@@ -164,11 +170,11 @@ export class EmailProviderService {
       //   text: text || this.stripHtml(html),
       // });
 
-      this.fastify.log.info({ to, subject }, '[SMTP] Email would be sent here');
+      this.fastify.log.info({ to, subject }, "[SMTP] Email would be sent here");
 
       return {
         messageId: `smtp-${Date.now()}`,
-        status: 'sent',
+        status: "sent",
       };
     } catch (error) {
       throw new Error(`SMTP error: ${(error as Error).message}`);
@@ -182,22 +188,22 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string
+    text?: string,
   ): Promise<EmailDeliveryStatus> {
-    console.log('\n' + '='.repeat(80));
-    console.log('📧 EMAIL (Console Mode)');
-    console.log('='.repeat(80));
+    console.log("\n" + "=".repeat(80));
+    console.log("📧 EMAIL (Console Mode)");
+    console.log("=".repeat(80));
     console.log(`From: ${this.fromName} <${this.fromEmail}>`);
     console.log(`To: ${to}`);
     console.log(`Subject: ${subject}`);
-    console.log('-'.repeat(80));
-    console.log('HTML Body:');
+    console.log("-".repeat(80));
+    console.log("HTML Body:");
     console.log(html);
-    console.log('='.repeat(80) + '\n');
+    console.log("=".repeat(80) + "\n");
 
     return {
       messageId: `console-${Date.now()}`,
-      status: 'sent',
+      status: "sent",
     };
   }
 
@@ -205,7 +211,10 @@ export class EmailProviderService {
    * Strip HTML tags for plain text version
    */
   private stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    return html
+      .replace(/<[^>]*>/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   /**
@@ -227,7 +236,7 @@ export class EmailProviderService {
     for (let i = 0; i < emails.length; i += batchSize) {
       const batch = emails.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map((email) => this.send(email))
+        batch.map((email) => this.send(email)),
       );
       results.push(...batchResults);
 
@@ -241,6 +250,8 @@ export class EmailProviderService {
   }
 }
 
-export function createEmailProviderService(fastify: FastifyInstance): EmailProviderService {
+export function createEmailProviderService(
+  fastify: FastifyInstance,
+): EmailProviderService {
   return new EmailProviderService(fastify);
 }

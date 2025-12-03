@@ -1,6 +1,6 @@
-import { FastifyInstance } from 'fastify';
-import { spawn, ChildProcess } from 'child_process';
-import axios from 'axios';
+import { FastifyInstance } from "fastify";
+import { spawn, ChildProcess } from "child_process";
+import axios from "axios";
 
 export interface FeatureVector {
   assetId: string;
@@ -23,7 +23,8 @@ export class FeastFeatureService {
 
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
-    this.feastServerUrl = process.env.FEAST_SERVER_URL || 'http://localhost:6566';
+    this.feastServerUrl =
+      process.env.FEAST_SERVER_URL || "http://localhost:6566";
   }
 
   /**
@@ -31,23 +32,29 @@ export class FeastFeatureService {
    */
   async getOnlineFeatures(
     featureViews: string[],
-    entityIds: Record<string, string[]>
+    entityIds: Record<string, string[]>,
   ): Promise<Record<string, any>[]> {
     try {
-      const response = await axios.post(`${this.feastServerUrl}/get-online-features`, {
-        features: featureViews,
-        entities: entityIds,
-      });
+      const response = await axios.post(
+        `${this.feastServerUrl}/get-online-features`,
+        {
+          features: featureViews,
+          entities: entityIds,
+        },
+      );
 
       this.fastify.log.info(
         { featureViews, entityCount: Object.values(entityIds)[0]?.length },
-        'Retrieved online features from Feast'
+        "Retrieved online features from Feast",
       );
 
       return response.data.results || [];
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to get online features from Feast');
-      throw new Error('Failed to retrieve features from Feast');
+      this.fastify.log.error(
+        { error },
+        "Failed to get online features from Feast",
+      );
+      throw new Error("Failed to retrieve features from Feast");
     }
   }
 
@@ -56,22 +63,22 @@ export class FeastFeatureService {
    */
   async getAssetFeatures(assetIds: string[]): Promise<FeatureVector[]> {
     const featureViews = [
-      'asset_features:asset_type',
-      'asset_features:asset_status',
-      'asset_features:asset_age_months',
-      'asset_features:total_work_orders',
-      'asset_features:days_since_last_maintenance',
-      'asset_features:mttr_hours',
-      'asset_features:mtbf_hours',
-      'asset_features:health_score',
-      'asset_features:recent_alarms_30d',
-      'telemetry_features:rolling_avg_power_7d',
-      'telemetry_features:rolling_std_power_7d',
-      'telemetry_features:anomaly_count_30d',
-      'telemetry_features:capacity_factor_30d',
-      'work_order_features:wo_count_30d',
-      'work_order_features:corrective_wo_count_30d',
-      'work_order_features:corrective_wo_ratio_30d',
+      "asset_features:asset_type",
+      "asset_features:asset_status",
+      "asset_features:asset_age_months",
+      "asset_features:total_work_orders",
+      "asset_features:days_since_last_maintenance",
+      "asset_features:mttr_hours",
+      "asset_features:mtbf_hours",
+      "asset_features:health_score",
+      "asset_features:recent_alarms_30d",
+      "telemetry_features:rolling_avg_power_7d",
+      "telemetry_features:rolling_std_power_7d",
+      "telemetry_features:anomaly_count_30d",
+      "telemetry_features:capacity_factor_30d",
+      "work_order_features:wo_count_30d",
+      "work_order_features:corrective_wo_count_30d",
+      "work_order_features:corrective_wo_ratio_30d",
     ];
 
     const entities = {
@@ -98,7 +105,10 @@ export class FeastFeatureService {
     nullCount: number;
   }> {
     // Placeholder - in production, calculate from offline store
-    this.fastify.log.warn({ featureName }, 'Feature statistics not implemented');
+    this.fastify.log.warn(
+      { featureName },
+      "Feature statistics not implemented",
+    );
 
     return {
       mean: 0,
@@ -120,7 +130,7 @@ export class FeastFeatureService {
 
       return response.status === 200;
     } catch (error) {
-      this.fastify.log.warn({ error }, 'Feast server health check failed');
+      this.fastify.log.warn({ error }, "Feast server health check failed");
       return false;
     }
   }
@@ -133,7 +143,7 @@ export class FeastFeatureService {
       const response = await axios.get(`${this.feastServerUrl}/feature-views`);
       return response.data.feature_views || [];
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to list feature views');
+      this.fastify.log.error({ error }, "Failed to list feature views");
       return [];
     }
   }
@@ -143,41 +153,56 @@ export class FeastFeatureService {
    */
   async triggerMaterialization(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const scriptPath = process.env.FEAST_MATERIALIZE_SCRIPT ||
-        '../../../ml/feast/materialize_features.py';
+      const scriptPath =
+        process.env.FEAST_MATERIALIZE_SCRIPT ||
+        "../../../ml/feast/materialize_features.py";
 
-      this.fastify.log.info('Triggering Feast feature materialization');
+      this.fastify.log.info("Triggering Feast feature materialization");
 
-      const child = spawn('python3', [scriptPath], {
+      const child = spawn("python3", [scriptPath], {
         cwd: __dirname,
         env: { ...process.env },
       });
 
-      let stdout = '';
-      let stderr = '';
+      let stdout = "";
+      let stderr = "";
 
-      child.stdout.on('data', (data: Buffer) => {
+      child.stdout.on("data", (data: Buffer) => {
         stdout += data.toString();
-        this.fastify.log.info({ output: data.toString() }, 'Materialization output');
+        this.fastify.log.info(
+          { output: data.toString() },
+          "Materialization output",
+        );
       });
 
-      child.stderr.on('data', (data: Buffer) => {
+      child.stderr.on("data", (data: Buffer) => {
         stderr += data.toString();
-        this.fastify.log.warn({ error: data.toString() }, 'Materialization warning');
+        this.fastify.log.warn(
+          { error: data.toString() },
+          "Materialization warning",
+        );
       });
 
-      child.on('close', (code: number) => {
+      child.on("close", (code: number) => {
         if (code === 0) {
-          this.fastify.log.info('Feature materialization completed successfully');
+          this.fastify.log.info(
+            "Feature materialization completed successfully",
+          );
           resolve();
         } else {
-          this.fastify.log.error({ code, stderr }, 'Feature materialization failed');
+          this.fastify.log.error(
+            { code, stderr },
+            "Feature materialization failed",
+          );
           reject(new Error(`Materialization failed with code ${code}`));
         }
       });
 
-      child.on('error', (error: Error) => {
-        this.fastify.log.error({ error }, 'Failed to start materialization process');
+      child.on("error", (error: Error) => {
+        this.fastify.log.error(
+          { error },
+          "Failed to start materialization process",
+        );
         reject(error);
       });
     });
@@ -187,34 +212,34 @@ export class FeastFeatureService {
    * Start Feast feature server (for development)
    */
   async startFeatureServer(): Promise<void> {
-    if (process.env.FEAST_SERVER_ENABLED !== 'true') {
-      this.fastify.log.info('Feast server disabled in environment');
+    if (process.env.FEAST_SERVER_ENABLED !== "true") {
+      this.fastify.log.info("Feast server disabled in environment");
       return;
     }
 
-    const feastRepoPath = process.env.FEAST_REPO_PATH || '../../../ml/feast';
+    const feastRepoPath = process.env.FEAST_REPO_PATH || "../../../ml/feast";
 
-    this.fastify.log.info({ feastRepoPath }, 'Starting Feast feature server');
+    this.fastify.log.info({ feastRepoPath }, "Starting Feast feature server");
 
     this.feastServerProcess = spawn(
-      'feast',
-      ['serve', '-h', '0.0.0.0', '-p', '6566'],
+      "feast",
+      ["serve", "-h", "0.0.0.0", "-p", "6566"],
       {
         cwd: feastRepoPath,
         env: { ...process.env },
-      }
+      },
     );
 
-    this.feastServerProcess.stdout?.on('data', (data) => {
-      this.fastify.log.info({ output: data.toString() }, 'Feast server output');
+    this.feastServerProcess.stdout?.on("data", (data) => {
+      this.fastify.log.info({ output: data.toString() }, "Feast server output");
     });
 
-    this.feastServerProcess.stderr?.on('data', (data) => {
-      this.fastify.log.warn({ error: data.toString() }, 'Feast server warning');
+    this.feastServerProcess.stderr?.on("data", (data) => {
+      this.fastify.log.warn({ error: data.toString() }, "Feast server warning");
     });
 
-    this.feastServerProcess.on('close', (code) => {
-      this.fastify.log.warn({ code }, 'Feast server stopped');
+    this.feastServerProcess.on("close", (code) => {
+      this.fastify.log.warn({ code }, "Feast server stopped");
     });
 
     // Wait for server to start
@@ -222,9 +247,9 @@ export class FeastFeatureService {
 
     const healthy = await this.checkHealth();
     if (healthy) {
-      this.fastify.log.info('Feast feature server started successfully');
+      this.fastify.log.info("Feast feature server started successfully");
     } else {
-      this.fastify.log.error('Feast feature server failed to start');
+      this.fastify.log.error("Feast feature server failed to start");
     }
   }
 
@@ -233,12 +258,14 @@ export class FeastFeatureService {
    */
   async stopFeatureServer(): Promise<void> {
     if (this.feastServerProcess) {
-      this.feastServerProcess.kill('SIGTERM');
-      this.fastify.log.info('Feast feature server stopped');
+      this.feastServerProcess.kill("SIGTERM");
+      this.fastify.log.info("Feast feature server stopped");
     }
   }
 }
 
-export function createFeastFeatureService(fastify: FastifyInstance): FeastFeatureService {
+export function createFeastFeatureService(
+  fastify: FastifyInstance,
+): FeastFeatureService {
   return new FeastFeatureService(fastify);
 }

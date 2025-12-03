@@ -1,13 +1,20 @@
-import { db } from './index';
-import { tenants, users, sites, assets, workOrders, workOrderTasks } from './schema';
-import { AuthService } from '../services/auth.service';
+import { db } from "./index";
+import {
+  tenants,
+  users,
+  sites,
+  assets,
+  workOrders,
+  workOrderTasks,
+} from "./schema";
+import { AuthService } from "../services/auth.service";
 
 async function seed() {
-  console.log('🌱 Starting database seed...');
+  console.log("🌱 Starting database seed...");
 
   try {
     // Clear existing data (in reverse order of dependencies)
-    console.log('Clearing existing data...');
+    console.log("Clearing existing data...");
     await db.delete(workOrderTasks);
     await db.delete(workOrders);
     await db.delete(assets);
@@ -16,39 +23,37 @@ async function seed() {
     await db.delete(tenants);
 
     // Create tenant
-    console.log('Creating tenant...');
+    console.log("Creating tenant...");
     const [tenant] = await db
       .insert(tenants)
       .values({
-        tenantId: 'demo-tenant',
-        name: 'Demo Corporation',
-        domain: 'demo.dcmms.local',
+        tenantId: "demo-tenant",
+        name: "Demo Corporation",
+        domain: "demo.dcmms.local",
         config: JSON.stringify({
-          timezone: 'America/New_York',
-          dateFormat: 'MM/DD/YYYY',
-          currency: 'USD',
+          timezone: "America/New_York",
+          dateFormat: "MM/DD/YYYY",
+          currency: "USD",
         }),
-
       })
       .returning();
 
     console.log(`  ✓ Created tenant: ${tenant.name}`);
 
     // Create users
-    console.log('Creating users...');
-    const passwordHash = await AuthService.hashPassword('Password123!');
+    console.log("Creating users...");
+    const passwordHash = await AuthService.hashPassword("Password123!");
 
     const [adminUser] = await db
       .insert(users)
       .values({
         tenantId: tenant.id,
-        email: 'admin@example.com',
-        username: 'admin',
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'tenant_admin',
+        email: "admin@example.com",
+        username: "admin",
+        firstName: "Admin",
+        lastName: "User",
+        role: "tenant_admin",
         passwordHash,
-
       })
       .returning();
 
@@ -56,13 +61,12 @@ async function seed() {
       .insert(users)
       .values({
         tenantId: tenant.id,
-        email: 'manager@example.com',
-        username: 'manager',
-        firstName: 'Manager',
-        lastName: 'User',
-        role: 'site_manager',
+        email: "manager@example.com",
+        username: "manager",
+        firstName: "Manager",
+        lastName: "User",
+        role: "site_manager",
         passwordHash,
-
       })
       .returning();
 
@@ -70,29 +74,27 @@ async function seed() {
       .insert(users)
       .values({
         tenantId: tenant.id,
-        email: 'technician@example.com',
-        username: 'technician',
-        firstName: 'Tech',
-        lastName: 'User',
-        role: 'technician',
+        email: "technician@example.com",
+        username: "technician",
+        firstName: "Tech",
+        lastName: "User",
+        role: "technician",
         passwordHash,
-
       })
       .returning();
 
     console.log(`  ✓ Created ${3} users`);
 
     // Create sites
-    console.log('Creating sites...');
+    console.log("Creating sites...");
     const [site1] = await db
       .insert(sites)
       .values({
         tenantId: tenant.id,
-        siteId: 'NYC-01',
-        name: 'New York Distribution Center',
-        type: 'Distribution Center',
-        location: '123 Industrial Parkway, New York, NY 10001, USA',
-
+        siteId: "NYC-01",
+        name: "New York Distribution Center",
+        type: "Distribution Center",
+        location: "123 Industrial Parkway, New York, NY 10001, USA",
       })
       .returning();
 
@@ -100,11 +102,10 @@ async function seed() {
       .insert(sites)
       .values({
         tenantId: tenant.id,
-        siteId: 'LA-01',
-        name: 'Los Angeles Warehouse',
-        type: 'Warehouse',
-        location: '456 Commerce Street, Los Angeles, CA 90001, USA',
-
+        siteId: "LA-01",
+        name: "Los Angeles Warehouse",
+        type: "Warehouse",
+        location: "456 Commerce Street, Los Angeles, CA 90001, USA",
       })
       .returning();
 
@@ -112,18 +113,17 @@ async function seed() {
       .insert(sites)
       .values({
         tenantId: tenant.id,
-        siteId: 'CHI-01',
-        name: 'Chicago Manufacturing Plant',
-        type: 'Manufacturing',
-        location: '789 Factory Lane, Chicago, IL 60601, USA',
-
+        siteId: "CHI-01",
+        name: "Chicago Manufacturing Plant",
+        type: "Manufacturing",
+        location: "789 Factory Lane, Chicago, IL 60601, USA",
       })
       .returning();
 
     console.log(`  ✓ Created ${3} sites`);
 
     // Create assets
-    console.log('Creating assets...');
+    console.log("Creating assets...");
     const assetsData = [];
 
     // NYC - HVAC System (parent asset)
@@ -132,21 +132,21 @@ async function seed() {
       .values({
         tenantId: tenant.id,
         siteId: site1.id,
-        assetId: 'NYC-HVAC-0001',
-        name: 'Main HVAC System',
-        type: 'HVAC',
-        manufacturer: 'Carrier',
-        model: 'AquaEdge 19DV',
-        serialNumber: 'HVAC-2023-001',
-        location: 'Mechanical Room A',
-        status: 'operational',
+        assetId: "NYC-HVAC-0001",
+        name: "Main HVAC System",
+        type: "HVAC",
+        manufacturer: "Carrier",
+        model: "AquaEdge 19DV",
+        serialNumber: "HVAC-2023-001",
+        location: "Mechanical Room A",
+        status: "operational",
 
-        installationDate: new Date('2022-01-15'),
-        warrantyExpiryDate: new Date('2027-01-15'),
+        installationDate: new Date("2022-01-15"),
+        warrantyExpiryDate: new Date("2027-01-15"),
         specifications: JSON.stringify({
-          capacity: '500 tons',
-          refrigerant: 'R-134a',
-          voltage: '480V 3-phase',
+          capacity: "500 tons",
+          refrigerant: "R-134a",
+          voltage: "480V 3-phase",
         }),
       })
       .returning()) as any[];
@@ -158,20 +158,20 @@ async function seed() {
       .values({
         tenantId: tenant.id,
         siteId: site1.id,
-        assetId: 'NYC-FOR-0001',
-        name: 'Forklift #1',
-        type: 'Forklift',
-        manufacturer: 'Toyota',
-        model: '8FGCU25',
-        serialNumber: 'FL-2023-001',
-        location: 'Warehouse Floor',
-        status: 'operational',
+        assetId: "NYC-FOR-0001",
+        name: "Forklift #1",
+        type: "Forklift",
+        manufacturer: "Toyota",
+        model: "8FGCU25",
+        serialNumber: "FL-2023-001",
+        location: "Warehouse Floor",
+        status: "operational",
 
-        installationDate: new Date('2023-03-10'),
+        installationDate: new Date("2023-03-10"),
         specifications: JSON.stringify({
-          capacity: '5000 lbs',
-          fuelType: 'Propane',
-          liftHeight: '15 ft',
+          capacity: "5000 lbs",
+          fuelType: "Propane",
+          liftHeight: "15 ft",
         }),
       })
       .returning()) as any[];
@@ -183,21 +183,21 @@ async function seed() {
       .values({
         tenantId: tenant.id,
         siteId: site2.id,
-        assetId: 'LA-CON-0001',
-        name: 'Main Conveyor Belt',
-        type: 'Conveyor',
-        manufacturer: 'Interroll',
-        model: 'RollerDrive EC5000',
-        serialNumber: 'CNV-2022-050',
-        location: 'Sorting Area',
-        status: 'maintenance',
+        assetId: "LA-CON-0001",
+        name: "Main Conveyor Belt",
+        type: "Conveyor",
+        manufacturer: "Interroll",
+        model: "RollerDrive EC5000",
+        serialNumber: "CNV-2022-050",
+        location: "Sorting Area",
+        status: "maintenance",
 
-        installationDate: new Date('2021-06-20'),
+        installationDate: new Date("2021-06-20"),
 
         specifications: JSON.stringify({
-          length: '100 ft',
-          speed: '200 ft/min',
-          maxLoad: '100 lbs',
+          length: "100 ft",
+          speed: "200 ft/min",
+          maxLoad: "100 lbs",
         }),
       })
       .returning()) as any[];
@@ -209,21 +209,21 @@ async function seed() {
       .values({
         tenantId: tenant.id,
         siteId: site3.id,
-        assetId: 'CHI-CNC-0001',
-        name: 'CNC Milling Machine #1',
-        type: 'CNC Machine',
-        manufacturer: 'Haas',
-        model: 'UMC-750',
-        serialNumber: 'CNC-2020-100',
-        location: 'Production Floor B',
-        status: 'operational',
+        assetId: "CHI-CNC-0001",
+        name: "CNC Milling Machine #1",
+        type: "CNC Machine",
+        manufacturer: "Haas",
+        model: "UMC-750",
+        serialNumber: "CNC-2020-100",
+        location: "Production Floor B",
+        status: "operational",
 
-        installationDate: new Date('2020-09-01'),
-        warrantyExpiryDate: new Date('2025-09-01'),
+        installationDate: new Date("2020-09-01"),
+        warrantyExpiryDate: new Date("2025-09-01"),
         specifications: JSON.stringify({
           axes: 5,
-          spindleSpeed: '12000 RPM',
-          tableSize: '30x16 inches',
+          spindleSpeed: "12000 RPM",
+          tableSize: "30x16 inches",
         }),
       })
       .returning()) as any[];
@@ -235,20 +235,20 @@ async function seed() {
       .values({
         tenantId: tenant.id,
         siteId: site3.id,
-        assetId: 'CHI-COM-0001',
-        name: 'Industrial Air Compressor',
-        type: 'Compressor',
-        manufacturer: 'Atlas Copco',
-        model: 'GA 55',
-        serialNumber: 'AC-2019-050',
-        location: 'Utility Room',
-        status: 'operational',
+        assetId: "CHI-COM-0001",
+        name: "Industrial Air Compressor",
+        type: "Compressor",
+        manufacturer: "Atlas Copco",
+        model: "GA 55",
+        serialNumber: "AC-2019-050",
+        location: "Utility Room",
+        status: "operational",
 
-        installationDate: new Date('2019-05-15'),
+        installationDate: new Date("2019-05-15"),
         specifications: JSON.stringify({
-          capacity: '100 CFM',
-          pressure: '125 PSI',
-          power: '55 kW',
+          capacity: "100 CFM",
+          pressure: "125 PSI",
+          power: "55 kW",
         }),
       })
       .returning()) as any[];
@@ -257,141 +257,139 @@ async function seed() {
     console.log(`  ✓ Created ${assetsData.length + 1} assets`);
 
     // Create work orders
-    console.log('Creating work orders...');
+    console.log("Creating work orders...");
 
     // Preventive maintenance
     const [wo1] = await db
       .insert(workOrders)
       .values({
         tenantId: tenant.id,
-        workOrderId: 'WO-20240118-0001',
-        title: 'Quarterly HVAC Maintenance',
-        description: 'Scheduled quarterly maintenance for main HVAC system including filter replacement and system inspection',
-        type: 'preventive',
-        priority: 'medium',
-        status: 'in_progress',
+        workOrderId: "WO-20240118-0001",
+        title: "Quarterly HVAC Maintenance",
+        description:
+          "Scheduled quarterly maintenance for main HVAC system including filter replacement and system inspection",
+        type: "preventive",
+        priority: "medium",
+        status: "in_progress",
         siteId: site1.id,
         assetId: hvacSystem.id,
         assignedTo: technicianUser.id,
         createdBy: managerUser.id,
-        scheduledStart: new Date('2024-01-20'),
-        scheduledEnd: new Date('2024-01-21'),
-        actualStart: new Date('2024-01-20T08:00:00'),
-        estimatedHours: '8',
+        scheduledStart: new Date("2024-01-20"),
+        scheduledEnd: new Date("2024-01-21"),
+        actualStart: new Date("2024-01-20T08:00:00"),
+        estimatedHours: "8",
       })
       .returning();
 
     // Corrective maintenance
     await db.insert(workOrders).values({
       tenantId: tenant.id,
-      workOrderId: 'WO-20240118-0002',
-      title: 'Repair Conveyor Belt Motor',
-      description: 'Motor is making unusual noises and needs inspection/repair',
-      type: 'corrective',
-      priority: 'high',
-      status: 'open',
+      workOrderId: "WO-20240118-0002",
+      title: "Repair Conveyor Belt Motor",
+      description: "Motor is making unusual noises and needs inspection/repair",
+      type: "corrective",
+      priority: "high",
+      status: "open",
       siteId: site2.id,
       assetId: assetsData[1].id,
       assignedTo: technicianUser.id,
       createdBy: managerUser.id,
-      scheduledStart: new Date('2024-01-19'),
-      scheduledEnd: new Date('2024-01-19'),
-      estimatedHours: '4',
+      scheduledStart: new Date("2024-01-19"),
+      scheduledEnd: new Date("2024-01-19"),
+      estimatedHours: "4",
     });
 
     // Emergency work order
     await db.insert(workOrders).values({
       tenantId: tenant.id,
-      workOrderId: 'WO-20240118-0003',
-      title: 'Emergency: CNC Machine Coolant Leak',
-      description: 'Coolant leak detected on CNC machine. Immediate attention required.',
-      type: 'emergency',
-      priority: 'critical',
-      status: 'open',
+      workOrderId: "WO-20240118-0003",
+      title: "Emergency: CNC Machine Coolant Leak",
+      description:
+        "Coolant leak detected on CNC machine. Immediate attention required.",
+      type: "emergency",
+      priority: "critical",
+      status: "open",
       siteId: site3.id,
       assetId: assetsData[2].id,
       assignedTo: managerUser.id,
       createdBy: managerUser.id,
-      scheduledStart: new Date('2024-01-18'),
-      scheduledEnd: new Date('2024-01-18'),
-      estimatedHours: '2',
+      scheduledStart: new Date("2024-01-18"),
+      scheduledEnd: new Date("2024-01-18"),
+      estimatedHours: "2",
     });
 
     // Completed work order
     await db.insert(workOrders).values({
       tenantId: tenant.id,
-      workOrderId: 'WO-20240115-0001',
-      title: 'Monthly Forklift Inspection',
-      description: 'Monthly safety inspection and fluid level check',
-      type: 'inspection',
-      priority: 'medium',
-      status: 'completed',
+      workOrderId: "WO-20240115-0001",
+      title: "Monthly Forklift Inspection",
+      description: "Monthly safety inspection and fluid level check",
+      type: "inspection",
+      priority: "medium",
+      status: "completed",
       siteId: site1.id,
       assetId: assetsData[0].id,
       assignedTo: technicianUser.id,
       createdBy: managerUser.id,
-      scheduledStart: new Date('2024-01-15'),
-      scheduledEnd: new Date('2024-01-15'),
-      actualStart: new Date('2024-01-15T09:00:00'),
-      actualEnd: new Date('2024-01-15T10:30:00'),
-      estimatedHours: '2',
-      actualHours: '1.5',
+      scheduledStart: new Date("2024-01-15"),
+      scheduledEnd: new Date("2024-01-15"),
+      actualStart: new Date("2024-01-15T09:00:00"),
+      actualEnd: new Date("2024-01-15T10:30:00"),
+      estimatedHours: "2",
+      actualHours: "1.5",
     });
 
     console.log(`  ✓ Created ${4} work orders`);
 
     // Create work order tasks
-    console.log('Creating work order tasks...');
+    console.log("Creating work order tasks...");
     await db.insert(workOrderTasks).values([
       {
         workOrderId: wo1.id,
-        title: 'Replace air filters',
-        description: 'Replace all air filters in HVAC system',
+        title: "Replace air filters",
+        description: "Replace all air filters in HVAC system",
         taskOrder: 1,
         isCompleted: true,
       },
       {
         workOrderId: wo1.id,
-        title: 'Inspect refrigerant levels',
-        description: 'Check and top up refrigerant if needed',
+        title: "Inspect refrigerant levels",
+        description: "Check and top up refrigerant if needed",
         taskOrder: 2,
         isCompleted: false,
-
       },
       {
         workOrderId: wo1.id,
-        title: 'Clean condenser coils',
-        description: 'Clean condenser coils and check for corrosion',
+        title: "Clean condenser coils",
+        description: "Clean condenser coils and check for corrosion",
         taskOrder: 3,
-
-
       },
       {
         workOrderId: wo1.id,
-        title: 'Test system performance',
-        description: 'Run system tests and verify proper operation',
+        title: "Test system performance",
+        description: "Run system tests and verify proper operation",
         taskOrder: 4,
         isCompleted: false,
-
       },
     ]);
 
     console.log(`  ✓ Created ${4} work order tasks`);
 
-    console.log('\n✅ Database seeded successfully!');
-    console.log('\n📊 Summary:');
+    console.log("\n✅ Database seeded successfully!");
+    console.log("\n📊 Summary:");
     console.log(`   • 1 tenant`);
     console.log(`   • 3 users (admin, manager, technician)`);
     console.log(`   • 3 sites`);
     console.log(`   • 5 assets`);
     console.log(`   • 4 work orders`);
     console.log(`   • 4 work order tasks`);
-    console.log('\n🔐 Login credentials:');
-    console.log('   • admin@example.com / Password123!');
-    console.log('   • manager@example.com / Password123!');
-    console.log('   • technician@example.com / Password123!');
+    console.log("\n🔐 Login credentials:");
+    console.log("   • admin@example.com / Password123!");
+    console.log("   • manager@example.com / Password123!");
+    console.log("   • technician@example.com / Password123!");
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error("Error seeding database:", error);
     throw error;
   }
 }
@@ -399,10 +397,10 @@ async function seed() {
 // Run seed
 seed()
   .then(() => {
-    console.log('\n👋 Seed complete. Exiting...');
+    console.log("\n👋 Seed complete. Exiting...");
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Seed failed:', error);
+    console.error("Seed failed:", error);
     process.exit(1);
   });

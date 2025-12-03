@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance } from "fastify";
 
 export interface SMSOptions {
   to: string;
@@ -7,7 +7,7 @@ export interface SMSOptions {
 
 export interface SMSDeliveryStatus {
   messageId: string;
-  status: 'sent' | 'failed';
+  status: "sent" | "failed";
   error?: string;
   cost?: number;
 }
@@ -18,13 +18,13 @@ export interface SMSDeliveryStatus {
  */
 export class SMSProviderService {
   private fastify: FastifyInstance;
-  private provider: 'twilio' | 'sns' | 'console';
+  private provider: "twilio" | "sns" | "console";
   private fromNumber: string;
 
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
-    this.provider = (process.env.SMS_PROVIDER as any) || 'console';
-    this.fromNumber = process.env.SMS_FROM_NUMBER || '+10000000000';
+    this.provider = (process.env.SMS_PROVIDER as any) || "console";
+    this.fromNumber = process.env.SMS_FROM_NUMBER || "+10000000000";
   }
 
   /**
@@ -42,30 +42,30 @@ export class SMSProviderService {
     if (body.length > 160) {
       this.fastify.log.warn(
         { length: body.length },
-        'SMS body exceeds 160 characters, may be split into multiple messages'
+        "SMS body exceeds 160 characters, may be split into multiple messages",
       );
     }
 
     this.fastify.log.info(
       { to, bodyLength: body.length, provider: this.provider },
-      'Sending SMS'
+      "Sending SMS",
     );
 
     try {
       switch (this.provider) {
-        case 'twilio':
+        case "twilio":
           return await this.sendViaTwilio(to, body);
-        case 'sns':
+        case "sns":
           return await this.sendViaSNS(to, body);
-        case 'console':
+        case "console":
         default:
           return await this.sendViaConsole(to, body);
       }
     } catch (error) {
-      this.fastify.log.error({ error, to }, 'Failed to send SMS');
+      this.fastify.log.error({ error, to }, "Failed to send SMS");
       return {
-        messageId: '',
-        status: 'failed',
+        messageId: "",
+        status: "failed",
         error: (error as Error).message,
       };
     }
@@ -74,7 +74,10 @@ export class SMSProviderService {
   /**
    * Send SMS via Twilio
    */
-  private async sendViaTwilio(to: string, body: string): Promise<SMSDeliveryStatus> {
+  private async sendViaTwilio(
+    to: string,
+    body: string,
+  ): Promise<SMSDeliveryStatus> {
     try {
       // TODO: Implement Twilio integration
       // const twilio = require('twilio');
@@ -88,11 +91,11 @@ export class SMSProviderService {
       //   to,
       // });
 
-      this.fastify.log.info({ to, body }, '[Twilio] SMS would be sent here');
+      this.fastify.log.info({ to, body }, "[Twilio] SMS would be sent here");
 
       return {
         messageId: `twilio-${Date.now()}`,
-        status: 'sent',
+        status: "sent",
         cost: 0.0075, // Approximate cost per SMS
       };
     } catch (error) {
@@ -103,7 +106,10 @@ export class SMSProviderService {
   /**
    * Send SMS via AWS SNS
    */
-  private async sendViaSNS(to: string, body: string): Promise<SMSDeliveryStatus> {
+  private async sendViaSNS(
+    to: string,
+    body: string,
+  ): Promise<SMSDeliveryStatus> {
     try {
       // TODO: Implement AWS SNS integration
       // const AWS = require('aws-sdk');
@@ -122,11 +128,11 @@ export class SMSProviderService {
       // };
       // const result = await sns.publish(params).promise();
 
-      this.fastify.log.info({ to, body }, '[AWS SNS] SMS would be sent here');
+      this.fastify.log.info({ to, body }, "[AWS SNS] SMS would be sent here");
 
       return {
         messageId: `sns-${Date.now()}`,
-        status: 'sent',
+        status: "sent",
         cost: 0.00645, // Approximate cost per SMS
       };
     } catch (error) {
@@ -137,19 +143,22 @@ export class SMSProviderService {
   /**
    * Console logger (for development/testing)
    */
-  private async sendViaConsole(to: string, body: string): Promise<SMSDeliveryStatus> {
-    console.log('\n' + '='.repeat(80));
-    console.log('📱 SMS (Console Mode)');
-    console.log('='.repeat(80));
+  private async sendViaConsole(
+    to: string,
+    body: string,
+  ): Promise<SMSDeliveryStatus> {
+    console.log("\n" + "=".repeat(80));
+    console.log("📱 SMS (Console Mode)");
+    console.log("=".repeat(80));
     console.log(`From: ${this.fromNumber}`);
     console.log(`To: ${to}`);
     console.log(`Body: ${body}`);
     console.log(`Length: ${body.length} characters`);
-    console.log('='.repeat(80) + '\n');
+    console.log("=".repeat(80) + "\n");
 
     return {
       messageId: `console-${Date.now()}`,
-      status: 'sent',
+      status: "sent",
       cost: 0,
     };
   }
@@ -167,9 +176,9 @@ export class SMSProviderService {
   /**
    * Format phone number to E.164
    */
-  static formatToE164(phone: string, countryCode: string = '1'): string {
+  static formatToE164(phone: string, countryCode: string = "1"): string {
     // Remove all non-numeric characters
-    const cleaned = phone.replace(/\D/g, '');
+    const cleaned = phone.replace(/\D/g, "");
 
     // Add country code if not present
     if (!cleaned.startsWith(countryCode)) {
@@ -192,7 +201,10 @@ export class SMSProviderService {
    * Handle opt-out request (STOP keyword)
    */
   async handleOptOut(phoneNumber: string): Promise<void> {
-    this.fastify.log.info({ phoneNumber }, 'User opted out of SMS notifications');
+    this.fastify.log.info(
+      { phoneNumber },
+      "User opted out of SMS notifications",
+    );
     // TODO: Add to opt-out list in database
   }
 
@@ -207,7 +219,7 @@ export class SMSProviderService {
     for (let i = 0; i < messages.length; i += batchSize) {
       const batch = messages.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map((msg) => this.send(msg))
+        batch.map((msg) => this.send(msg)),
       );
       results.push(...batchResults);
 
@@ -228,10 +240,10 @@ export class SMSProviderService {
     totalFailed: number;
     totalCost: number;
   }> {
-    const totalSent = results.filter((r) => r.status === 'sent').length;
-    const totalFailed = results.filter((r) => r.status === 'failed').length;
+    const totalSent = results.filter((r) => r.status === "sent").length;
+    const totalFailed = results.filter((r) => r.status === "failed").length;
     const totalCost = results
-      .filter((r) => r.status === 'sent')
+      .filter((r) => r.status === "sent")
       .reduce((sum, r) => sum + (r.cost || 0), 0);
 
     return {
@@ -242,6 +254,8 @@ export class SMSProviderService {
   }
 }
 
-export function createSMSProviderService(fastify: FastifyInstance): SMSProviderService {
+export function createSMSProviderService(
+  fastify: FastifyInstance,
+): SMSProviderService {
   return new SMSProviderService(fastify);
 }

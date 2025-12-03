@@ -1,64 +1,64 @@
-import { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
-import { pool } from '../db';
+import { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
+import { pool } from "../db";
 
 const healthRoutes: FastifyPluginAsync = async (server) => {
   server.get(
-    '/',
+    "/",
     {
       schema: {
-        description: 'Health check endpoint',
-        tags: ['health'],
+        description: "Health check endpoint",
+        tags: ["health"],
       },
     },
     async (request, reply) => {
-      let dbStatus = 'disconnected';
+      let dbStatus = "disconnected";
 
       try {
-        await pool.query('SELECT 1');
-        dbStatus = 'connected';
+        await pool.query("SELECT 1");
+        dbStatus = "connected";
       } catch (error) {
-        request.log.error({ err: error }, 'Database health check failed');
+        request.log.error({ err: error }, "Database health check failed");
       }
 
       return {
-        status: 'ok',
+        status: "ok",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         database: dbStatus,
       };
-    }
+    },
   );
 
   server.get(
-    '/ready',
+    "/ready",
     {
       schema: {
-        description: 'Readiness probe for Kubernetes',
-        tags: ['health'],
+        description: "Readiness probe for Kubernetes",
+        tags: ["health"],
       },
     },
     async (request, reply) => {
       try {
-        await pool.query('SELECT 1');
-        return reply.status(200).send({ status: 'ready' });
+        await pool.query("SELECT 1");
+        return reply.status(200).send({ status: "ready" });
       } catch (error) {
-        return reply.status(503).send({ status: 'not ready' });
+        return reply.status(503).send({ status: "not ready" });
       }
-    }
+    },
   );
 
   server.get(
-    '/live',
+    "/live",
     {
       schema: {
-        description: 'Liveness probe for Kubernetes',
-        tags: ['health'],
+        description: "Liveness probe for Kubernetes",
+        tags: ["health"],
       },
     },
     async (request, reply) => {
-      return { status: 'alive' };
-    }
+      return { status: "alive" };
+    },
   );
 };
 

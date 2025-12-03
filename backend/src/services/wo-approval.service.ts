@@ -1,4 +1,4 @@
-import { ModelPerformanceService } from './model-performance.service';
+import { ModelPerformanceService } from "./model-performance.service";
 
 export interface ApprovalRequest {
   workOrderId: string;
@@ -25,7 +25,7 @@ export interface ApprovalStats {
 
 export interface WorkOrderApproval {
   workOrderId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   approvedBy?: string;
   rejectedBy?: string;
   approvalDate?: Date;
@@ -67,16 +67,14 @@ export class WorkOrderApprovalService {
 
     // Check if already approved or rejected
     const existing = this.approvals.get(request.workOrderId);
-    if (existing && existing.status !== 'pending') {
-      throw new Error(
-        `Work order already ${existing.status}`
-      );
+    if (existing && existing.status !== "pending") {
+      throw new Error(`Work order already ${existing.status}`);
     }
 
     // Create approval
     const approval: WorkOrderApproval = {
       workOrderId: request.workOrderId,
-      status: 'approved',
+      status: "approved",
       approvedBy: request.approvedBy,
       approvalDate: new Date(),
       comments: request.comments,
@@ -85,7 +83,7 @@ export class WorkOrderApprovalService {
     this.approvals.set(request.workOrderId, approval);
 
     // Update work order status to "scheduled"
-    await this.updateWorkOrderStatus(request.workOrderId, 'scheduled');
+    await this.updateWorkOrderStatus(request.workOrderId, "scheduled");
 
     // Assign technician (in production, use work order assignment logic)
     await this.assignTechnician(request.workOrderId);
@@ -93,7 +91,9 @@ export class WorkOrderApprovalService {
     // Send notification to assigned technician
     await this.notifyTechnician(request.workOrderId);
 
-    this.logger.log(`Work order ${request.workOrderId} approved by ${request.approvedBy}`);
+    this.logger.log(
+      `Work order ${request.workOrderId} approved by ${request.approvedBy}`,
+    );
 
     return approval;
   }
@@ -113,16 +113,14 @@ export class WorkOrderApprovalService {
 
     // Check if already approved or rejected
     const existing = this.approvals.get(request.workOrderId);
-    if (existing && existing.status !== 'pending') {
-      throw new Error(
-        `Work order already ${existing.status}`
-      );
+    if (existing && existing.status !== "pending") {
+      throw new Error(`Work order already ${existing.status}`);
     }
 
     // Create rejection
     const approval: WorkOrderApproval = {
       workOrderId: request.workOrderId,
-      status: 'rejected',
+      status: "rejected",
       rejectedBy: request.rejectedBy,
       rejectionDate: new Date(),
       rejectionReason: request.reason,
@@ -135,12 +133,12 @@ export class WorkOrderApprovalService {
     this.rejectionFeedback.push({
       workOrderId: request.workOrderId,
       reason: request.reason,
-      feedback: request.feedback || '',
+      feedback: request.feedback || "",
       timestamp: new Date(),
     });
 
     // Update work order status to "canceled"
-    await this.updateWorkOrderStatus(request.workOrderId, 'canceled');
+    await this.updateWorkOrderStatus(request.workOrderId, "canceled");
 
     // Log rejection reason for model improvement
     await this.logRejectionForModelImprovement(request);
@@ -148,7 +146,9 @@ export class WorkOrderApprovalService {
     // Notify ML team of rejection (optional)
     await this.notifyMLTeam(request);
 
-    this.logger.log(`Work order ${request.workOrderId} rejected by ${request.rejectedBy}`);
+    this.logger.log(
+      `Work order ${request.workOrderId} rejected by ${request.rejectedBy}`,
+    );
 
     return approval;
   }
@@ -159,7 +159,7 @@ export class WorkOrderApprovalService {
   async batchApprove(
     workOrderIds: string[],
     approvedBy: string,
-    comments?: string
+    comments?: string,
   ): Promise<{ approved: number; failed: number; errors: string[] }> {
     this.logger.log(`Batch approving ${workOrderIds.length} work orders`);
 
@@ -178,11 +178,15 @@ export class WorkOrderApprovalService {
       } catch (error) {
         failed++;
         errors.push(`${workOrderId}: ${(error as any).message}`);
-        this.logger.error(`Failed to approve ${workOrderId}: ${(error as any).message}`);
+        this.logger.error(
+          `Failed to approve ${workOrderId}: ${(error as any).message}`,
+        );
       }
     }
 
-    this.logger.log(`Batch approval completed: ${approved} approved, ${failed} failed`);
+    this.logger.log(
+      `Batch approval completed: ${approved} approved, ${failed} failed`,
+    );
 
     return { approved, failed, errors };
   }
@@ -196,7 +200,7 @@ export class WorkOrderApprovalService {
     if (!approval) {
       return {
         workOrderId,
-        status: 'pending',
+        status: "pending",
       };
     }
 
@@ -206,7 +210,10 @@ export class WorkOrderApprovalService {
   /**
    * Get approval statistics
    */
-  async getApprovalStats(startDate?: Date, endDate?: Date): Promise<ApprovalStats> {
+  async getApprovalStats(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<ApprovalStats> {
     // In production, query from database
     const allApprovals = Array.from(this.approvals.values());
 
@@ -225,15 +232,22 @@ export class WorkOrderApprovalService {
     }
 
     const totalPredictiveWOs = filteredApprovals.length;
-    const approved = filteredApprovals.filter((a) => a.status === 'approved').length;
-    const rejected = filteredApprovals.filter((a) => a.status === 'rejected').length;
-    const pending = filteredApprovals.filter((a) => a.status === 'pending').length;
+    const approved = filteredApprovals.filter(
+      (a) => a.status === "approved",
+    ).length;
+    const rejected = filteredApprovals.filter(
+      (a) => a.status === "rejected",
+    ).length;
+    const pending = filteredApprovals.filter(
+      (a) => a.status === "pending",
+    ).length;
 
-    const approvalRate = totalPredictiveWOs > 0 ? (approved / totalPredictiveWOs) * 100 : 0;
+    const approvalRate =
+      totalPredictiveWOs > 0 ? (approved / totalPredictiveWOs) * 100 : 0;
 
     // Calculate average approval time
     const approvedItems = filteredApprovals.filter(
-      (a) => a.status === 'approved' && a.approvalDate
+      (a) => a.status === "approved" && a.approvalDate,
     );
     let avgApprovalTimeHours = 0;
     if (approvedItems.length > 0) {
@@ -244,8 +258,9 @@ export class WorkOrderApprovalService {
     // Count rejection reasons
     const rejectionReasons: Record<string, number> = {};
     for (const item of filteredApprovals) {
-      if (item.status === 'rejected' && item.rejectionReason) {
-        rejectionReasons[item.rejectionReason] = (rejectionReasons[item.rejectionReason] || 0) + 1;
+      if (item.status === "rejected" && item.rejectionReason) {
+        rejectionReasons[item.rejectionReason] =
+          (rejectionReasons[item.rejectionReason] || 0) + 1;
       }
     }
 
@@ -274,9 +289,11 @@ export class WorkOrderApprovalService {
     workOrderId: string,
     assetId: string,
     failureOccurred: boolean,
-    failureType?: string
+    failureType?: string,
   ): Promise<void> {
-    this.logger.log(`Recording WO completion for ${workOrderId}: failure=${failureOccurred}`);
+    this.logger.log(
+      `Recording WO completion for ${workOrderId}: failure=${failureOccurred}`,
+    );
 
     try {
       // Record ground truth for model performance tracking
@@ -284,12 +301,14 @@ export class WorkOrderApprovalService {
         workOrderId,
         assetId,
         failureOccurred,
-        failureType
+        failureType,
       );
 
       this.logger.log(`Ground truth recorded for WO ${workOrderId}`);
     } catch (error) {
-      this.logger.error(`Failed to record ground truth: ${(error as any).message}`);
+      this.logger.error(
+        `Failed to record ground truth: ${(error as any).message}`,
+      );
       // Don't throw - this is a non-critical operation
     }
   }
@@ -301,13 +320,16 @@ export class WorkOrderApprovalService {
    */
   private async getWorkOrder(workOrderId: string): Promise<any> {
     // TODO: Query from database
-    return { id: workOrderId, type: 'predictive', status: 'draft' };
+    return { id: workOrderId, type: "predictive", status: "draft" };
   }
 
   /**
    * Update work order status
    */
-  private async updateWorkOrderStatus(workOrderId: string, status: string): Promise<void> {
+  private async updateWorkOrderStatus(
+    workOrderId: string,
+    status: string,
+  ): Promise<void> {
     this.logger.log(`Updating WO ${workOrderId} status to: ${status}`);
 
     // TODO: Update in database
@@ -345,8 +367,12 @@ export class WorkOrderApprovalService {
   /**
    * Log rejection for model improvement
    */
-  private async logRejectionForModelImprovement(request: RejectionRequest): Promise<void> {
-    this.logger.log(`Logging rejection feedback for model improvement: ${request.workOrderId}`);
+  private async logRejectionForModelImprovement(
+    request: RejectionRequest,
+  ): Promise<void> {
+    this.logger.log(
+      `Logging rejection feedback for model improvement: ${request.workOrderId}`,
+    );
 
     // In production:
     // 1. Store in ML feedback table

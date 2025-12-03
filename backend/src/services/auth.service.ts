@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
-import { db } from '../db';
-import { users } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import bcrypt from "bcrypt";
+import { db } from "../db";
+import { users } from "../db/schema";
+import { eq, and } from "drizzle-orm";
 
 const SALT_ROUNDS = 10;
 
@@ -29,14 +29,19 @@ export class AuthService {
   /**
    * Verify password against hash
    */
-  static async verifyPassword(password: string, hash: string): Promise<boolean> {
+  static async verifyPassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
 
   /**
    * Authenticate user with email and password
    */
-  static async authenticate(credentials: LoginCredentials): Promise<UserPayload | null> {
+  static async authenticate(
+    credentials: LoginCredentials,
+  ): Promise<UserPayload | null> {
     const { email, password } = credentials;
 
     // Find user by email
@@ -56,7 +61,10 @@ export class AuthService {
       return null;
     }
 
-    const isPasswordValid = await this.verifyPassword(password, user.passwordHash);
+    const isPasswordValid = await this.verifyPassword(
+      password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       return null;
     }
@@ -119,7 +127,7 @@ export class AuthService {
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        role: (data.role as any) || 'viewer',
+        role: (data.role as any) || "viewer",
         isActive: true,
       })
       .returning({

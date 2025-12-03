@@ -5,8 +5,8 @@
  * Schedule: Every day at 2:00 AM
  */
 
-import { CronJob } from 'cron';
-import { PredictiveWOService } from '../services/predictive-wo.service';
+import { CronJob } from "cron";
+import { PredictiveWOService } from "../services/predictive-wo.service";
 
 const predictiveWOService = new PredictiveWOService();
 
@@ -16,18 +16,22 @@ const predictiveWOService = new PredictiveWOService();
  * Format: second minute hour day-of-month month day-of-week
  */
 export const predictiveMaintenanceJob = new CronJob(
-  '0 2 * * *', // Every day at 2:00 AM
+  "0 2 * * *", // Every day at 2:00 AM
   async () => {
-    console.log('[CRON] Starting predictive maintenance job...');
+    console.log("[CRON] Starting predictive maintenance job...");
 
     try {
-      const stats = await predictiveWOService.runPredictiveMaintenanceJob('predictive_maintenance');
+      const stats = await predictiveWOService.runPredictiveMaintenanceJob(
+        "predictive_maintenance",
+      );
 
-      console.log('[CRON] Predictive maintenance job completed:', stats);
+      console.log("[CRON] Predictive maintenance job completed:", stats);
 
       // Send summary email to admin (optional)
       if (stats.totalCreated > 0) {
-        console.log(`[CRON] Created ${stats.totalCreated} predictive work orders`);
+        console.log(
+          `[CRON] Created ${stats.totalCreated} predictive work orders`,
+        );
         console.log(`[CRON]   - Critical risk: ${stats.criticalRisk}`);
         console.log(`[CRON]   - High risk: ${stats.highRisk}`);
         console.log(`[CRON]   - Deduplicated: ${stats.deduplicatedCount}`);
@@ -35,9 +39,8 @@ export const predictiveMaintenanceJob = new CronJob(
 
       // Cleanup deduplication cache
       predictiveWOService.cleanupDeduplicationCache();
-
     } catch (error) {
-      console.error('[CRON] Predictive maintenance job failed:', error);
+      console.error("[CRON] Predictive maintenance job failed:", error);
 
       // Send alert to admin (optional)
       // TODO: Integrate with alerting system
@@ -45,7 +48,7 @@ export const predictiveMaintenanceJob = new CronJob(
   },
   null, // onComplete callback
   false, // start immediately
-  'America/New_York' // timezone
+  "America/New_York", // timezone
 );
 
 /**
@@ -53,7 +56,7 @@ export const predictiveMaintenanceJob = new CronJob(
  */
 export function startPredictiveMaintenanceCron() {
   predictiveMaintenanceJob.start();
-  console.log('[CRON] Predictive maintenance job scheduled (daily at 2:00 AM)');
+  console.log("[CRON] Predictive maintenance job scheduled (daily at 2:00 AM)");
 }
 
 /**
@@ -61,27 +64,29 @@ export function startPredictiveMaintenanceCron() {
  */
 export function stopPredictiveMaintenanceCron() {
   predictiveMaintenanceJob.stop();
-  console.log('[CRON] Predictive maintenance job stopped');
+  console.log("[CRON] Predictive maintenance job stopped");
 }
 
 /**
  * Run job immediately (for testing)
  */
 export async function runPredictiveMaintenanceNow() {
-  console.log('[CRON] Running predictive maintenance job immediately...');
-  const stats = await predictiveWOService.runPredictiveMaintenanceJob('predictive_maintenance');
-  console.log('[CRON] Job completed:', stats);
+  console.log("[CRON] Running predictive maintenance job immediately...");
+  const stats = await predictiveWOService.runPredictiveMaintenanceJob(
+    "predictive_maintenance",
+  );
+  console.log("[CRON] Job completed:", stats);
   return stats;
 }
 
 // Auto-start if this file is executed directly
 if (require.main === module) {
-  console.log('Starting predictive maintenance cron job...');
+  console.log("Starting predictive maintenance cron job...");
   startPredictiveMaintenanceCron();
 
   // Keep process alive
-  process.on('SIGINT', () => {
-    console.log('Stopping cron job...');
+  process.on("SIGINT", () => {
+    console.log("Stopping cron job...");
     stopPredictiveMaintenanceCron();
     process.exit(0);
   });

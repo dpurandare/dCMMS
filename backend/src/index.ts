@@ -1,11 +1,11 @@
-import { config } from 'dotenv';
-import { buildServer } from './server';
+import { config } from "dotenv";
+import { buildServer } from "./server";
 
 // Load environment variables
 config();
 
-const PORT = parseInt(process.env.PORT || '3000', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = parseInt(process.env.PORT || "3000", 10);
+const HOST = process.env.HOST || "0.0.0.0";
 
 async function start() {
   const server = await buildServer();

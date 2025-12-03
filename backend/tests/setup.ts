@@ -54,13 +54,18 @@ expect.extend({
 });
 
 // Declare custom matchers for TypeScript
-declare namespace jest {
-  interface Matchers<R> {
-    toBeValidUUID(): R;
-    toBeISO8601DateString(): R;
-    toHaveStatus(expected: number): R;
+// Declare custom matchers for TypeScript
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeValidUUID(): R;
+      toBeISO8601DateString(): R;
+      toHaveStatus(expected: number): R;
+    }
   }
 }
+
+export { };
 
 // Mock external services by default
 // jest.mock('@sendgrid/mail');

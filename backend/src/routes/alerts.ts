@@ -1,10 +1,13 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { db } from '../db';
-import { alerts } from '../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { createAlertNotificationHandler } from '../services/alert-notification-handler.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { db } from "../db";
+import { alerts } from "../db/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { createAlertNotificationHandler } from "../services/alert-notification-handler.service";
 
 // Validation schemas
 const acknowledgeAlertSchema = z.object({
@@ -24,7 +27,7 @@ const createAlertSchema = z.object({
   assetId: z.string().uuid().optional(),
   title: z.string().min(1).max(255),
   description: z.string().optional(),
-  severity: z.enum(['critical', 'high', 'medium', 'low', 'info']),
+  severity: z.enum(["critical", "high", "medium", "low", "info"]),
   ruleId: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
@@ -52,11 +55,11 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       limit?: string;
       offset?: string;
     };
-  }>('/alerts', async (request, reply) => {
+  }>("/alerts", async (request, reply) => {
     try {
       const { tenantId, siteId, assetId, severity, status } = request.query;
-      const limit = parseInt(request.query.limit || '50');
-      const offset = parseInt(request.query.offset || '0');
+      const limit = parseInt(request.query.limit || "50");
+      const offset = parseInt(request.query.offset || "0");
 
       // Build where conditions
       const conditions = [eq(alerts.tenantId, tenantId)];
@@ -121,9 +124,9 @@ export default async function alertRoutes(fastify: FastifyInstance) {
         },
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to list alerts');
+      fastify.log.error({ error }, "Failed to list alerts");
       return reply.status(500).send({
-        error: 'Failed to list alerts',
+        error: "Failed to list alerts",
       });
     }
   });
@@ -131,7 +134,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
   // Get alert by ID
   fastify.get<{
     Params: { alertId: string };
-  }>('/alerts/:alertId', async (request, reply) => {
+  }>("/alerts/:alertId", async (request, reply) => {
     try {
       const { alertId } = request.params;
 
@@ -161,7 +164,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
 
       if (!alert) {
         return reply.status(404).send({
-          error: 'Alert not found',
+          error: "Alert not found",
         });
       }
 
@@ -169,9 +172,9 @@ export default async function alertRoutes(fastify: FastifyInstance) {
         alert,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get alert');
+      fastify.log.error({ error }, "Failed to get alert");
       return reply.status(500).send({
-        error: 'Failed to get alert',
+        error: "Failed to get alert",
       });
     }
   });
@@ -180,7 +183,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof createAlertSchema>;
   }>(
-    '/alerts',
+    "/alerts",
     {
       schema: {
         body: createAlertSchema,
@@ -188,8 +191,16 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { tenantId, siteId, assetId, title, description, severity, ruleId, metadata } =
-          request.body;
+        const {
+          tenantId,
+          siteId,
+          assetId,
+          title,
+          description,
+          severity,
+          ruleId,
+          metadata,
+        } = request.body;
 
         // Generate alert ID
         const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -205,14 +216,14 @@ export default async function alertRoutes(fastify: FastifyInstance) {
             title,
             description,
             severity,
-            status: 'active',
+            status: "active",
             ruleId,
             triggeredAt: new Date(),
             metadata: JSON.stringify(metadata || {}),
           })
           .returning();
 
-        fastify.log.info({ alertId: alert.id, severity }, 'Alert created');
+        fastify.log.info({ alertId: alert.id, severity }, "Alert created");
 
         // Trigger alert notification handler
         try {
@@ -226,24 +237,27 @@ export default async function alertRoutes(fastify: FastifyInstance) {
             severity: alert.severity as any,
             status: alert.status as any,
             triggeredAt: alert.triggeredAt.toISOString(),
-            metadata: JSON.parse(alert.metadata || '{}'),
+            metadata: JSON.parse(alert.metadata || "{}"),
           });
         } catch (handlerError) {
           // Log but don't fail the request
-          fastify.log.error({ error: handlerError, alertId: alert.id }, 'Failed to trigger alert notifications');
+          fastify.log.error(
+            { error: handlerError, alertId: alert.id },
+            "Failed to trigger alert notifications",
+          );
         }
 
         return reply.status(201).send({
           alert,
-          message: 'Alert created successfully',
+          message: "Alert created successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to create alert');
+        fastify.log.error({ error }, "Failed to create alert");
         return reply.status(500).send({
-          error: 'Failed to create alert',
+          error: "Failed to create alert",
         });
       }
-    }
+    },
   );
 
   // Acknowledge alert
@@ -251,7 +265,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     Params: { alertId: string };
     Body: z.infer<typeof acknowledgeAlertSchema>;
   }>(
-    '/alerts/:alertId/acknowledge',
+    "/alerts/:alertId/acknowledge",
     {
       schema: {
         body: acknowledgeAlertSchema,
@@ -269,26 +283,26 @@ export default async function alertRoutes(fastify: FastifyInstance) {
 
         if (!alert) {
           return reply.status(404).send({
-            error: 'Alert not found',
+            error: "Alert not found",
           });
         }
 
         // Check if alert is already acknowledged or resolved
-        if (alert.status === 'acknowledged') {
+        if (alert.status === "acknowledged") {
           return reply.status(400).send({
-            error: 'Alert is already acknowledged',
+            error: "Alert is already acknowledged",
           });
         }
 
-        if (alert.status === 'resolved') {
+        if (alert.status === "resolved") {
           return reply.status(400).send({
-            error: 'Alert is already resolved',
+            error: "Alert is already resolved",
           });
         }
 
-        if (alert.status === 'suppressed') {
+        if (alert.status === "suppressed") {
           return reply.status(400).send({
-            error: 'Alert is suppressed',
+            error: "Alert is suppressed",
           });
         }
 
@@ -296,11 +310,11 @@ export default async function alertRoutes(fastify: FastifyInstance) {
         const [updated] = await db
           .update(alerts)
           .set({
-            status: 'acknowledged',
+            status: "acknowledged",
             acknowledgedBy: userId,
             acknowledgedAt: new Date(),
             metadata: JSON.stringify({
-              ...JSON.parse(alert.metadata || '{}'),
+              ...JSON.parse(alert.metadata || "{}"),
               acknowledgment_comment: comment,
             }),
             updatedAt: new Date(),
@@ -308,7 +322,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           .where(eq(alerts.id, alertId))
           .returning();
 
-        fastify.log.info({ alertId, userId }, 'Alert acknowledged');
+        fastify.log.info({ alertId, userId }, "Alert acknowledged");
 
         // Trigger alert.acknowledged event (for notifications and escalation cancellation)
         try {
@@ -325,20 +339,23 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           });
         } catch (handlerError) {
           // Log but don't fail the request
-          fastify.log.error({ error: handlerError, alertId }, 'Failed to trigger acknowledge notification');
+          fastify.log.error(
+            { error: handlerError, alertId },
+            "Failed to trigger acknowledge notification",
+          );
         }
 
         return reply.send({
           alert: updated,
-          message: 'Alert acknowledged successfully',
+          message: "Alert acknowledged successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to acknowledge alert');
+        fastify.log.error({ error }, "Failed to acknowledge alert");
         return reply.status(500).send({
-          error: 'Failed to acknowledge alert',
+          error: "Failed to acknowledge alert",
         });
       }
-    }
+    },
   );
 
   // Resolve alert
@@ -346,7 +363,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     Params: { alertId: string };
     Body: z.infer<typeof resolveAlertSchema>;
   }>(
-    '/alerts/:alertId/resolve',
+    "/alerts/:alertId/resolve",
     {
       schema: {
         body: resolveAlertSchema,
@@ -364,14 +381,14 @@ export default async function alertRoutes(fastify: FastifyInstance) {
 
         if (!alert) {
           return reply.status(404).send({
-            error: 'Alert not found',
+            error: "Alert not found",
           });
         }
 
         // Check if alert is already resolved
-        if (alert.status === 'resolved') {
+        if (alert.status === "resolved") {
           return reply.status(400).send({
-            error: 'Alert is already resolved',
+            error: "Alert is already resolved",
           });
         }
 
@@ -379,11 +396,11 @@ export default async function alertRoutes(fastify: FastifyInstance) {
         const [updated] = await db
           .update(alerts)
           .set({
-            status: 'resolved',
+            status: "resolved",
             resolvedBy: userId,
             resolvedAt: new Date(),
             metadata: JSON.stringify({
-              ...JSON.parse(alert.metadata || '{}'),
+              ...JSON.parse(alert.metadata || "{}"),
               resolution_comment: comment,
               resolution,
             }),
@@ -392,7 +409,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           .where(eq(alerts.id, alertId))
           .returning();
 
-        fastify.log.info({ alertId, userId }, 'Alert resolved');
+        fastify.log.info({ alertId, userId }, "Alert resolved");
 
         // Trigger alert.resolved event (for notifications)
         try {
@@ -409,27 +426,31 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           });
         } catch (handlerError) {
           // Log but don't fail the request
-          fastify.log.error({ error: handlerError, alertId }, 'Failed to trigger resolve notification');
+          fastify.log.error(
+            { error: handlerError, alertId },
+            "Failed to trigger resolve notification",
+          );
         }
 
         return reply.send({
           alert: updated,
-          message: 'Alert resolved successfully',
+          message: "Alert resolved successfully",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to resolve alert');
+        fastify.log.error({ error }, "Failed to resolve alert");
         return reply.status(500).send({
-          error: 'Failed to resolve alert',
+          error: "Failed to resolve alert",
         });
       }
-    }
+    },
   );
 
   // Suppress alert (temporarily disable notifications)
   fastify.post<{
     Params: { alertId: string };
     Body: z.infer<typeof suppressAlertSchema>;
-  }>('/alerts/:alertId/suppress',
+  }>(
+    "/alerts/:alertId/suppress",
     {
       schema: {
         body: suppressAlertSchema,
@@ -447,21 +468,23 @@ export default async function alertRoutes(fastify: FastifyInstance) {
 
         if (!alert) {
           return reply.status(404).send({
-            error: 'Alert not found',
+            error: "Alert not found",
           });
         }
 
         // Calculate suppression end time
         const suppressedUntil = new Date();
-        suppressedUntil.setMinutes(suppressedUntil.getMinutes() + durationMinutes);
+        suppressedUntil.setMinutes(
+          suppressedUntil.getMinutes() + durationMinutes,
+        );
 
         // Update alert
         const [updated] = await db
           .update(alerts)
           .set({
-            status: 'suppressed',
+            status: "suppressed",
             metadata: JSON.stringify({
-              ...JSON.parse(alert.metadata || '{}'),
+              ...JSON.parse(alert.metadata || "{}"),
               suppressed_by: userId,
               suppression_reason: reason,
               suppressed_at: new Date().toISOString(),
@@ -472,19 +495,23 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           .where(eq(alerts.id, alertId))
           .returning();
 
-        fastify.log.info({ alertId, userId, durationMinutes }, 'Alert suppressed');
+        fastify.log.info(
+          { alertId, userId, durationMinutes },
+          "Alert suppressed",
+        );
 
         return reply.send({
           alert: updated,
           message: `Alert suppressed for ${durationMinutes} minutes`,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to suppress alert');
+        fastify.log.error({ error }, "Failed to suppress alert");
         return reply.status(500).send({
-          error: 'Failed to suppress alert',
+          error: "Failed to suppress alert",
         });
       }
-    });
+    },
+  );
 
   // Get alert statistics
   fastify.get<{
@@ -494,7 +521,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       startDate?: string;
       endDate?: string;
     };
-  }>('/alerts/stats', async (request, reply) => {
+  }>("/alerts/stats", async (request, reply) => {
     try {
       const { tenantId, siteId, startDate, endDate } = request.query;
 
@@ -513,16 +540,17 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       // Calculate statistics
       const stats = {
         total: allAlerts.length,
-        active: allAlerts.filter((a) => a.status === 'active').length,
-        acknowledged: allAlerts.filter((a) => a.status === 'acknowledged').length,
-        resolved: allAlerts.filter((a) => a.status === 'resolved').length,
-        suppressed: allAlerts.filter((a) => a.status === 'suppressed').length,
+        active: allAlerts.filter((a) => a.status === "active").length,
+        acknowledged: allAlerts.filter((a) => a.status === "acknowledged")
+          .length,
+        resolved: allAlerts.filter((a) => a.status === "resolved").length,
+        suppressed: allAlerts.filter((a) => a.status === "suppressed").length,
         bySeverity: {
-          critical: allAlerts.filter((a) => a.severity === 'critical').length,
-          high: allAlerts.filter((a) => a.severity === 'high').length,
-          medium: allAlerts.filter((a) => a.severity === 'medium').length,
-          low: allAlerts.filter((a) => a.severity === 'low').length,
-          info: allAlerts.filter((a) => a.severity === 'info').length,
+          critical: allAlerts.filter((a) => a.severity === "critical").length,
+          high: allAlerts.filter((a) => a.severity === "high").length,
+          medium: allAlerts.filter((a) => a.severity === "medium").length,
+          low: allAlerts.filter((a) => a.severity === "low").length,
+          info: allAlerts.filter((a) => a.severity === "info").length,
         },
         averageResponseTime: 0, // TODO: Calculate average time from triggered to acknowledged
         averageResolutionTime: 0, // TODO: Calculate average time from triggered to resolved
@@ -533,10 +561,13 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       if (acknowledgedAlerts.length > 0) {
         const totalResponseTime = acknowledgedAlerts.reduce((sum, alert) => {
           const responseTime =
-            new Date(alert.acknowledgedAt!).getTime() - new Date(alert.triggeredAt).getTime();
+            new Date(alert.acknowledgedAt!).getTime() -
+            new Date(alert.triggeredAt).getTime();
           return sum + responseTime;
         }, 0);
-        stats.averageResponseTime = Math.round(totalResponseTime / acknowledgedAlerts.length / 1000 / 60); // in minutes
+        stats.averageResponseTime = Math.round(
+          totalResponseTime / acknowledgedAlerts.length / 1000 / 60,
+        ); // in minutes
       }
 
       // Calculate average resolution time (time from triggered to resolved)
@@ -544,19 +575,22 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       if (resolvedAlerts.length > 0) {
         const totalResolutionTime = resolvedAlerts.reduce((sum, alert) => {
           const resolutionTime =
-            new Date(alert.resolvedAt!).getTime() - new Date(alert.triggeredAt).getTime();
+            new Date(alert.resolvedAt!).getTime() -
+            new Date(alert.triggeredAt).getTime();
           return sum + resolutionTime;
         }, 0);
-        stats.averageResolutionTime = Math.round(totalResolutionTime / resolvedAlerts.length / 1000 / 60); // in minutes
+        stats.averageResolutionTime = Math.round(
+          totalResolutionTime / resolvedAlerts.length / 1000 / 60,
+        ); // in minutes
       }
 
       return reply.send({
         stats,
       });
     } catch (error) {
-      fastify.log.error({ error }, 'Failed to get alert statistics');
+      fastify.log.error({ error }, "Failed to get alert statistics");
       return reply.status(500).send({
-        error: 'Failed to get alert statistics',
+        error: "Failed to get alert statistics",
       });
     }
   });

@@ -1,9 +1,12 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createComplianceReportGenerationService } from '../services/compliance-report-generation.service';
-import { createAuditLogService } from '../services/audit-log.service';
-import { createReadStream, existsSync } from 'fs';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createComplianceReportGenerationService } from "../services/compliance-report-generation.service";
+import { createAuditLogService } from "../services/audit-log.service";
+import { createReadStream, existsSync } from "fs";
 
 // Validation schemas
 const generateReportSchema = z.object({
@@ -12,12 +15,12 @@ const generateReportSchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   manualData: z.record(z.any()).optional(),
-  watermark: z.enum(['DRAFT', 'FINAL']).optional().default('DRAFT'),
-  format: z.enum(['pdf', 'csv', 'json']).optional().default('pdf'),
+  watermark: z.enum(["DRAFT", "FINAL"]).optional().default("DRAFT"),
+  format: z.enum(["pdf", "csv", "json"]).optional().default("pdf"),
 });
 
 const updateStatusSchema = z.object({
-  status: z.enum(['draft', 'final', 'submitted']),
+  status: z.enum(["draft", "final", "submitted"]),
 });
 
 /**
@@ -38,12 +41,12 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof generateReportSchema>;
   }>(
-    '/compliance/reports',
+    "/compliance/reports",
     {
       schema: {
         body: generateReportSchema,
-        tags: ['Compliance'],
-        description: 'Generate a new compliance report (PDF, CSV, or JSON)',
+        tags: ["Compliance"],
+        description: "Generate a new compliance report (PDF, CSV, or JSON)",
       },
     },
     async (request, reply) => {
@@ -53,17 +56,25 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!tenantId || !userId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
         const reportRequest = {
           ...request.body,
-          startDate: request.body.startDate ? new Date(request.body.startDate) : undefined,
-          endDate: request.body.endDate ? new Date(request.body.endDate) : undefined,
+          startDate: request.body.startDate
+            ? new Date(request.body.startDate)
+            : undefined,
+          endDate: request.body.endDate
+            ? new Date(request.body.endDate)
+            : undefined,
         };
 
-        const report = await reportService.generateReport(reportRequest, tenantId, userId);
+        const report = await reportService.generateReport(
+          reportRequest,
+          tenantId,
+          userId,
+        );
 
         // Audit log
         await auditService.logReportGenerated(
@@ -72,13 +83,16 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           report.reportId,
           report.templateId,
           request.ip,
-          request.headers['user-agent']
+          request.headers["user-agent"],
         );
 
-        fastify.log.info({ reportId: report.reportId }, 'Compliance report generated');
+        fastify.log.info(
+          { reportId: report.reportId },
+          "Compliance report generated",
+        );
 
         return reply.status(201).send({
-          message: 'Report generated successfully',
+          message: "Report generated successfully",
           report: {
             reportId: report.reportId,
             templateId: report.templateId,
@@ -90,13 +104,13 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           },
         });
       } catch (error: any) {
-        fastify.log.error({ error }, 'Failed to generate compliance report');
+        fastify.log.error({ error }, "Failed to generate compliance report");
         return reply.status(500).send({
-          error: 'Failed to generate compliance report',
+          error: "Failed to generate compliance report",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -110,15 +124,15 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
       status?: string;
     };
   }>(
-    '/compliance/reports',
+    "/compliance/reports",
     {
       schema: {
         querystring: z.object({
           templateId: z.string().optional(),
-          status: z.enum(['draft', 'final', 'submitted']).optional(),
+          status: z.enum(["draft", "final", "submitted"]).optional(),
         }),
-        tags: ['Compliance'],
-        description: 'List all generated compliance reports',
+        tags: ["Compliance"],
+        description: "List all generated compliance reports",
       },
     },
     async (request, reply) => {
@@ -127,7 +141,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -153,12 +167,12 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           })),
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to list compliance reports');
+        fastify.log.error({ error }, "Failed to list compliance reports");
         return reply.status(500).send({
-          error: 'Failed to list compliance reports',
+          error: "Failed to list compliance reports",
         });
       }
-    }
+    },
   );
 
   // Get single compliance report
@@ -167,14 +181,14 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
       reportId: string;
     };
   }>(
-    '/compliance/reports/:reportId',
+    "/compliance/reports/:reportId",
     {
       schema: {
         params: z.object({
           reportId: z.string(),
         }),
-        tags: ['Compliance'],
-        description: 'Get compliance report details by ID',
+        tags: ["Compliance"],
+        description: "Get compliance report details by ID",
       },
     },
     async (request, reply) => {
@@ -183,7 +197,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -193,7 +207,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!report) {
           return reply.status(404).send({
-            error: 'Report not found',
+            error: "Report not found",
           });
         }
 
@@ -210,12 +224,12 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           downloadUrl: `/api/v1/compliance/reports/${report.reportId}/download`,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to get compliance report');
+        fastify.log.error({ error }, "Failed to get compliance report");
         return reply.status(500).send({
-          error: 'Failed to get compliance report',
+          error: "Failed to get compliance report",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -228,14 +242,14 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
       reportId: string;
     };
   }>(
-    '/compliance/reports/:reportId/download',
+    "/compliance/reports/:reportId/download",
     {
       schema: {
         params: z.object({
           reportId: z.string(),
         }),
-        tags: ['Compliance'],
-        description: 'Download compliance report file',
+        tags: ["Compliance"],
+        description: "Download compliance report file",
       },
     },
     async (request, reply) => {
@@ -244,7 +258,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -255,26 +269,30 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!report) {
           return reply.status(404).send({
-            error: 'Report not found',
+            error: "Report not found",
           });
         }
 
         // Check if file exists
         if (!existsSync(report.filePath)) {
-          fastify.log.error({ reportId, filePath: report.filePath }, 'Report file not found');
+          fastify.log.error(
+            { reportId, filePath: report.filePath },
+            "Report file not found",
+          );
           return reply.status(404).send({
-            error: 'Report file not found',
+            error: "Report file not found",
           });
         }
 
         // Set content type based on format
         const contentTypes: Record<string, string> = {
-          pdf: 'application/pdf',
-          csv: 'text/csv',
-          json: 'application/json',
+          pdf: "application/pdf",
+          csv: "text/csv",
+          json: "application/json",
         };
 
-        const contentType = contentTypes[report.format] || 'application/octet-stream';
+        const contentType =
+          contentTypes[report.format] || "application/octet-stream";
         const fileName = `${reportId}.${report.format}`;
 
         // Audit log
@@ -284,22 +302,25 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           reportId,
           report.format,
           request.ip,
-          request.headers['user-agent']
+          request.headers["user-agent"],
         );
 
-        reply.header('Content-Type', contentType);
-        reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
+        reply.header("Content-Type", contentType);
+        reply.header(
+          "Content-Disposition",
+          `attachment; filename="${fileName}"`,
+        );
 
         const fileStream = createReadStream(report.filePath);
 
         return reply.send(fileStream);
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to download compliance report');
+        fastify.log.error({ error }, "Failed to download compliance report");
         return reply.status(500).send({
-          error: 'Failed to download compliance report',
+          error: "Failed to download compliance report",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -313,15 +334,16 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     };
     Body: z.infer<typeof updateStatusSchema>;
   }>(
-    '/compliance/reports/:reportId/status',
+    "/compliance/reports/:reportId/status",
     {
       schema: {
         params: z.object({
           reportId: z.string(),
         }),
         body: updateStatusSchema,
-        tags: ['Compliance'],
-        description: 'Update compliance report status (draft, final, submitted)',
+        tags: ["Compliance"],
+        description:
+          "Update compliance report status (draft, final, submitted)",
       },
     },
     async (request, reply) => {
@@ -330,7 +352,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -340,11 +362,15 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         // Get old status first
         const oldReport = await reportService.getReport(reportId, tenantId);
 
-        const updated = await reportService.updateReportStatus(reportId, tenantId, status);
+        const updated = await reportService.updateReportStatus(
+          reportId,
+          tenantId,
+          status,
+        );
 
         if (!updated) {
           return reply.status(404).send({
-            error: 'Report not found',
+            error: "Report not found",
           });
         }
 
@@ -353,16 +379,16 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           tenantId,
           (request.user as any)!.id,
           reportId,
-          oldReport?.status || 'unknown',
+          oldReport?.status || "unknown",
           status,
           request.ip,
-          request.headers['user-agent']
+          request.headers["user-agent"],
         );
 
-        fastify.log.info({ reportId, status }, 'Report status updated');
+        fastify.log.info({ reportId, status }, "Report status updated");
 
         return reply.send({
-          message: 'Report status updated successfully',
+          message: "Report status updated successfully",
           report: {
             reportId: updated.reportId,
             status: updated.status,
@@ -370,11 +396,11 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           },
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to update report status');
+        fastify.log.error({ error }, "Failed to update report status");
         return reply.status(500).send({
-          error: 'Failed to update report status',
+          error: "Failed to update report status",
         });
       }
-    }
+    },
   );
 }

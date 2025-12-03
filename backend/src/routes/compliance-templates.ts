@@ -1,7 +1,10 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createComplianceTemplateService } from '../services/compliance-template.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createComplianceTemplateService } from "../services/compliance-template.service";
 
 // Validation schemas
 const autoPopulateSchema = z.object({
@@ -18,7 +21,9 @@ const validateReportSchema = z.object({
  * Compliance Template Routes
  * Manage compliance report templates and auto-population
  */
-export default async function complianceTemplateRoutes(fastify: FastifyInstance) {
+export default async function complianceTemplateRoutes(
+  fastify: FastifyInstance,
+) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
   const complianceService = createComplianceTemplateService(fastify);
@@ -33,14 +38,14 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
       reportType?: string;
     };
   }>(
-    '/compliance/templates',
+    "/compliance/templates",
     {
       schema: {
         querystring: z.object({
           reportType: z.string().optional(),
         }),
-        tags: ['Compliance'],
-        description: 'List all compliance report templates',
+        tags: ["Compliance"],
+        description: "List all compliance report templates",
       },
     },
     async (request, reply) => {
@@ -54,12 +59,12 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
           templates,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to list compliance templates');
+        fastify.log.error({ error }, "Failed to list compliance templates");
         return reply.status(500).send({
-          error: 'Failed to list compliance templates',
+          error: "Failed to list compliance templates",
         });
       }
-    }
+    },
   );
 
   // Get single template by ID
@@ -68,14 +73,14 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
       templateId: string;
     };
   }>(
-    '/compliance/templates/:templateId',
+    "/compliance/templates/:templateId",
     {
       schema: {
         params: z.object({
           templateId: z.string(),
         }),
-        tags: ['Compliance'],
-        description: 'Get compliance template by ID',
+        tags: ["Compliance"],
+        description: "Get compliance template by ID",
       },
     },
     async (request, reply) => {
@@ -86,18 +91,18 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!template) {
           return reply.status(404).send({
-            error: 'Template not found',
+            error: "Template not found",
           });
         }
 
         return reply.send(template);
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to get compliance template');
+        fastify.log.error({ error }, "Failed to get compliance template");
         return reply.status(500).send({
-          error: 'Failed to get compliance template',
+          error: "Failed to get compliance template",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -111,15 +116,15 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
     };
     Body: z.infer<typeof autoPopulateSchema>;
   }>(
-    '/compliance/templates/:templateId/auto-populate',
+    "/compliance/templates/:templateId/auto-populate",
     {
       schema: {
         params: z.object({
           templateId: z.string(),
         }),
         body: autoPopulateSchema,
-        tags: ['Compliance'],
-        description: 'Auto-populate template data from dCMMS sources',
+        tags: ["Compliance"],
+        description: "Auto-populate template data from dCMMS sources",
       },
     },
     async (request, reply) => {
@@ -128,7 +133,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -140,7 +145,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!template) {
           return reply.status(404).send({
-            error: 'Template not found',
+            error: "Template not found",
           });
         }
 
@@ -150,12 +155,12 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
           tenantId,
           siteId,
           startDate ? new Date(startDate) : undefined,
-          endDate ? new Date(endDate) : undefined
+          endDate ? new Date(endDate) : undefined,
         );
 
         fastify.log.info(
           { templateId, fieldsPopulated: Object.keys(populatedData).length },
-          'Template auto-populated'
+          "Template auto-populated",
         );
 
         return reply.send({
@@ -166,13 +171,13 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
           populatedAt: new Date().toISOString(),
         });
       } catch (error: any) {
-        fastify.log.error({ error }, 'Failed to auto-populate template');
+        fastify.log.error({ error }, "Failed to auto-populate template");
         return reply.status(500).send({
-          error: 'Failed to auto-populate template',
+          error: "Failed to auto-populate template",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -186,15 +191,15 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
     };
     Body: z.infer<typeof validateReportSchema>;
   }>(
-    '/compliance/templates/:templateId/validate',
+    "/compliance/templates/:templateId/validate",
     {
       schema: {
         params: z.object({
           templateId: z.string(),
         }),
         body: validateReportSchema,
-        tags: ['Compliance'],
-        description: 'Validate report data against template rules',
+        tags: ["Compliance"],
+        description: "Validate report data against template rules",
       },
     },
     async (request, reply) => {
@@ -207,17 +212,20 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!template) {
           return reply.status(404).send({
-            error: 'Template not found',
+            error: "Template not found",
           });
         }
 
         // Validate data
-        const validation = complianceService.validateReportData(template, reportData);
+        const validation = complianceService.validateReportData(
+          template,
+          reportData,
+        );
 
         if (validation.valid) {
           return reply.send({
             valid: true,
-            message: 'Report data is valid',
+            message: "Report data is valid",
           });
         } else {
           return reply.status(400).send({
@@ -226,12 +234,12 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
           });
         }
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to validate report data');
+        fastify.log.error({ error }, "Failed to validate report data");
         return reply.status(500).send({
-          error: 'Failed to validate report data',
+          error: "Failed to validate report data",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -247,7 +255,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
       manualData?: Record<string, any>;
     };
   }>(
-    '/compliance/templates/:templateId/preview',
+    "/compliance/templates/:templateId/preview",
     {
       schema: {
         params: z.object({
@@ -256,8 +264,9 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
         body: autoPopulateSchema.extend({
           manualData: z.record(z.any()).optional(),
         }),
-        tags: ['Compliance'],
-        description: 'Generate preview of compliance report with auto-populated and manual data',
+        tags: ["Compliance"],
+        description:
+          "Generate preview of compliance report with auto-populated and manual data",
       },
     },
     async (request, reply) => {
@@ -266,7 +275,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!tenantId) {
           return reply.status(401).send({
-            error: 'Unauthorized',
+            error: "Unauthorized",
           });
         }
 
@@ -278,7 +287,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         if (!template) {
           return reply.status(404).send({
-            error: 'Template not found',
+            error: "Template not found",
           });
         }
 
@@ -288,7 +297,7 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
           tenantId,
           siteId,
           startDate ? new Date(startDate) : undefined,
-          endDate ? new Date(endDate) : undefined
+          endDate ? new Date(endDate) : undefined,
         );
 
         // Merge with manual data
@@ -298,7 +307,10 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
         };
 
         // Validate merged data
-        const validation = complianceService.validateReportData(template, mergedData);
+        const validation = complianceService.validateReportData(
+          template,
+          mergedData,
+        );
 
         // Build preview response
         const preview = {
@@ -324,12 +336,12 @@ export default async function complianceTemplateRoutes(fastify: FastifyInstance)
 
         return reply.send(preview);
       } catch (error: any) {
-        fastify.log.error({ error }, 'Failed to generate preview');
+        fastify.log.error({ error }, "Failed to generate preview");
         return reply.status(500).send({
-          error: 'Failed to generate preview',
+          error: "Failed to generate preview",
           message: error.message,
         });
       }
-    }
+    },
   );
 }

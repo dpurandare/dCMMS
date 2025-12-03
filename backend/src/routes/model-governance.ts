@@ -1,29 +1,29 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync } from "fastify";
 import {
   ModelGovernanceService,
   ModelDocumentation,
   ModelStage,
-} from '../services/model-governance.service';
+} from "../services/model-governance.service";
 
 const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
   const governanceService = new ModelGovernanceService();
 
   // POST /api/v1/model-governance/register
   server.post(
-    '/register',
+    "/register",
     {
       schema: {
-        summary: 'Register a new model',
-        tags: ['Model Governance'],
+        summary: "Register a new model",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         body: {
-          type: 'object',
-          required: ['modelName', 'version', 'description', 'owner'],
+          type: "object",
+          required: ["modelName", "version", "description", "owner"],
           properties: {
-            modelName: { type: 'string', example: 'predictive_maintenance' },
-            version: { type: 'string', example: 'v2.0.0' },
-            description: { type: 'string' },
-            owner: { type: 'string' },
+            modelName: { type: "string", example: "predictive_maintenance" },
+            version: { type: "string", example: "v2.0.0" },
+            description: { type: "string" },
+            owner: { type: "string" },
           },
         },
       },
@@ -37,48 +37,57 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           modelName,
           version,
           description,
-          owner
+          owner,
         );
 
         return {
-          message: 'Model registered successfully',
+          message: "Model registered successfully",
           registration,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('already registered')) {
+        if (error.message.includes("already registered")) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to register model',
+          error: "Failed to register model",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // PUT /api/v1/model-governance/:modelId/stage
   server.put(
-    '/:modelId/stage',
+    "/:modelId/stage",
     {
       schema: {
-        summary: 'Update model stage',
-        tags: ['Model Governance'],
+        summary: "Update model stage",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['newStage', 'updatedBy'],
+          type: "object",
+          required: ["newStage", "updatedBy"],
           properties: {
-            newStage: { type: 'string', enum: ['development', 'staging', 'review', 'production', 'retired'] },
-            updatedBy: { type: 'string' },
+            newStage: {
+              type: "string",
+              enum: [
+                "development",
+                "staging",
+                "review",
+                "production",
+                "retired",
+              ],
+            },
+            updatedBy: { type: "string" },
           },
         },
       },
@@ -92,52 +101,52 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
         const model = await governanceService.updateModelStage(
           modelId,
           newStage as ModelStage,
-          updatedBy
+          updatedBy,
         );
 
         return {
-          message: 'Model stage updated successfully',
+          message: "Model stage updated successfully",
           model,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
-        if (error.message.includes('Invalid')) {
+        if (error.message.includes("Invalid")) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to update model stage',
+          error: "Failed to update model stage",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/approval/request
   server.post(
-    '/:modelId/approval/request',
+    "/:modelId/approval/request",
     {
       schema: {
-        summary: 'Request approval for model promotion',
-        tags: ['Model Governance'],
+        summary: "Request approval for model promotion",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['requestedBy', 'approvers'],
+          type: "object",
+          required: ["requestedBy", "approvers"],
           properties: {
-            requestedBy: { type: 'string' },
-            approvers: { type: 'array', items: { type: 'string' } },
+            requestedBy: { type: "string" },
+            approvers: { type: "array", items: { type: "string" } },
           },
         },
       },
@@ -151,51 +160,51 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
         const approval = await governanceService.requestApproval(
           modelId,
           requestedBy,
-          approvers
+          approvers,
         );
 
         return {
-          message: 'Approval request created successfully',
+          message: "Approval request created successfully",
           approval,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
-        if (error.message.includes('stage')) {
+        if (error.message.includes("stage")) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to request approval',
+          error: "Failed to request approval",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/approval/approve
   server.post(
-    '/:modelId/approval/approve',
+    "/:modelId/approval/approve",
     {
       schema: {
-        summary: 'Approve model for production',
-        tags: ['Model Governance'],
+        summary: "Approve model for production",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['approvedBy'],
+          type: "object",
+          required: ["approvedBy"],
           properties: {
-            approvedBy: { type: 'string' },
+            approvedBy: { type: "string" },
           },
         },
       },
@@ -206,51 +215,57 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
         const { modelId } = request.params as { modelId: string };
         const { approvedBy } = request.body as any;
 
-        const approval = await governanceService.approveModel(modelId, approvedBy);
+        const approval = await governanceService.approveModel(
+          modelId,
+          approvedBy,
+        );
 
         return {
-          message: 'Model approved successfully',
+          message: "Model approved successfully",
           approval,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
-        if (error.message.includes('approver') || error.message.includes('checklist')) {
+        if (
+          error.message.includes("approver") ||
+          error.message.includes("checklist")
+        ) {
           return reply.status(400).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to approve model',
+          error: "Failed to approve model",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/approval/reject
   server.post(
-    '/:modelId/approval/reject',
+    "/:modelId/approval/reject",
     {
       schema: {
-        summary: 'Reject model approval',
-        tags: ['Model Governance'],
+        summary: "Reject model approval",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['rejectedBy', 'reason'],
+          type: "object",
+          required: ["rejectedBy", "reason"],
           properties: {
-            rejectedBy: { type: 'string' },
-            reason: { type: 'string' },
+            rejectedBy: { type: "string" },
+            reason: { type: "string" },
           },
         },
       },
@@ -261,50 +276,54 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
         const { modelId } = request.params as { modelId: string };
         const { rejectedBy, reason } = request.body as any;
 
-        const approval = await governanceService.rejectModel(modelId, rejectedBy, reason);
+        const approval = await governanceService.rejectModel(
+          modelId,
+          rejectedBy,
+          reason,
+        );
 
         return {
-          message: 'Model rejected',
+          message: "Model rejected",
           approval,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to reject model',
+          error: "Failed to reject model",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // PUT /api/v1/model-governance/:modelId/checklist/:itemId
   server.put(
-    '/:modelId/checklist/:itemId',
+    "/:modelId/checklist/:itemId",
     {
       schema: {
-        summary: 'Update checklist item',
-        tags: ['Model Governance'],
+        summary: "Update checklist item",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
-            itemId: { type: 'string' },
+            modelId: { type: "string" },
+            itemId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['completed', 'completedBy'],
+          type: "object",
+          required: ["completed", "completedBy"],
           properties: {
-            completed: { type: 'boolean' },
-            completedBy: { type: 'string' },
-            evidence: { type: 'string' },
-            notes: { type: 'string' },
+            completed: { type: "boolean" },
+            completedBy: { type: "string" },
+            evidence: { type: "string" },
+            notes: { type: "string" },
           },
         },
       },
@@ -312,7 +331,10 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { modelId, itemId } = request.params as { modelId: string; itemId: string };
+        const { modelId, itemId } = request.params as {
+          modelId: string;
+          itemId: string;
+        };
         const { completed, completedBy, evidence, notes } = request.body as any;
 
         const approval = await governanceService.updateChecklistItem(
@@ -321,44 +343,44 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           completed,
           completedBy,
           evidence,
-          notes
+          notes,
         );
 
         return {
-          message: 'Checklist item updated',
+          message: "Checklist item updated",
           approval,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to update checklist item',
+          error: "Failed to update checklist item",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/documentation
   server.post(
-    '/:modelId/documentation',
+    "/:modelId/documentation",
     {
       schema: {
-        summary: 'Add model documentation',
-        tags: ['Model Governance'],
+        summary: "Add model documentation",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
+          type: "object",
         },
       },
       preHandler: server.authenticate,
@@ -375,31 +397,31 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
         const documentation = await governanceService.addDocumentation(doc);
 
         return {
-          message: 'Documentation added successfully',
+          message: "Documentation added successfully",
           documentation,
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to add documentation',
+          error: "Failed to add documentation",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/model-governance/:modelId/documentation
   server.get(
-    '/:modelId/documentation',
+    "/:modelId/documentation",
     {
       schema: {
-        summary: 'Get model documentation',
-        tags: ['Model Governance'],
+        summary: "Get model documentation",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
       },
@@ -415,40 +437,40 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to get documentation',
+          error: "Failed to get documentation",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/retire
   server.post(
-    '/:modelId/retire',
+    "/:modelId/retire",
     {
       schema: {
-        summary: 'Retire a model',
-        tags: ['Model Governance'],
+        summary: "Retire a model",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['retiredBy', 'reason'],
+          type: "object",
+          required: ["retiredBy", "reason"],
           properties: {
-            retiredBy: { type: 'string' },
-            reason: { type: 'string' },
-            replacementModelId: { type: 'string' },
-            dataRetentionPolicy: { type: 'string' },
+            retiredBy: { type: "string" },
+            reason: { type: "string" },
+            replacementModelId: { type: "string" },
+            dataRetentionPolicy: { type: "string" },
           },
         },
       },
@@ -457,58 +479,72 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { modelId } = request.params as { modelId: string };
-        const { retiredBy, reason, replacementModelId, dataRetentionPolicy } = request.body as any;
+        const { retiredBy, reason, replacementModelId, dataRetentionPolicy } =
+          request.body as any;
 
         const retirement = await governanceService.retireModel(
           modelId,
           retiredBy,
           reason,
           replacementModelId,
-          dataRetentionPolicy
+          dataRetentionPolicy,
         );
 
         return {
-          message: 'Model retired successfully',
+          message: "Model retired successfully",
           retirement,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to retire model',
+          error: "Failed to retire model",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/model-governance/:modelId/incidents
   server.post(
-    '/:modelId/incidents',
+    "/:modelId/incidents",
     {
       schema: {
-        summary: 'Report an incident',
-        tags: ['Model Governance'],
+        summary: "Report an incident",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelId: { type: 'string' },
+            modelId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['severity', 'type', 'description', 'impact', 'reportedBy'],
+          type: "object",
+          required: ["severity", "type", "description", "impact", "reportedBy"],
           properties: {
-            severity: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
-            type: { type: 'string', enum: ['prediction_error', 'performance_degradation', 'bias', 'security', 'compliance', 'other'] },
-            description: { type: 'string' },
-            impact: { type: 'string' },
-            reportedBy: { type: 'string' },
+            severity: {
+              type: "string",
+              enum: ["low", "medium", "high", "critical"],
+            },
+            type: {
+              type: "string",
+              enum: [
+                "prediction_error",
+                "performance_degradation",
+                "bias",
+                "security",
+                "compliance",
+                "other",
+              ],
+            },
+            description: { type: "string" },
+            impact: { type: "string" },
+            reportedBy: { type: "string" },
           },
         },
       },
@@ -517,7 +553,8 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { modelId } = request.params as { modelId: string };
-        const { severity, type, description, impact, reportedBy } = request.body as any;
+        const { severity, type, description, impact, reportedBy } =
+          request.body as any;
 
         const incident = await governanceService.reportIncident(
           modelId,
@@ -525,50 +562,53 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           type,
           description,
           impact,
-          reportedBy
+          reportedBy,
         );
 
         return {
-          message: 'Incident reported successfully',
+          message: "Incident reported successfully",
           incident,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to report incident',
+          error: "Failed to report incident",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // PUT /api/v1/model-governance/incidents/:incidentId
   server.put(
-    '/incidents/:incidentId',
+    "/incidents/:incidentId",
     {
       schema: {
-        summary: 'Update incident status',
-        tags: ['Model Governance'],
+        summary: "Update incident status",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            incidentId: { type: 'string' },
+            incidentId: { type: "string" },
           },
         },
         body: {
-          type: 'object',
-          required: ['status'],
+          type: "object",
+          required: ["status"],
           properties: {
-            status: { type: 'string', enum: ['open', 'investigating', 'resolved', 'closed'] },
-            resolution: { type: 'string' },
-            resolvedBy: { type: 'string' },
-            actionsTaken: { type: 'array', items: { type: 'string' } },
+            status: {
+              type: "string",
+              enum: ["open", "investigating", "resolved", "closed"],
+            },
+            resolution: { type: "string" },
+            resolvedBy: { type: "string" },
+            actionsTaken: { type: "array", items: { type: "string" } },
           },
         },
       },
@@ -577,48 +617,58 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { incidentId } = request.params as { incidentId: string };
-        const { status, resolution, resolvedBy, actionsTaken } = request.body as any;
+        const { status, resolution, resolvedBy, actionsTaken } =
+          request.body as any;
 
         const incident = await governanceService.updateIncident(
           incidentId,
           status,
           resolution,
           resolvedBy,
-          actionsTaken
+          actionsTaken,
         );
 
         return {
-          message: 'Incident updated successfully',
+          message: "Incident updated successfully",
           incident,
         };
       } catch (error: any) {
         request.log.error(error);
 
-        if (error.message.includes('not found')) {
+        if (error.message.includes("not found")) {
           return reply.status(404).send({ error: error.message });
         }
 
         return reply.status(500).send({
-          error: 'Failed to update incident',
+          error: "Failed to update incident",
           details: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/model-governance/models
   server.get(
-    '/models',
+    "/models",
     {
       schema: {
-        summary: 'Get models by stage',
-        tags: ['Model Governance'],
+        summary: "Get models by stage",
+        tags: ["Model Governance"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
-          required: ['stage'],
+          type: "object",
+          required: ["stage"],
           properties: {
-            stage: { type: 'string', enum: ['development', 'staging', 'review', 'production', 'retired'] },
+            stage: {
+              type: "string",
+              enum: [
+                "development",
+                "staging",
+                "review",
+                "production",
+                "retired",
+              ],
+            },
           },
         },
       },
@@ -628,7 +678,9 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { stage } = request.query as any;
 
-        const models = await governanceService.getModelsByStage(stage as ModelStage);
+        const models = await governanceService.getModelsByStage(
+          stage as ModelStage,
+        );
 
         return {
           stage,
@@ -638,11 +690,11 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: 'Failed to get models',
+          error: "Failed to get models",
           details: error.message,
         });
       }
-    }
+    },
   );
 };
 

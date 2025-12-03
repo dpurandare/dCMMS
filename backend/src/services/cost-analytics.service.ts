@@ -6,19 +6,21 @@ import {
   CostByWOType,
   CostExportOptions,
   Currency,
-} from '../models/cost.models';
-import { CostCalculationService } from './cost-calculation.service';
+} from "../models/cost.models";
+import { CostCalculationService } from "./cost-calculation.service";
 
 export class CostAnalyticsService {
-  constructor(private readonly costService: CostCalculationService) { }
+  constructor(private readonly costService: CostCalculationService) {}
 
   /**
    * Get aggregate cost analytics
    */
-  async getCostAnalytics(query: CostAnalyticsQuery): Promise<CostAnalyticsResult> {
+  async getCostAnalytics(
+    query: CostAnalyticsQuery,
+  ): Promise<CostAnalyticsResult> {
     console.log(
-      `Generating cost analytics: ${query.startDate.toISOString().split('T')[0]} to ${query.endDate.toISOString().split('T')[0]}, ` +
-      `GroupBy: ${query.groupBy}`
+      `Generating cost analytics: ${query.startDate.toISOString().split("T")[0]} to ${query.endDate.toISOString().split("T")[0]}, ` +
+        `GroupBy: ${query.groupBy}`,
     );
 
     // Get all cost records in the date range
@@ -36,9 +38,9 @@ export class CostAnalyticsService {
   async getCostTrends(
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<CostTrend[]> {
-    console.log('Generating cost trends');
+    console.log("Generating cost trends");
 
     // Mock data for demonstration
     const trends: CostTrend[] = [];
@@ -71,10 +73,10 @@ export class CostAnalyticsService {
    * Get cost breakdown by site
    */
   async getCostBySite(startDate: Date, endDate: Date): Promise<CostBySite[]> {
-    console.log('Generating cost by site');
+    console.log("Generating cost by site");
 
     // Mock data
-    const sites = ['Site A', 'Site B', 'Site C', 'Site D'];
+    const sites = ["Site A", "Site B", "Site C", "Site D"];
     const costBySite: CostBySite[] = [];
 
     for (const siteName of sites) {
@@ -82,7 +84,7 @@ export class CostAnalyticsService {
       const totalCost = Math.random() * 40000 + 15000;
 
       costBySite.push({
-        siteId: `site_${siteName.toLowerCase().replace(' ', '_')}`,
+        siteId: `site_${siteName.toLowerCase().replace(" ", "_")}`,
         siteName,
         totalCost,
         woCount,
@@ -99,15 +101,15 @@ export class CostAnalyticsService {
   async getCostByWOType(
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<CostByWOType[]> {
-    console.log('Generating cost by WO type');
+    console.log("Generating cost by WO type");
 
     // Mock data
     const woTypes = [
-      { type: 'preventive', cost: 25000, count: 45 },
-      { type: 'corrective', cost: 35000, count: 30 },
-      { type: 'predictive', cost: 15000, count: 20 },
+      { type: "preventive", cost: 25000, count: 45 },
+      { type: "corrective", cost: 35000, count: 30 },
+      { type: "predictive", cost: 15000, count: 20 },
     ];
 
     const totalCost = woTypes.reduce((sum, wt) => sum + wt.cost, 0);
@@ -126,20 +128,20 @@ export class CostAnalyticsService {
    */
   async exportCostData(
     query: CostAnalyticsQuery,
-    options: CostExportOptions
+    options: CostExportOptions,
   ): Promise<{ data: string; mimeType: string; filename: string }> {
     console.log(`Exporting cost data as ${options.format}`);
 
     const analytics = await this.getCostAnalytics(query);
 
     switch (options.format) {
-      case 'csv':
+      case "csv":
         return this.exportAsCSV(analytics, query, options);
 
-      case 'pdf':
+      case "pdf":
         return this.exportAsPDF(analytics, query, options);
 
-      case 'excel':
+      case "excel":
         return this.exportAsExcel(analytics, query, options);
 
       default:
@@ -153,7 +155,7 @@ export class CostAnalyticsService {
   async getCostVariance(
     siteId?: string,
     currentPeriodStart?: Date,
-    currentPeriodEnd?: Date
+    currentPeriodEnd?: Date,
   ): Promise<{
     currentPeriod: { cost: number; woCount: number };
     previousPeriod: { cost: number; woCount: number };
@@ -164,7 +166,7 @@ export class CostAnalyticsService {
       woCountChangePercentage: number;
     };
   }> {
-    console.log('Calculating cost variance');
+    console.log("Calculating cost variance");
 
     // Mock data
     const currentPeriod = {
@@ -181,7 +183,8 @@ export class CostAnalyticsService {
     const costChangePercentage = (costChange / previousPeriod.cost) * 100;
 
     const woCountChange = currentPeriod.woCount - previousPeriod.woCount;
-    const woCountChangePercentage = (woCountChange / previousPeriod.woCount) * 100;
+    const woCountChangePercentage =
+      (woCountChange / previousPeriod.woCount) * 100;
 
     return {
       currentPeriod,
@@ -201,16 +204,18 @@ export class CostAnalyticsService {
   async getCostPerAsset(
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
-  ): Promise<Array<{
-    assetId: string;
-    assetName: string;
-    totalCost: number;
-    woCount: number;
-    avgCostPerWO: number;
-    lastMaintenanceDate: Date;
-  }>> {
-    console.log('Generating cost per asset');
+    endDate?: Date,
+  ): Promise<
+    Array<{
+      assetId: string;
+      assetName: string;
+      totalCost: number;
+      woCount: number;
+      avgCostPerWO: number;
+      lastMaintenanceDate: Date;
+    }>
+  > {
+    console.log("Generating cost per asset");
 
     // Mock data
     const assets = [];
@@ -220,12 +225,14 @@ export class CostAnalyticsService {
       const totalCost = Math.random() * 15000 + 3000;
 
       assets.push({
-        assetId: `asset_${i.toString().padStart(3, '0')}`,
+        assetId: `asset_${i.toString().padStart(3, "0")}`,
         assetName: `Asset ${String.fromCharCode(64 + i)} - Equipment`,
         totalCost,
         woCount,
         avgCostPerWO: totalCost / woCount,
-        lastMaintenanceDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000),
+        lastMaintenanceDate: new Date(
+          Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000,
+        ),
       });
     }
 
@@ -238,7 +245,7 @@ export class CostAnalyticsService {
   async getCostBreakdown(
     siteId?: string,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Promise<{
     labor: { amount: number; percentage: number };
     parts: { amount: number; percentage: number };
@@ -246,7 +253,7 @@ export class CostAnalyticsService {
     other: { amount: number; percentage: number };
     total: number;
   }> {
-    console.log('Generating cost breakdown');
+    console.log("Generating cost breakdown");
 
     // Mock data
     const labor = Math.random() * 30000 + 15000;
@@ -281,7 +288,9 @@ export class CostAnalyticsService {
   /**
    * Generate mock analytics data
    */
-  private generateMockAnalyticsData(query: CostAnalyticsQuery): CostAnalyticsResult {
+  private generateMockAnalyticsData(
+    query: CostAnalyticsQuery,
+  ): CostAnalyticsResult {
     const totalCost = Math.random() * 100000 + 50000;
     const woCount = Math.floor(Math.random() * 100 + 50);
 
@@ -298,7 +307,7 @@ export class CostAnalyticsService {
           percentage: 45,
         },
         parts: {
-          amount: totalCost * 0.30,
+          amount: totalCost * 0.3,
           percentage: 30,
         },
         equipment: {
@@ -326,8 +335,11 @@ export class CostAnalyticsService {
   /**
    * Generate mock trends
    */
-  private generateMockTrends(startDate: Date, endDate: Date): CostAnalyticsResult['trends'] {
-    const trends: CostAnalyticsResult['trends'] = [];
+  private generateMockTrends(
+    startDate: Date,
+    endDate: Date,
+  ): CostAnalyticsResult["trends"] {
+    const trends: CostAnalyticsResult["trends"] = [];
     const months = this.getMonthsBetween(startDate, endDate);
 
     for (const month of months) {
@@ -348,24 +360,24 @@ export class CostAnalyticsService {
   /**
    * Generate mock groups
    */
-  private generateMockGroups(groupBy: string): CostAnalyticsResult['groups'] {
-    const groups: CostAnalyticsResult['groups'] = [];
+  private generateMockGroups(groupBy: string): CostAnalyticsResult["groups"] {
+    const groups: CostAnalyticsResult["groups"] = [];
 
     const groupNames =
-      groupBy === 'site'
-        ? ['Site A', 'Site B', 'Site C', 'Site D']
-        : groupBy === 'wo_type'
-          ? ['Preventive', 'Corrective', 'Predictive']
-          : groupBy === 'category'
-            ? ['Labor', 'Parts', 'Equipment', 'Other']
-            : ['Group 1', 'Group 2', 'Group 3'];
+      groupBy === "site"
+        ? ["Site A", "Site B", "Site C", "Site D"]
+        : groupBy === "wo_type"
+          ? ["Preventive", "Corrective", "Predictive"]
+          : groupBy === "category"
+            ? ["Labor", "Parts", "Equipment", "Other"]
+            : ["Group 1", "Group 2", "Group 3"];
 
     for (const name of groupNames) {
       const totalCost = Math.random() * 40000 + 10000;
       const woCount = Math.floor(Math.random() * 40 + 10);
 
       groups.push({
-        groupKey: name.toLowerCase().replace(' ', '_'),
+        groupKey: name.toLowerCase().replace(" ", "_"),
         groupName: name,
         totalCost,
         woCount,
@@ -398,17 +410,17 @@ export class CostAnalyticsService {
   private exportAsCSV(
     analytics: CostAnalyticsResult,
     query: CostAnalyticsQuery,
-    options: CostExportOptions
+    options: CostExportOptions,
   ): { data: string; mimeType: string; filename: string } {
-    let csv = 'Cost Analytics Report\n\n';
+    let csv = "Cost Analytics Report\n\n";
 
-    csv += `Period: ${query.startDate.toISOString().split('T')[0]} to ${query.endDate.toISOString().split('T')[0]}\n`;
+    csv += `Period: ${query.startDate.toISOString().split("T")[0]} to ${query.endDate.toISOString().split("T")[0]}\n`;
     csv += `Total Cost: $${analytics.totalCost.toFixed(2)}\n`;
     csv += `Average Cost per WO: $${analytics.averageCostPerWO.toFixed(2)}\n\n`;
 
     if (options.includeBreakdown) {
-      csv += 'Category Breakdown\n';
-      csv += 'Category,Amount,Percentage\n';
+      csv += "Category Breakdown\n";
+      csv += "Category,Amount,Percentage\n";
       csv += `Labor,$${analytics.categoryBreakdown.labor.amount.toFixed(2)},${analytics.categoryBreakdown.labor.percentage.toFixed(1)}%\n`;
       csv += `Parts,$${analytics.categoryBreakdown.parts.amount.toFixed(2)},${analytics.categoryBreakdown.parts.percentage.toFixed(1)}%\n`;
       csv += `Equipment,$${analytics.categoryBreakdown.equipment.amount.toFixed(2)},${analytics.categoryBreakdown.equipment.percentage.toFixed(1)}%\n`;
@@ -416,16 +428,16 @@ export class CostAnalyticsService {
     }
 
     if (options.includeTrends) {
-      csv += 'Cost Trends\n';
-      csv += 'Date,Total Cost,WO Count,Avg Cost per WO\n';
+      csv += "Cost Trends\n";
+      csv += "Date,Total Cost,WO Count,Avg Cost per WO\n";
       for (const trend of analytics.trends) {
-        csv += `${trend.date.toISOString().split('T')[0]},$${trend.totalCost.toFixed(2)},${trend.woCount},$${trend.avgCostPerWO.toFixed(2)}\n`;
+        csv += `${trend.date.toISOString().split("T")[0]},$${trend.totalCost.toFixed(2)},${trend.woCount},$${trend.avgCostPerWO.toFixed(2)}\n`;
       }
-      csv += '\n';
+      csv += "\n";
     }
 
     if (options.includeComparison && analytics.comparison) {
-      csv += 'Period Comparison\n';
+      csv += "Period Comparison\n";
       csv += `Previous Period: $${analytics.comparison.previousPeriodCost.toFixed(2)}\n`;
       csv += `Current Period: $${analytics.totalCost.toFixed(2)}\n`;
       csv += `Change: $${analytics.comparison.change.toFixed(2)} (${analytics.comparison.changePercentage.toFixed(1)}%)\n`;
@@ -433,8 +445,8 @@ export class CostAnalyticsService {
 
     return {
       data: csv,
-      mimeType: 'text/csv',
-      filename: `cost_analytics_${query.startDate.toISOString().split('T')[0]}_to_${query.endDate.toISOString().split('T')[0]}.csv`,
+      mimeType: "text/csv",
+      filename: `cost_analytics_${query.startDate.toISOString().split("T")[0]}_to_${query.endDate.toISOString().split("T")[0]}.csv`,
     };
   }
 
@@ -444,15 +456,15 @@ export class CostAnalyticsService {
   private exportAsPDF(
     analytics: CostAnalyticsResult,
     query: CostAnalyticsQuery,
-    options: CostExportOptions
+    options: CostExportOptions,
   ): { data: string; mimeType: string; filename: string } {
     // In production, use a PDF library like pdfkit or puppeteer
-    console.warn('PDF export not fully implemented - returning placeholder');
+    console.warn("PDF export not fully implemented - returning placeholder");
 
     return {
-      data: 'PDF export would generate a formatted PDF report here',
-      mimeType: 'application/pdf',
-      filename: `cost_analytics_${query.startDate.toISOString().split('T')[0]}_to_${query.endDate.toISOString().split('T')[0]}.pdf`,
+      data: "PDF export would generate a formatted PDF report here",
+      mimeType: "application/pdf",
+      filename: `cost_analytics_${query.startDate.toISOString().split("T")[0]}_to_${query.endDate.toISOString().split("T")[0]}.pdf`,
     };
   }
 
@@ -462,15 +474,16 @@ export class CostAnalyticsService {
   private exportAsExcel(
     analytics: CostAnalyticsResult,
     query: CostAnalyticsQuery,
-    options: CostExportOptions
+    options: CostExportOptions,
   ): { data: string; mimeType: string; filename: string } {
     // In production, use a library like exceljs
-    console.warn('Excel export not fully implemented - returning placeholder');
+    console.warn("Excel export not fully implemented - returning placeholder");
 
     return {
-      data: 'Excel export would generate an XLSX file here',
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `cost_analytics_${query.startDate.toISOString().split('T')[0]}_to_${query.endDate.toISOString().split('T')[0]}.xlsx`,
+      data: "Excel export would generate an XLSX file here",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      filename: `cost_analytics_${query.startDate.toISOString().split("T")[0]}_to_${query.endDate.toISOString().split("T")[0]}.xlsx`,
     };
   }
 }

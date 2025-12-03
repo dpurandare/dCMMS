@@ -1,7 +1,7 @@
-import { db } from '../db';
-import { weatherForecasts } from '../db/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
-import axios from 'axios';
+import { db } from "../db";
+import { weatherForecasts } from "../db/schema";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
+import axios from "axios";
 
 // ==========================================
 // Types & Interfaces
@@ -13,7 +13,7 @@ export interface WeatherForecast {
   forecastTimestamp: Date;
   fetchedAt: Date;
   source: string;
-  forecastType: 'historical' | 'current' | 'forecast';
+  forecastType: "historical" | "current" | "forecast";
 
   // Solar-specific
   irradiationWhM2?: number;
@@ -73,12 +73,12 @@ export interface OpenWeatherMapResponse {
   };
   visibility: number;
   rain?: {
-    '1h'?: number;
-    '3h'?: number;
+    "1h"?: number;
+    "3h"?: number;
   };
   snow?: {
-    '1h'?: number;
-    '3h'?: number;
+    "1h"?: number;
+    "3h"?: number;
   };
 }
 
@@ -95,13 +95,15 @@ export interface SiteLocation {
 
 export class WeatherAPIService {
   private apiKey: string;
-  private baseUrl: string = 'https://api.openweathermap.org/data/2.5';
-  private solcastBaseUrl: string = 'https://api.solcast.com.au';
+  private baseUrl: string = "https://api.openweathermap.org/data/2.5";
+  private solcastBaseUrl: string = "https://api.solcast.com.au";
 
   constructor() {
-    this.apiKey = process.env.OPENWEATHERMAP_API_KEY || '';
+    this.apiKey = process.env.OPENWEATHERMAP_API_KEY || "";
     if (!this.apiKey) {
-      console.warn('OPENWEATHERMAP_API_KEY not set - weather API will not work');
+      console.warn(
+        "OPENWEATHERMAP_API_KEY not set - weather API will not work",
+      );
     }
   }
 
@@ -112,7 +114,9 @@ export class WeatherAPIService {
   /**
    * Fetch current weather for a site
    */
-  async fetchCurrentWeather(siteLocation: SiteLocation): Promise<WeatherForecast> {
+  async fetchCurrentWeather(
+    siteLocation: SiteLocation,
+  ): Promise<WeatherForecast> {
     const { latitude, longitude } = siteLocation;
 
     try {
@@ -123,15 +127,15 @@ export class WeatherAPIService {
             lat: latitude,
             lon: longitude,
             appid: this.apiKey,
-            units: 'metric', // Celsius, m/s
+            units: "metric", // Celsius, m/s
           },
-        }
+        },
       );
 
       const weatherData = this.transformOpenWeatherMapResponse(
         response.data,
         siteLocation.siteId,
-        'current'
+        "current",
       );
 
       // Save to database
@@ -139,8 +143,8 @@ export class WeatherAPIService {
 
       return weatherData;
     } catch (error) {
-      console.error('Error fetching current weather:', error);
-      throw new Error('Failed to fetch current weather');
+      console.error("Error fetching current weather:", error);
+      throw new Error("Failed to fetch current weather");
     }
   }
 
@@ -151,17 +155,14 @@ export class WeatherAPIService {
     const { latitude, longitude } = siteLocation;
 
     try {
-      const response = await axios.get(
-        `${this.baseUrl}/forecast`,
-        {
-          params: {
-            lat: latitude,
-            lon: longitude,
-            appid: this.apiKey,
-            units: 'metric',
-          },
-        }
-      );
+      const response = await axios.get(`${this.baseUrl}/forecast`, {
+        params: {
+          lat: latitude,
+          lon: longitude,
+          appid: this.apiKey,
+          units: "metric",
+        },
+      });
 
       const forecasts: WeatherForecast[] = [];
 
@@ -169,7 +170,7 @@ export class WeatherAPIService {
         const weatherData = this.transformOpenWeatherMapResponse(
           item,
           siteLocation.siteId,
-          'forecast'
+          "forecast",
         );
         forecasts.push(weatherData);
       }
@@ -179,8 +180,8 @@ export class WeatherAPIService {
 
       return forecasts;
     } catch (error) {
-      console.error('Error fetching weather forecast:', error);
-      throw new Error('Failed to fetch weather forecast');
+      console.error("Error fetching weather forecast:", error);
+      throw new Error("Failed to fetch weather forecast");
     }
   }
 
@@ -191,11 +192,13 @@ export class WeatherAPIService {
   async fetchHistoricalWeather(
     siteLocation: SiteLocation,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<WeatherForecast[]> {
     // Implementation depends on OpenWeatherMap Historical API
     // For now, return empty array
-    console.warn('Historical weather API not implemented - requires paid subscription');
+    console.warn(
+      "Historical weather API not implemented - requires paid subscription",
+    );
     return [];
   }
 
@@ -204,12 +207,14 @@ export class WeatherAPIService {
    * Note: Requires separate Solcast API key
    */
   async fetchSolarIrradiationForecast(
-    siteLocation: SiteLocation
+    siteLocation: SiteLocation,
   ): Promise<WeatherForecast[]> {
     const solcastApiKey = process.env.SOLCAST_API_KEY;
 
     if (!solcastApiKey) {
-      console.warn('SOLCAST_API_KEY not set - solar irradiation forecast not available');
+      console.warn(
+        "SOLCAST_API_KEY not set - solar irradiation forecast not available",
+      );
       return [];
     }
 
@@ -221,35 +226,37 @@ export class WeatherAPIService {
             latitude: siteLocation.latitude,
             longitude: siteLocation.longitude,
             hours: 168, // 7 days
-            format: 'json',
+            format: "json",
           },
           headers: {
-            'Authorization': `Bearer ${solcastApiKey}`,
+            Authorization: `Bearer ${solcastApiKey}`,
           },
-        }
+        },
       );
 
-      const forecasts: WeatherForecast[] = response.data.forecasts.map((item: any) => ({
-        id: '', // Will be generated by database
-        siteId: siteLocation.siteId,
-        forecastTimestamp: new Date(item.period_end),
-        fetchedAt: new Date(),
-        source: 'solcast',
-        forecastType: 'forecast' as const,
-        ghiWhM2: item.ghi,
-        dniWhM2: item.dni,
-        dhiWhM2: item.dhi,
-        cloudCoverPercent: item.cloud_opacity,
-        rawApiResponse: item,
-      }));
+      const forecasts: WeatherForecast[] = response.data.forecasts.map(
+        (item: any) => ({
+          id: "", // Will be generated by database
+          siteId: siteLocation.siteId,
+          forecastTimestamp: new Date(item.period_end),
+          fetchedAt: new Date(),
+          source: "solcast",
+          forecastType: "forecast" as const,
+          ghiWhM2: item.ghi,
+          dniWhM2: item.dni,
+          dhiWhM2: item.dhi,
+          cloudCoverPercent: item.cloud_opacity,
+          rawApiResponse: item,
+        }),
+      );
 
       // Save to database
       await this.saveWeatherForecasts(forecasts);
 
       return forecasts;
     } catch (error) {
-      console.error('Error fetching solar irradiation forecast:', error);
-      throw new Error('Failed to fetch solar irradiation forecast');
+      console.error("Error fetching solar irradiation forecast:", error);
+      throw new Error("Failed to fetch solar irradiation forecast");
     }
   }
 
@@ -261,7 +268,7 @@ export class WeatherAPIService {
    */
   async fetchWindForecast(
     siteLocation: SiteLocation,
-    hours: number = 24
+    hours: number = 24,
   ): Promise<WeatherForecast[]> {
     const noaaApiKey = process.env.NOAA_API_KEY;
 
@@ -270,12 +277,14 @@ export class WeatherAPIService {
       try {
         return await this.fetchNOAAWindForecast(siteLocation, hours);
       } catch (error) {
-        console.warn('NOAA API failed, falling back to OpenWeatherMap:', error);
+        console.warn("NOAA API failed, falling back to OpenWeatherMap:", error);
       }
     }
 
     // Fallback to OpenWeatherMap
-    console.info('Using OpenWeatherMap for wind forecast (NOAA not configured or failed)');
+    console.info(
+      "Using OpenWeatherMap for wind forecast (NOAA not configured or failed)",
+    );
     return this.fetchForecast(siteLocation);
   }
 
@@ -285,7 +294,7 @@ export class WeatherAPIService {
    */
   private async fetchNOAAWindForecast(
     siteLocation: SiteLocation,
-    hours: number
+    hours: number,
   ): Promise<WeatherForecast[]> {
     const { latitude, longitude } = siteLocation;
 
@@ -295,10 +304,10 @@ export class WeatherAPIService {
         `https://api.weather.gov/points/${latitude},${longitude}`,
         {
           headers: {
-            'User-Agent': 'dCMMS/1.0 (contact@dcmms.io)',
-            'Accept': 'application/geo+json',
+            "User-Agent": "dCMMS/1.0 (contact@dcmms.io)",
+            Accept: "application/geo+json",
           },
-        }
+        },
       );
 
       const forecastHourlyUrl = pointResponse.data.properties.forecastHourly;
@@ -306,8 +315,8 @@ export class WeatherAPIService {
       // Step 2: Get hourly forecast
       const forecastResponse = await axios.get(forecastHourlyUrl, {
         headers: {
-          'User-Agent': 'dCMMS/1.0 (contact@dcmms.io)',
-          'Accept': 'application/geo+json',
+          "User-Agent": "dCMMS/1.0 (contact@dcmms.io)",
+          Accept: "application/geo+json",
         },
       });
 
@@ -326,17 +335,20 @@ export class WeatherAPIService {
         const windGustMs = windSpeedMs * 1.3;
 
         // Calculate air density from temperature and standard pressure
-        const temperatureC = (period.temperature - 32) * 5 / 9; // F to C
+        const temperatureC = ((period.temperature - 32) * 5) / 9; // F to C
         const pressureHpa = 1013.25; // Standard pressure (NOAA doesn't provide)
-        const airDensityKgM3 = this.calculateAirDensity(temperatureC, pressureHpa);
+        const airDensityKgM3 = this.calculateAirDensity(
+          temperatureC,
+          pressureHpa,
+        );
 
         const weatherData: WeatherForecast = {
-          id: '', // Will be generated by database
+          id: "", // Will be generated by database
           siteId: siteLocation.siteId,
           forecastTimestamp: new Date(period.startTime),
           fetchedAt: new Date(),
-          source: 'noaa',
-          forecastType: 'forecast' as const,
+          source: "noaa",
+          forecastType: "forecast" as const,
 
           // Wind-specific data
           windSpeedMs,
@@ -368,8 +380,8 @@ export class WeatherAPIService {
 
       return forecasts;
     } catch (error) {
-      console.error('Error fetching NOAA wind forecast:', error);
-      throw new Error('Failed to fetch NOAA wind forecast');
+      console.error("Error fetching NOAA wind forecast:", error);
+      throw new Error("Failed to fetch NOAA wind forecast");
     }
   }
 
@@ -378,10 +390,22 @@ export class WeatherAPIService {
    */
   private parseWindDirection(direction: string): number {
     const directions: { [key: string]: number } = {
-      'N': 0, 'NNE': 22, 'NE': 45, 'ENE': 67,
-      'E': 90, 'ESE': 112, 'SE': 135, 'SSE': 157,
-      'S': 180, 'SSW': 202, 'SW': 225, 'WSW': 247,
-      'W': 270, 'WNW': 292, 'NW': 315, 'NNW': 337,
+      N: 0,
+      NNE: 22,
+      NE: 45,
+      ENE: 67,
+      E: 90,
+      ESE: 112,
+      SE: 135,
+      SSE: 157,
+      S: 180,
+      SSW: 202,
+      SW: 225,
+      WSW: 247,
+      W: 270,
+      WNW: 292,
+      NW: 315,
+      NNW: 337,
     };
 
     return directions[direction.toUpperCase()] || 0;
@@ -409,11 +433,13 @@ export class WeatherAPIService {
   private parseCloudCover(description: string): number {
     const text = description.toLowerCase();
 
-    if (text.includes('clear') || text.includes('sunny')) return 10;
-    if (text.includes('mostly clear') || text.includes('mostly sunny')) return 25;
-    if (text.includes('partly cloudy') || text.includes('partly sunny')) return 50;
-    if (text.includes('mostly cloudy')) return 75;
-    if (text.includes('cloudy') || text.includes('overcast')) return 90;
+    if (text.includes("clear") || text.includes("sunny")) return 10;
+    if (text.includes("mostly clear") || text.includes("mostly sunny"))
+      return 25;
+    if (text.includes("partly cloudy") || text.includes("partly sunny"))
+      return 50;
+    if (text.includes("mostly cloudy")) return 75;
+    if (text.includes("cloudy") || text.includes("overcast")) return 90;
 
     return 50; // Default
   }
@@ -422,7 +448,10 @@ export class WeatherAPIService {
    * Calculate air density from temperature and pressure
    * ρ = P / (R * T)
    */
-  private calculateAirDensity(temperatureC: number, pressureHpa: number): number {
+  private calculateAirDensity(
+    temperatureC: number,
+    pressureHpa: number,
+  ): number {
     const pressurePa = pressureHpa * 100; // hPa to Pa
     const temperatureK = temperatureC + 273.15; // C to K
     const gasConstant = 287.05; // J/(kg·K) for dry air
@@ -437,7 +466,7 @@ export class WeatherAPIService {
     siteId: string,
     startDate: Date,
     endDate: Date,
-    forecastType?: 'historical' | 'current' | 'forecast'
+    forecastType?: "historical" | "current" | "forecast",
   ): Promise<WeatherForecast[]> {
     try {
       const conditions = [
@@ -456,9 +485,11 @@ export class WeatherAPIService {
         .where(and(...conditions))
         .orderBy(desc(weatherForecasts.forecastTimestamp));
 
-      return results.map(r => ({
+      return results.map((r) => ({
         ...r,
-        irradiationWhM2: r.irradiationWhM2 ? Number(r.irradiationWhM2) : undefined,
+        irradiationWhM2: r.irradiationWhM2
+          ? Number(r.irradiationWhM2)
+          : undefined,
         ghiWhM2: r.ghiWhM2 ? Number(r.ghiWhM2) : undefined,
         dniWhM2: r.dniWhM2 ? Number(r.dniWhM2) : undefined,
         dhiWhM2: r.dhiWhM2 ? Number(r.dhiWhM2) : undefined,
@@ -466,20 +497,24 @@ export class WeatherAPIService {
         windGustMs: r.windGustMs ? Number(r.windGustMs) : undefined,
         temperatureC: r.temperatureC ? Number(r.temperatureC) : undefined,
         pressureHpa: r.pressureHpa ? Number(r.pressureHpa) : undefined,
-        precipitationMm: r.precipitationMm ? Number(r.precipitationMm) : undefined,
+        precipitationMm: r.precipitationMm
+          ? Number(r.precipitationMm)
+          : undefined,
         snowMm: r.snowMm ? Number(r.snowMm) : undefined,
         airDensityKgM3: r.airDensityKgM3 ? Number(r.airDensityKgM3) : undefined,
       })) as WeatherForecast[];
     } catch (error) {
-      console.error('Error getting weather forecasts:', error);
-      throw new Error('Failed to get weather forecasts');
+      console.error("Error getting weather forecasts:", error);
+      throw new Error("Failed to get weather forecasts");
     }
   }
 
   /**
    * Get latest weather forecast for a site
    */
-  async getLatestWeatherForecast(siteId: string): Promise<WeatherForecast | null> {
+  async getLatestWeatherForecast(
+    siteId: string,
+  ): Promise<WeatherForecast | null> {
     try {
       const results = await db
         .select()
@@ -493,7 +528,9 @@ export class WeatherAPIService {
       const r = results[0];
       return {
         ...r,
-        irradiationWhM2: r.irradiationWhM2 ? Number(r.irradiationWhM2) : undefined,
+        irradiationWhM2: r.irradiationWhM2
+          ? Number(r.irradiationWhM2)
+          : undefined,
         ghiWhM2: r.ghiWhM2 ? Number(r.ghiWhM2) : undefined,
         dniWhM2: r.dniWhM2 ? Number(r.dniWhM2) : undefined,
         dhiWhM2: r.dhiWhM2 ? Number(r.dhiWhM2) : undefined,
@@ -501,13 +538,15 @@ export class WeatherAPIService {
         windGustMs: r.windGustMs ? Number(r.windGustMs) : undefined,
         temperatureC: r.temperatureC ? Number(r.temperatureC) : undefined,
         pressureHpa: r.pressureHpa ? Number(r.pressureHpa) : undefined,
-        precipitationMm: r.precipitationMm ? Number(r.precipitationMm) : undefined,
+        precipitationMm: r.precipitationMm
+          ? Number(r.precipitationMm)
+          : undefined,
         snowMm: r.snowMm ? Number(r.snowMm) : undefined,
         airDensityKgM3: r.airDensityKgM3 ? Number(r.airDensityKgM3) : undefined,
       } as WeatherForecast;
     } catch (error) {
-      console.error('Error getting latest weather forecast:', error);
-      throw new Error('Failed to get latest weather forecast');
+      console.error("Error getting latest weather forecast:", error);
+      throw new Error("Failed to get latest weather forecast");
     }
   }
 
@@ -521,7 +560,7 @@ export class WeatherAPIService {
   private transformOpenWeatherMapResponse(
     data: OpenWeatherMapResponse,
     siteId: string,
-    forecastType: 'historical' | 'current' | 'forecast'
+    forecastType: "historical" | "current" | "forecast",
   ): WeatherForecast {
     // Calculate air density (ρ = P / (R * T))
     // P = pressure in Pa, R = 287.05 J/(kg·K), T = temperature in Kelvin
@@ -530,11 +569,11 @@ export class WeatherAPIService {
     const airDensityKgM3 = pressurePa / (287.05 * temperatureK);
 
     return {
-      id: '', // Will be generated by database
+      id: "", // Will be generated by database
       siteId,
       forecastTimestamp: new Date(data.dt * 1000),
       fetchedAt: new Date(),
-      source: 'openweathermap',
+      source: "openweathermap",
       forecastType,
 
       // Wind data
@@ -547,8 +586,8 @@ export class WeatherAPIService {
       humidityPercent: data.main.humidity,
       pressureHpa: data.main.pressure,
       cloudCoverPercent: data.clouds.all,
-      precipitationMm: data.rain?.['1h'] || data.rain?.['3h'] || 0,
-      snowMm: data.snow?.['1h'] || data.snow?.['3h'] || 0,
+      precipitationMm: data.rain?.["1h"] || data.rain?.["3h"] || 0,
+      snowMm: data.snow?.["1h"] || data.snow?.["3h"] || 0,
       visibilityM: data.visibility,
 
       // Air quality
@@ -566,51 +605,60 @@ export class WeatherAPIService {
   /**
    * Save a single weather forecast to database
    */
-  private async saveWeatherForecast(weatherData: WeatherForecast): Promise<void> {
+  private async saveWeatherForecast(
+    weatherData: WeatherForecast,
+  ): Promise<void> {
     try {
-      await db.insert(weatherForecasts).values({
-        siteId: weatherData.siteId,
-        forecastTimestamp: weatherData.forecastTimestamp,
-        fetchedAt: weatherData.fetchedAt,
-        source: weatherData.source,
-        forecastType: weatherData.forecastType,
-
-        irradiationWhM2: weatherData.irradiationWhM2?.toString(),
-        ghiWhM2: weatherData.ghiWhM2?.toString(),
-        dniWhM2: weatherData.dniWhM2?.toString(),
-        dhiWhM2: weatherData.dhiWhM2?.toString(),
-
-        windSpeedMs: weatherData.windSpeedMs?.toString(),
-        windDirectionDeg: weatherData.windDirectionDeg, // integer
-        windGustMs: weatherData.windGustMs?.toString(),
-
-        temperatureC: weatherData.temperatureC?.toString(),
-        humidityPercent: weatherData.humidityPercent, // integer
-        pressureHpa: weatherData.pressureHpa?.toString(),
-        cloudCoverPercent: weatherData.cloudCoverPercent, // integer
-        precipitationMm: weatherData.precipitationMm?.toString(),
-        snowMm: weatherData.snowMm?.toString(),
-        visibilityM: weatherData.visibilityM, // integer
-
-        airDensityKgM3: weatherData.airDensityKgM3?.toString(),
-        aqi: weatherData.aqi, // integer
-
-        weatherCondition: weatherData.weatherCondition,
-        weatherDescription: weatherData.weatherDescription,
-
-        rawApiResponse: weatherData.rawApiResponse,
-      }).onConflictDoUpdate({
-        target: [weatherForecasts.siteId, weatherForecasts.forecastTimestamp, weatherForecasts.source],
-        set: {
+      await db
+        .insert(weatherForecasts)
+        .values({
+          siteId: weatherData.siteId,
+          forecastTimestamp: weatherData.forecastTimestamp,
           fetchedAt: weatherData.fetchedAt,
+          source: weatherData.source,
+          forecastType: weatherData.forecastType,
+
+          irradiationWhM2: weatherData.irradiationWhM2?.toString(),
+          ghiWhM2: weatherData.ghiWhM2?.toString(),
+          dniWhM2: weatherData.dniWhM2?.toString(),
+          dhiWhM2: weatherData.dhiWhM2?.toString(),
+
           windSpeedMs: weatherData.windSpeedMs?.toString(),
-          windDirectionDeg: weatherData.windDirectionDeg,
+          windDirectionDeg: weatherData.windDirectionDeg, // integer
+          windGustMs: weatherData.windGustMs?.toString(),
+
           temperatureC: weatherData.temperatureC?.toString(),
-          updatedAt: new Date(),
-        },
-      });
+          humidityPercent: weatherData.humidityPercent, // integer
+          pressureHpa: weatherData.pressureHpa?.toString(),
+          cloudCoverPercent: weatherData.cloudCoverPercent, // integer
+          precipitationMm: weatherData.precipitationMm?.toString(),
+          snowMm: weatherData.snowMm?.toString(),
+          visibilityM: weatherData.visibilityM, // integer
+
+          airDensityKgM3: weatherData.airDensityKgM3?.toString(),
+          aqi: weatherData.aqi, // integer
+
+          weatherCondition: weatherData.weatherCondition,
+          weatherDescription: weatherData.weatherDescription,
+
+          rawApiResponse: weatherData.rawApiResponse,
+        })
+        .onConflictDoUpdate({
+          target: [
+            weatherForecasts.siteId,
+            weatherForecasts.forecastTimestamp,
+            weatherForecasts.source,
+          ],
+          set: {
+            fetchedAt: weatherData.fetchedAt,
+            windSpeedMs: weatherData.windSpeedMs?.toString(),
+            windDirectionDeg: weatherData.windDirectionDeg,
+            temperatureC: weatherData.temperatureC?.toString(),
+            updatedAt: new Date(),
+          },
+        });
     } catch (error) {
-      console.error('Error saving weather forecast:', error);
+      console.error("Error saving weather forecast:", error);
       throw error;
     }
   }
@@ -618,7 +666,9 @@ export class WeatherAPIService {
   /**
    * Save multiple weather forecasts to database
    */
-  private async saveWeatherForecasts(forecasts: WeatherForecast[]): Promise<void> {
+  private async saveWeatherForecasts(
+    forecasts: WeatherForecast[],
+  ): Promise<void> {
     for (const forecast of forecasts) {
       await this.saveWeatherForecast(forecast);
     }

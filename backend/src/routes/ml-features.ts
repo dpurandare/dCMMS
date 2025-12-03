@@ -1,7 +1,10 @@
-import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { validatorCompiler, serializerCompiler } from 'fastify-type-provider-zod';
-import { createFeastFeatureService } from '../services/feast-feature.service';
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  validatorCompiler,
+  serializerCompiler,
+} from "fastify-type-provider-zod";
+import { createFeastFeatureService } from "../services/feast-feature.service";
 
 // Validation schemas
 const getAssetFeaturesSchema = z.object({
@@ -30,12 +33,12 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof getAssetFeaturesSchema>;
   }>(
-    '/ml/features/assets',
+    "/ml/features/assets",
     {
       schema: {
         body: getAssetFeaturesSchema,
-        tags: ['ML'],
-        description: 'Get asset features from Feast feature store',
+        tags: ["ML"],
+        description: "Get asset features from Feast feature store",
       },
     },
     async (request, reply) => {
@@ -49,13 +52,13 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
           features,
         });
       } catch (error: any) {
-        fastify.log.error({ error }, 'Failed to get asset features');
+        fastify.log.error({ error }, "Failed to get asset features");
         return reply.status(500).send({
-          error: 'Failed to get asset features',
+          error: "Failed to get asset features",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -64,11 +67,11 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
 
   // List available feature views
   fastify.get(
-    '/ml/features/views',
+    "/ml/features/views",
     {
       schema: {
-        tags: ['ML'],
-        description: 'List available Feast feature views',
+        tags: ["ML"],
+        description: "List available Feast feature views",
       },
     },
     async (request, reply) => {
@@ -80,21 +83,21 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
           featureViews,
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to list feature views');
+        fastify.log.error({ error }, "Failed to list feature views");
         return reply.status(500).send({
-          error: 'Failed to list feature views',
+          error: "Failed to list feature views",
         });
       }
-    }
+    },
   );
 
   // Check Feast server health
   fastify.get(
-    '/ml/features/health',
+    "/ml/features/health",
     {
       schema: {
-        tags: ['ML'],
-        description: 'Check Feast feature server health',
+        tags: ["ML"],
+        description: "Check Feast feature server health",
       },
     },
     async (request, reply) => {
@@ -103,15 +106,15 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
 
         return reply.send({
           healthy,
-          status: healthy ? 'ok' : 'unhealthy',
+          status: healthy ? "ok" : "unhealthy",
         });
       } catch (error) {
-        fastify.log.error({ error }, 'Failed to check Feast health');
+        fastify.log.error({ error }, "Failed to check Feast health");
         return reply.status(500).send({
-          error: 'Failed to check Feast health',
+          error: "Failed to check Feast health",
         });
       }
-    }
+    },
   );
 
   // ==========================================
@@ -122,22 +125,22 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
   fastify.post<{
     Body: z.infer<typeof triggerMaterializationSchema>;
   }>(
-    '/ml/features/materialize',
+    "/ml/features/materialize",
     {
       schema: {
         body: triggerMaterializationSchema,
-        tags: ['ML'],
-        description: 'Trigger Feast feature materialization (admin-only)',
+        tags: ["ML"],
+        description: "Trigger Feast feature materialization (admin-only)",
       },
     },
     async (request, reply) => {
       try {
         const userRole = (request.user as any)?.role;
 
-        if (userRole !== 'super_admin' && userRole !== 'tenant_admin') {
+        if (userRole !== "super_admin" && userRole !== "tenant_admin") {
           return reply.status(403).send({
-            error: 'Forbidden',
-            message: 'Only administrators can trigger feature materialization',
+            error: "Forbidden",
+            message: "Only administrators can trigger feature materialization",
           });
         }
 
@@ -145,23 +148,23 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
         featureService
           .triggerMaterialization()
           .then(() => {
-            fastify.log.info('Feature materialization completed');
+            fastify.log.info("Feature materialization completed");
           })
           .catch((error) => {
-            fastify.log.error({ error }, 'Feature materialization failed');
+            fastify.log.error({ error }, "Feature materialization failed");
           });
 
         return reply.status(202).send({
-          message: 'Feature materialization triggered',
-          status: 'processing',
+          message: "Feature materialization triggered",
+          status: "processing",
         });
       } catch (error: any) {
-        fastify.log.error({ error }, 'Failed to trigger materialization');
+        fastify.log.error({ error }, "Failed to trigger materialization");
         return reply.status(500).send({
-          error: 'Failed to trigger materialization',
+          error: "Failed to trigger materialization",
           message: error.message,
         });
       }
-    }
+    },
   );
 }

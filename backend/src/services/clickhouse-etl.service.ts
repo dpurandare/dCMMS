@@ -1,8 +1,8 @@
-import { FastifyInstance } from 'fastify';
-import { db } from '../db';
-import { workOrders, assets, alerts } from '../db/schema';
-import { gte, lte } from 'drizzle-orm';
-import { createClient } from '@clickhouse/client';
+import { FastifyInstance } from "fastify";
+import { db } from "../db";
+import { workOrders, assets, alerts } from "../db/schema";
+import { gte, lte } from "drizzle-orm";
+import { createClient } from "@clickhouse/client";
 
 /**
  * ClickHouse ETL Service
@@ -17,10 +17,10 @@ export class ClickHouseETLService {
 
     // Initialize ClickHouse client
     this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-      username: process.env.CLICKHOUSE_USER || 'clickhouse_user',
-      password: process.env.CLICKHOUSE_PASSWORD || 'clickhouse_password_dev',
-      database: process.env.CLICKHOUSE_DATABASE || 'dcmms_analytics',
+      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
+      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
+      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
+      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
     });
   }
 
@@ -28,7 +28,7 @@ export class ClickHouseETLService {
    * Run full ETL sync
    */
   async runFullSync(): Promise<void> {
-    this.fastify.log.info('Starting full ETL sync to ClickHouse');
+    this.fastify.log.info("Starting full ETL sync to ClickHouse");
 
     const startTime = Date.now();
 
@@ -45,10 +45,10 @@ export class ClickHouseETLService {
       const duration = Date.now() - startTime;
       this.fastify.log.info(
         { durationMs: duration },
-        'Full ETL sync completed successfully'
+        "Full ETL sync completed successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to run full ETL sync');
+      this.fastify.log.error({ error }, "Failed to run full ETL sync");
       throw error;
     }
   }
@@ -57,7 +57,7 @@ export class ClickHouseETLService {
    * Run incremental sync (last 24 hours)
    */
   async runIncrementalSync(): Promise<void> {
-    this.fastify.log.info('Starting incremental ETL sync to ClickHouse');
+    this.fastify.log.info("Starting incremental ETL sync to ClickHouse");
 
     const startTime = Date.now();
     const since = new Date();
@@ -76,10 +76,10 @@ export class ClickHouseETLService {
       const duration = Date.now() - startTime;
       this.fastify.log.info(
         { durationMs: duration, since },
-        'Incremental ETL sync completed successfully'
+        "Incremental ETL sync completed successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to run incremental ETL sync');
+      this.fastify.log.error({ error }, "Failed to run incremental ETL sync");
       throw error;
     }
   }
@@ -88,7 +88,7 @@ export class ClickHouseETLService {
    * Sync work orders to ClickHouse
    */
   private async syncWorkOrders(since?: Date): Promise<void> {
-    this.fastify.log.info({ since }, 'Syncing work orders to ClickHouse');
+    this.fastify.log.info({ since }, "Syncing work orders to ClickHouse");
 
     try {
       // Fetch work orders from PostgreSQL
@@ -102,19 +102,23 @@ export class ClickHouseETLService {
       const orders = await query;
 
       if (orders.length === 0) {
-        this.fastify.log.info('No work orders to sync');
+        this.fastify.log.info("No work orders to sync");
         return;
       }
 
       // Transform to ClickHouse format
       const rows = orders.map((wo) => {
-        const durationHours = wo.actualEnd && wo.actualStart
-          ? (wo.actualEnd.getTime() - wo.actualStart.getTime()) / (1000 * 60 * 60)
-          : null;
+        const durationHours =
+          wo.actualEnd && wo.actualStart
+            ? (wo.actualEnd.getTime() - wo.actualStart.getTime()) /
+              (1000 * 60 * 60)
+            : null;
 
-        const mttrHours = wo.actualEnd && wo.createdAt && wo.type === 'corrective'
-          ? (wo.actualEnd.getTime() - wo.createdAt.getTime()) / (1000 * 60 * 60)
-          : null;
+        const mttrHours =
+          wo.actualEnd && wo.createdAt && wo.type === "corrective"
+            ? (wo.actualEnd.getTime() - wo.createdAt.getTime()) /
+              (1000 * 60 * 60)
+            : null;
 
         return {
           wo_id: wo.id,
@@ -141,17 +145,17 @@ export class ClickHouseETLService {
 
       // Insert to ClickHouse
       await this.clickhouse.insert({
-        table: 'wo_metrics',
+        table: "wo_metrics",
         values: rows,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       this.fastify.log.info(
         { count: rows.length },
-        'Work orders synced to ClickHouse successfully'
+        "Work orders synced to ClickHouse successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to sync work orders');
+      this.fastify.log.error({ error }, "Failed to sync work orders");
       throw error;
     }
   }
@@ -160,7 +164,7 @@ export class ClickHouseETLService {
    * Sync assets to ClickHouse
    */
   private async syncAssets(since?: Date): Promise<void> {
-    this.fastify.log.info({ since }, 'Syncing assets to ClickHouse');
+    this.fastify.log.info({ since }, "Syncing assets to ClickHouse");
 
     try {
       // Fetch assets from PostgreSQL
@@ -174,15 +178,16 @@ export class ClickHouseETLService {
       const assetList = await query;
 
       if (assetList.length === 0) {
-        this.fastify.log.info('No assets to sync');
+        this.fastify.log.info("No assets to sync");
         return;
       }
 
       // Transform to ClickHouse format
       const rows = assetList.map((asset) => {
-        const metadata = typeof asset.metadata === 'string'
-          ? JSON.parse(asset.metadata)
-          : asset.metadata || {};
+        const metadata =
+          typeof asset.metadata === "string"
+            ? JSON.parse(asset.metadata)
+            : asset.metadata || {};
 
         return {
           asset_id: asset.id,
@@ -210,17 +215,17 @@ export class ClickHouseETLService {
 
       // Insert to ClickHouse
       await this.clickhouse.insert({
-        table: 'asset_metrics',
+        table: "asset_metrics",
         values: rows,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       this.fastify.log.info(
         { count: rows.length },
-        'Assets synced to ClickHouse successfully'
+        "Assets synced to ClickHouse successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to sync assets');
+      this.fastify.log.error({ error }, "Failed to sync assets");
       throw error;
     }
   }
@@ -229,7 +234,7 @@ export class ClickHouseETLService {
    * Sync alarms to ClickHouse
    */
   private async syncAlarms(since?: Date): Promise<void> {
-    this.fastify.log.info({ since }, 'Syncing alarms to ClickHouse');
+    this.fastify.log.info({ since }, "Syncing alarms to ClickHouse");
 
     try {
       // Fetch alerts from PostgreSQL
@@ -243,19 +248,26 @@ export class ClickHouseETLService {
       const alertList = await query;
 
       if (alertList.length === 0) {
-        this.fastify.log.info('No alarms to sync');
+        this.fastify.log.info("No alarms to sync");
         return;
       }
 
       // Transform to ClickHouse format
       const rows = alertList.map((alert) => {
-        const timeToAck = alert.acknowledgedAt && alert.createdAt
-          ? Math.floor((alert.acknowledgedAt.getTime() - alert.createdAt.getTime()) / 1000)
-          : 0;
+        const timeToAck =
+          alert.acknowledgedAt && alert.createdAt
+            ? Math.floor(
+                (alert.acknowledgedAt.getTime() - alert.createdAt.getTime()) /
+                  1000,
+              )
+            : 0;
 
-        const timeToResolve = alert.resolvedAt && alert.createdAt
-          ? Math.floor((alert.resolvedAt.getTime() - alert.createdAt.getTime()) / 1000)
-          : 0;
+        const timeToResolve =
+          alert.resolvedAt && alert.createdAt
+            ? Math.floor(
+                (alert.resolvedAt.getTime() - alert.createdAt.getTime()) / 1000,
+              )
+            : 0;
 
         return {
           alarm_id: alert.id,
@@ -264,7 +276,7 @@ export class ClickHouseETLService {
           asset_id: alert.assetId,
           severity: alert.severity,
           status: alert.status,
-          alarm_type: 'general',
+          alarm_type: "general",
           message: alert.title,
           created_at: alert.createdAt,
           acknowledged_at: alert.acknowledgedAt,
@@ -276,17 +288,17 @@ export class ClickHouseETLService {
 
       // Insert to ClickHouse
       await this.clickhouse.insert({
-        table: 'alarm_metrics',
+        table: "alarm_metrics",
         values: rows,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       this.fastify.log.info(
         { count: rows.length },
-        'Alarms synced to ClickHouse successfully'
+        "Alarms synced to ClickHouse successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to sync alarms');
+      this.fastify.log.error({ error }, "Failed to sync alarms");
       throw error;
     }
   }
@@ -298,7 +310,7 @@ export class ClickHouseETLService {
     const snapshotDate = date || new Date();
     snapshotDate.setHours(0, 0, 0, 0);
 
-    this.fastify.log.info({ snapshotDate }, 'Calculating KPI snapshots');
+    this.fastify.log.info({ snapshotDate }, "Calculating KPI snapshots");
 
     try {
       // Calculate KPIs from ClickHouse data
@@ -306,7 +318,7 @@ export class ClickHouseETLService {
         SELECT
           tenant_id,
           site_id,
-          toDate('${snapshotDate.toISOString().split('T')[0]}') AS snapshot_date,
+          toDate('${snapshotDate.toISOString().split("T")[0]}') AS snapshot_date,
 
           -- MTTR (corrective WOs only)
           avg(if(type = 'corrective' AND mttr_hours > 0, mttr_hours, NULL)) AS mttr_hours,
@@ -323,35 +335,35 @@ export class ClickHouseETLService {
           sum(cost) AS total_maintenance_cost
 
         FROM wo_metrics
-        WHERE toDate(created_at) = toDate('${snapshotDate.toISOString().split('T')[0]}')
+        WHERE toDate(created_at) = toDate('${snapshotDate.toISOString().split("T")[0]}')
         GROUP BY tenant_id, site_id
       `;
 
       const result = await this.clickhouse.query({
         query,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       const rows = await result.json<any[]>();
 
       if (rows.length === 0) {
-        this.fastify.log.info('No KPI data to snapshot');
+        this.fastify.log.info("No KPI data to snapshot");
         return;
       }
 
       // Insert KPI snapshots
       await this.clickhouse.insert({
-        table: 'kpi_snapshots',
+        table: "kpi_snapshots",
         values: rows,
-        format: 'JSONEachRow',
+        format: "JSONEachRow",
       });
 
       this.fastify.log.info(
         { count: rows.length, date: snapshotDate },
-        'KPI snapshots calculated successfully'
+        "KPI snapshots calculated successfully",
       );
     } catch (error) {
-      this.fastify.log.error({ error }, 'Failed to calculate KPI snapshots');
+      this.fastify.log.error({ error }, "Failed to calculate KPI snapshots");
       throw error;
     }
   }
@@ -362,15 +374,15 @@ export class ClickHouseETLService {
   async testConnection(): Promise<boolean> {
     try {
       const result = await this.clickhouse.query({
-        query: 'SELECT 1',
-        format: 'JSONEachRow',
+        query: "SELECT 1",
+        format: "JSONEachRow",
       });
 
       await result.json();
-      this.fastify.log.info('ClickHouse connection test successful');
+      this.fastify.log.info("ClickHouse connection test successful");
       return true;
     } catch (error) {
-      this.fastify.log.error({ error }, 'ClickHouse connection test failed');
+      this.fastify.log.error({ error }, "ClickHouse connection test failed");
       return false;
     }
   }
@@ -380,10 +392,12 @@ export class ClickHouseETLService {
    */
   async close(): Promise<void> {
     await this.clickhouse.close();
-    this.fastify.log.info('ClickHouse connection closed');
+    this.fastify.log.info("ClickHouse connection closed");
   }
 }
 
-export function createClickHouseETLService(fastify: FastifyInstance): ClickHouseETLService {
+export function createClickHouseETLService(
+  fastify: FastifyInstance,
+): ClickHouseETLService {
   return new ClickHouseETLService(fastify);
 }

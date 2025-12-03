@@ -1,50 +1,53 @@
-import Fastify, { FastifyInstance } from 'fastify';
-import cors from '@fastify/cors';
-import helmet from '@fastify/helmet';
-import rateLimit from '@fastify/rate-limit';
-import swagger from '@fastify/swagger';
-import swaggerUi from '@fastify/swagger-ui';
-import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import Fastify, { FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 
 // Plugins
-import { registerJwt } from './plugins/jwt';
+import { registerJwt } from "./plugins/jwt";
 
 // Routes
-import healthRoutes from './routes/health';
-import authRoutes from './routes/auth';
-import workOrderRoutes from './routes/work-orders';
-import assetRoutes from './routes/assets';
-import siteRoutes from './routes/sites';
-import telemetryRoutes from './routes/telemetry';
-import notificationRoutes from './routes/notifications';
-import webhookRoutes from './routes/webhooks';
-import alertRoutes from './routes/alerts';
-import integrationRoutes from './routes/integrations';
-import analyticsAdminRoutes from './routes/analytics-admin';
-import analyticsRoutes from './routes/analytics';
-import reportRoutes from './routes/reports';
-import complianceTemplateRoutes from './routes/compliance-templates';
-import complianceReportRoutes from './routes/compliance-reports';
-import auditLogRoutes from './routes/audit-logs';
-import mlFeatureRoutes from './routes/ml-features';
-import forecastRoutes from './routes/forecasts';
+import healthRoutes from "./routes/health";
+import authRoutes from "./routes/auth";
+import workOrderRoutes from "./routes/work-orders";
+import assetRoutes from "./routes/assets";
+import siteRoutes from "./routes/sites";
+import telemetryRoutes from "./routes/telemetry";
+import notificationRoutes from "./routes/notifications";
+import webhookRoutes from "./routes/webhooks";
+import alertRoutes from "./routes/alerts";
+import integrationRoutes from "./routes/integrations";
+import analyticsAdminRoutes from "./routes/analytics-admin";
+import analyticsRoutes from "./routes/analytics";
+import reportRoutes from "./routes/reports";
+import complianceTemplateRoutes from "./routes/compliance-templates";
+import complianceReportRoutes from "./routes/compliance-reports";
+import auditLogRoutes from "./routes/audit-logs";
+import mlFeatureRoutes from "./routes/ml-features";
+import forecastRoutes from "./routes/forecasts";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
     logger: {
-      level: process.env.LOG_LEVEL || 'info',
-      ...(process.env.NODE_ENV === 'development' && {
+      level: process.env.LOG_LEVEL || "info",
+      ...(process.env.NODE_ENV === "development" && {
         transport: {
-          target: 'pino-pretty',
+          target: "pino-pretty",
           options: {
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
+            translateTime: "HH:MM:ss Z",
+            ignore: "pid,hostname",
           },
         },
       }),
     },
-    requestIdHeader: 'x-request-id',
-    requestIdLogLabel: 'reqId',
+    requestIdHeader: "x-request-id",
+    requestIdLogLabel: "reqId",
     disableRequestLogging: false,
     trustProxy: true,
   });
@@ -67,22 +70,22 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // CORS
   await server.register(cors, {
-    origin: process.env.CORS_ORIGIN?.split(',') || '*',
-    credentials: process.env.CORS_CREDENTIALS === 'true',
+    origin: process.env.CORS_ORIGIN?.split(",") || "*",
+    credentials: process.env.CORS_CREDENTIALS === "true",
   });
 
   // Rate limiting
   await server.register(rateLimit, {
-    max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
-    timeWindow: parseInt(process.env.RATE_LIMIT_TIMEWINDOW || '60000', 10),
+    max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
+    timeWindow: parseInt(process.env.RATE_LIMIT_TIMEWINDOW || "60000", 10),
   });
 
   // Swagger documentation
-  if (process.env.SWAGGER_ENABLED !== 'false') {
+  if (process.env.SWAGGER_ENABLED !== "false") {
     await server.register(swagger, {
       openapi: {
         info: {
-          title: 'dCMMS API',
+          title: "dCMMS API",
           description: `
 # Distributed Computerized Maintenance Management System API
 
@@ -108,97 +111,105 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
 - **Default**: 100 requests per minute per IP
 - Check response headers for rate limit status
           `,
-          version: '1.0.0',
+          version: "1.0.0",
           contact: {
-            name: 'dCMMS Support',
-            email: 'support@dcmms.com',
-            url: 'https://dcmms.com/support',
+            name: "dCMMS Support",
+            email: "support@dcmms.com",
+            url: "https://dcmms.com/support",
           },
           license: {
-            name: 'UNLICENSED',
+            name: "UNLICENSED",
           },
         },
         servers: [
           {
-            url: `http://${process.env.SWAGGER_HOST || 'localhost:3000'}`,
-            description: 'Development server',
+            url: `http://${process.env.SWAGGER_HOST || "localhost:3000"}`,
+            description: "Development server",
           },
           {
-            url: 'https://api.dcmms.com',
-            description: 'Production server',
+            url: "https://api.dcmms.com",
+            description: "Production server",
           },
           {
-            url: 'https://staging-api.dcmms.com',
-            description: 'Staging server',
+            url: "https://staging-api.dcmms.com",
+            description: "Staging server",
           },
         ],
         tags: [
           {
-            name: 'health',
-            description: 'Health check and system status endpoints',
+            name: "health",
+            description: "Health check and system status endpoints",
           },
           {
-            name: 'auth',
-            description: 'Authentication and authorization endpoints',
+            name: "auth",
+            description: "Authentication and authorization endpoints",
           },
           {
-            name: 'work-orders',
-            description: 'Work order management - Create, assign, and track maintenance work',
+            name: "work-orders",
+            description:
+              "Work order management - Create, assign, and track maintenance work",
           },
           {
-            name: 'assets',
-            description: 'Asset management - Track physical assets and their hierarchy',
+            name: "assets",
+            description:
+              "Asset management - Track physical assets and their hierarchy",
           },
           {
-            name: 'sites',
-            description: 'Site management - Organize assets by location',
+            name: "sites",
+            description: "Site management - Organize assets by location",
           },
           {
-            name: 'notifications',
-            description: 'Notification management - Manage notification preferences and history',
+            name: "notifications",
+            description:
+              "Notification management - Manage notification preferences and history",
           },
           {
-            name: 'Compliance',
-            description: 'Compliance reporting - Manage compliance templates and generate reports',
+            name: "Compliance",
+            description:
+              "Compliance reporting - Manage compliance templates and generate reports",
           },
           {
-            name: 'Reports',
-            description: 'Custom report builder - Create and execute custom reports',
+            name: "Reports",
+            description:
+              "Custom report builder - Create and execute custom reports",
           },
           {
-            name: 'Analytics',
-            description: 'Analytics and KPIs - Access system analytics and key performance indicators',
+            name: "Analytics",
+            description:
+              "Analytics and KPIs - Access system analytics and key performance indicators",
           },
           {
-            name: 'Audit',
-            description: 'Audit logs - Tamper-proof compliance audit trail (admin-only)',
+            name: "Audit",
+            description:
+              "Audit logs - Tamper-proof compliance audit trail (admin-only)",
           },
           {
-            name: 'ML',
-            description: 'Machine Learning - Feast feature store and ML model serving',
+            name: "ML",
+            description:
+              "Machine Learning - Feast feature store and ML model serving",
           },
         ],
         components: {
           securitySchemes: {
             bearerAuth: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-              description: 'JWT token obtained from /api/v1/auth/login',
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+              description: "JWT token obtained from /api/v1/auth/login",
             },
           },
         },
         externalDocs: {
-          description: 'API Usage Guide and Examples',
-          url: 'https://docs.dcmms.com/api/usage-guide',
+          description: "API Usage Guide and Examples",
+          url: "https://docs.dcmms.com/api/usage-guide",
         },
       },
     });
 
     await server.register(swaggerUi, {
-      routePrefix: '/docs',
+      routePrefix: "/docs",
       uiConfig: {
-        docExpansion: 'list',
+        docExpansion: "list",
         deepLinking: true,
         filter: true,
         tryItOutEnabled: true,
@@ -213,12 +224,15 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   // ==========================================
 
   // Request logging
-  server.addHook('onRequest', async (request, reply) => {
-    request.log.info({ url: request.url, method: request.method }, 'incoming request');
+  server.addHook("onRequest", async (request, reply) => {
+    request.log.info(
+      { url: request.url, method: request.method },
+      "incoming request",
+    );
   });
 
   // Response time tracking
-  server.addHook('onResponse', async (request, reply) => {
+  server.addHook("onResponse", async (request, reply) => {
     request.log.info(
       {
         url: request.url,
@@ -226,7 +240,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
         statusCode: reply.statusCode,
         responseTime: reply.getResponseTime(),
       },
-      'request completed'
+      "request completed",
     );
   });
 
@@ -241,36 +255,36 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
     if (error.validation) {
       return reply.status(400).send({
         statusCode: 400,
-        error: 'Bad Request',
-        message: 'Validation failed',
+        error: "Bad Request",
+        message: "Validation failed",
         details: error.validation,
       });
     }
 
     // JWT errors
-    if (error.message?.includes('Authorization')) {
+    if (error.message?.includes("Authorization")) {
       return reply.status(401).send({
         statusCode: 401,
-        error: 'Unauthorized',
+        error: "Unauthorized",
         message: error.message,
       });
     }
 
     // Database errors
-    if (error.message?.includes('duplicate key') || error.code === '23505') {
+    if (error.message?.includes("duplicate key") || error.code === "23505") {
       return reply.status(409).send({
         statusCode: 409,
-        error: 'Conflict',
-        message: 'Resource already exists',
+        error: "Conflict",
+        message: "Resource already exists",
       });
     }
 
     // Foreign key errors
-    if (error.code === '23503') {
+    if (error.code === "23503") {
       return reply.status(400).send({
         statusCode: 400,
-        error: 'Bad Request',
-        message: 'Referenced resource does not exist',
+        error: "Bad Request",
+        message: "Referenced resource does not exist",
       });
     }
 
@@ -278,8 +292,8 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
     const statusCode = error.statusCode || 500;
     reply.status(statusCode).send({
       statusCode,
-      error: error.name || 'Internal Server Error',
-      message: error.message || 'An unexpected error occurred',
+      error: error.name || "Internal Server Error",
+      message: error.message || "An unexpected error occurred",
     });
   });
 
@@ -287,30 +301,30 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   // ROUTES
   // ==========================================
 
-  await server.register(healthRoutes, { prefix: '/health' });
-  await server.register(authRoutes, { prefix: '/api/v1/auth' });
-  await server.register(workOrderRoutes, { prefix: '/api/v1/work-orders' });
-  await server.register(assetRoutes, { prefix: '/api/v1/assets' });
-  await server.register(siteRoutes, { prefix: '/api/v1/sites' });
-  await server.register(telemetryRoutes, { prefix: '/api/v1/telemetry' });
-  await server.register(notificationRoutes, { prefix: '/api/v1' });
-  await server.register(webhookRoutes, { prefix: '/api/v1' });
-  await server.register(alertRoutes, { prefix: '/api/v1' });
-  await server.register(integrationRoutes, { prefix: '/api/v1' });
-  await server.register(analyticsAdminRoutes, { prefix: '/api/v1' });
-  await server.register(analyticsRoutes, { prefix: '/api/v1' });
-  await server.register(reportRoutes, { prefix: '/api/v1' });
-  await server.register(complianceTemplateRoutes, { prefix: '/api/v1' });
-  await server.register(complianceReportRoutes, { prefix: '/api/v1' });
-  await server.register(auditLogRoutes, { prefix: '/api/v1' });
-  await server.register(mlFeatureRoutes, { prefix: '/api/v1' });
-  await server.register(forecastRoutes, { prefix: '/api/v1/forecasts' });
+  await server.register(healthRoutes, { prefix: "/health" });
+  await server.register(authRoutes, { prefix: "/api/v1/auth" });
+  await server.register(workOrderRoutes, { prefix: "/api/v1/work-orders" });
+  await server.register(assetRoutes, { prefix: "/api/v1/assets" });
+  await server.register(siteRoutes, { prefix: "/api/v1/sites" });
+  await server.register(telemetryRoutes, { prefix: "/api/v1/telemetry" });
+  await server.register(notificationRoutes, { prefix: "/api/v1" });
+  await server.register(webhookRoutes, { prefix: "/api/v1" });
+  await server.register(alertRoutes, { prefix: "/api/v1" });
+  await server.register(integrationRoutes, { prefix: "/api/v1" });
+  await server.register(analyticsAdminRoutes, { prefix: "/api/v1" });
+  await server.register(analyticsRoutes, { prefix: "/api/v1" });
+  await server.register(reportRoutes, { prefix: "/api/v1" });
+  await server.register(complianceTemplateRoutes, { prefix: "/api/v1" });
+  await server.register(complianceReportRoutes, { prefix: "/api/v1" });
+  await server.register(auditLogRoutes, { prefix: "/api/v1" });
+  await server.register(mlFeatureRoutes, { prefix: "/api/v1" });
+  await server.register(forecastRoutes, { prefix: "/api/v1/forecasts" });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {
     reply.status(404).send({
       statusCode: 404,
-      error: 'Not Found',
+      error: "Not Found",
       message: `Route ${request.method}:${request.url} not found`,
     });
   });
@@ -320,7 +334,8 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   // ==========================================
 
   // Start notification batching service
-  const { createNotificationBatchingService } = await import('./services/notification-batching.service');
+  const { createNotificationBatchingService } =
+    await import("./services/notification-batching.service");
   const batchingService = createNotificationBatchingService(server);
   batchingService.start();
 
@@ -329,16 +344,17 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   // ==========================================
 
   // Start ETL scheduler for ClickHouse analytics
-  const { createETLSchedulerService } = await import('./services/etl-scheduler.service');
+  const { createETLSchedulerService } =
+    await import("./services/etl-scheduler.service");
   const etlScheduler = createETLSchedulerService(server);
   await etlScheduler.start();
 
   // Cleanup on server close
-  server.addHook('onClose', async () => {
-    server.log.info('Shutting down notification batching service');
+  server.addHook("onClose", async () => {
+    server.log.info("Shutting down notification batching service");
     batchingService.stop();
 
-    server.log.info('Shutting down ETL scheduler');
+    server.log.info("Shutting down ETL scheduler");
     etlScheduler.stop();
   });
 

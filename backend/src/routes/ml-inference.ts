@@ -1,28 +1,28 @@
-import { FastifyPluginAsync } from 'fastify';
-import { MLInferenceService } from '../services/ml-inference.service';
+import { FastifyPluginAsync } from "fastify";
+import { MLInferenceService } from "../services/ml-inference.service";
 
 const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
   const inferenceService = new MLInferenceService();
 
   // GET /api/v1/ml-inference/predict/asset/:assetId
   server.get(
-    '/predict/asset/:assetId',
+    "/predict/asset/:assetId",
     {
       schema: {
-        summary: 'Get prediction for a single asset',
-        tags: ['ML Inference'],
+        summary: "Get prediction for a single asset",
+        tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            assetId: { type: 'string' },
+            assetId: { type: "string" },
           },
         },
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelName: { type: 'string' },
-            useCache: { type: 'boolean', default: true },
+            modelName: { type: "string" },
+            useCache: { type: "boolean", default: true },
           },
         },
       },
@@ -31,33 +31,38 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { assetId } = request.params as { assetId: string };
-        const { modelName = 'default-model', useCache = true } = request.query as { modelName?: string; useCache?: boolean };
+        const { modelName = "default-model", useCache = true } =
+          request.query as { modelName?: string; useCache?: boolean };
 
-        const prediction = await inferenceService.predictSingle(modelName, assetId, useCache);
+        const prediction = await inferenceService.predictSingle(
+          modelName,
+          assetId,
+          useCache,
+        );
 
         return prediction;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Prediction failed',
+          error: error.message || "Prediction failed",
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/ml-inference/predict/all
   server.get(
-    '/predict/all',
+    "/predict/all",
     {
       schema: {
-        summary: 'Get predictions for all assets',
-        tags: ['ML Inference'],
+        summary: "Get predictions for all assets",
+        tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            modelName: { type: 'string' },
-            riskLevel: { type: 'string' },
+            modelName: { type: "string" },
+            riskLevel: { type: "string" },
           },
         },
       },
@@ -65,32 +70,38 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const { modelName = 'default-model', riskLevel } = request.query as { modelName?: string; riskLevel?: string };
+        const { modelName = "default-model", riskLevel } = request.query as {
+          modelName?: string;
+          riskLevel?: string;
+        };
 
-        const response = await inferenceService.predictAllAssets(modelName, riskLevel);
+        const response = await inferenceService.predictAllAssets(
+          modelName,
+          riskLevel,
+        );
 
         return response;
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Prediction failed',
+          error: error.message || "Prediction failed",
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/ml-inference/predictions/logs
   server.get(
-    '/predictions/logs',
+    "/predictions/logs",
     {
       schema: {
-        summary: 'Get prediction logs',
-        tags: ['ML Inference'],
+        summary: "Get prediction logs",
+        tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            limit: { type: 'integer', default: 100 },
+            limit: { type: "integer", default: 100 },
           },
         },
       },
@@ -106,19 +117,19 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Failed to get prediction logs',
+          error: error.message || "Failed to get prediction logs",
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/ml-inference/predictions/cache/clear
   server.post(
-    '/predictions/cache/clear',
+    "/predictions/cache/clear",
     {
       schema: {
-        summary: 'Clear prediction cache',
-        tags: ['ML Inference'],
+        summary: "Clear prediction cache",
+        tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
       },
       preHandler: server.authenticate,
@@ -128,15 +139,15 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
         inferenceService.clearCache();
 
         return {
-          message: 'Cache cleared successfully',
+          message: "Cache cleared successfully",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
-          error: error.message || 'Failed to clear cache',
+          error: error.message || "Failed to clear cache",
         });
       }
-    }
+    },
   );
 };
 

@@ -16,20 +16,22 @@ export interface EmailOptions {
 }
 
 export interface EmailResult {
-  status: 'sent' | 'failed';
+  status: "sent" | "failed";
   messageId?: string;
   error?: string;
 }
 
 export class EmailService {
   constructor() {
-    console.log('Email Service initialized (Mock Provider)');
+    console.log("Email Service initialized (Mock Provider)");
   }
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
-    console.log(`[Mock Email] Sending email to ${options.to}: ${options.subject}`);
+    console.log(
+      `[Mock Email] Sending email to ${options.to}: ${options.subject}`,
+    );
     return {
-      status: 'sent',
+      status: "sent",
       messageId: `mock-email-${Date.now()}`,
     };
   }

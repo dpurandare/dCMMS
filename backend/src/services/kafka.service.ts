@@ -1,4 +1,4 @@
-import { Kafka, Producer, ProducerRecord, logLevel } from 'kafkajs';
+import { Kafka, Producer, ProducerRecord, logLevel } from "kafkajs";
 
 /**
  * Kafka Service for Publishing Telemetry Events
@@ -20,10 +20,12 @@ class KafkaService {
    */
   private initialize() {
     try {
-      const brokers = (process.env.KAFKA_BROKERS || 'localhost:9092').split(',');
+      const brokers = (process.env.KAFKA_BROKERS || "localhost:9092").split(
+        ",",
+      );
 
       this.kafka = new Kafka({
-        clientId: 'dcmms-backend',
+        clientId: "dcmms-backend",
         brokers,
         logLevel: logLevel.ERROR,
         retry: {
@@ -39,9 +41,9 @@ class KafkaService {
         idempotent: true,
       });
 
-      console.log('Kafka service initialized');
+      console.log("Kafka service initialized");
     } catch (error) {
-      console.error('Failed to initialize Kafka:', error);
+      console.error("Failed to initialize Kafka:", error);
     }
   }
 
@@ -56,9 +58,9 @@ class KafkaService {
     try {
       await this.producer.connect();
       this.isConnected = true;
-      console.log('✓ Connected to Kafka');
+      console.log("✓ Connected to Kafka");
     } catch (error) {
-      console.error('Failed to connect to Kafka:', error);
+      console.error("Failed to connect to Kafka:", error);
       throw error;
     }
   }
@@ -74,9 +76,9 @@ class KafkaService {
     try {
       await this.producer.disconnect();
       this.isConnected = false;
-      console.log('✓ Disconnected from Kafka');
+      console.log("✓ Disconnected from Kafka");
     } catch (error) {
-      console.error('Failed to disconnect from Kafka:', error);
+      console.error("Failed to disconnect from Kafka:", error);
     }
   }
 
@@ -93,7 +95,7 @@ class KafkaService {
     }
 
     if (!this.producer) {
-      throw new Error('Kafka producer not initialized');
+      throw new Error("Kafka producer not initialized");
     }
 
     try {

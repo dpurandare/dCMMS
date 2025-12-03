@@ -1,20 +1,20 @@
-import { MLInferenceService, AssetPrediction } from './ml-inference.service';
-import { MLExplainabilityService } from './ml-explainability.service';
+import { MLInferenceService, AssetPrediction } from "./ml-inference.service";
+import { MLExplainabilityService } from "./ml-explainability.service";
 
 export interface PredictiveWorkOrder {
   assetId: string;
   assetName: string;
-  workOrderType: 'predictive';
+  workOrderType: "predictive";
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'draft';
+  priority: "low" | "medium" | "high" | "critical";
+  status: "draft";
   assignedTo?: string;
   failureProbability: number;
   confidence: number;
   topFactors: Array<{ feature: string; contribution: number }>;
   shapExplanation: any;
-  createdBy: 'ml_system';
+  createdBy: "ml_system";
   requiresApproval: boolean;
 }
 
@@ -42,8 +42,10 @@ export class PredictiveWOService {
   /**
    * Main scheduled job - run daily to create predictive work orders
    */
-  async runPredictiveMaintenanceJob(modelName: string = 'predictive_maintenance'): Promise<PredictiveWOStats> {
-    console.log('Starting predictive maintenance job...');
+  async runPredictiveMaintenanceJob(
+    modelName: string = "predictive_maintenance",
+  ): Promise<PredictiveWOStats> {
+    console.log("Starting predictive maintenance job...");
 
     const stats: PredictiveWOStats = {
       totalCreated: 0,
@@ -55,13 +57,15 @@ export class PredictiveWOService {
 
     try {
       // Step 1: Get all asset predictions
-      const predictions = await this.inferenceService.predictAllAssets('predictive-maintenance-v1');
+      const predictions = await this.inferenceService.predictAllAssets(
+        "predictive-maintenance-v1",
+      );
 
       console.log(`Received ${predictions.length} predictions`);
 
       // Filter high-risk predictions
       const highRiskPredictions = predictions.filter(
-        (p) => (p.failureProbability || 0) >= 0.7
+        (p) => (p.failureProbability || 0) >= 0.7,
       );
 
       console.log(`Found ${highRiskPredictions.length} high-risk predictions`);
@@ -71,7 +75,9 @@ export class PredictiveWOService {
         try {
           // Check deduplication
           if (this.shouldSkipDueToDeduplication(prediction.assetId)) {
-            console.log(`Skipping ${prediction.assetId} - WO already exists within 7 days`);
+            console.log(
+              `Skipping ${prediction.assetId} - WO already exists within 7 days`,
+            );
             stats.deduplicatedCount++;
             continue;
           }
@@ -79,14 +85,14 @@ export class PredictiveWOService {
           // Create predictive work order
           const workOrder = await this.createPredictiveWorkOrder(
             modelName,
-            prediction
+            prediction,
           );
 
           stats.totalCreated++;
 
-          if (workOrder.priority === 'critical') {
+          if (workOrder.priority === "critical") {
             stats.criticalRisk++;
-          } else if (workOrder.priority === 'high') {
+          } else if (workOrder.priority === "high") {
             stats.highRisk++;
           }
 
@@ -96,16 +102,18 @@ export class PredictiveWOService {
 
           // Track for deduplication
           this.recentWorkOrders.set(prediction.assetId, new Date());
-
         } catch (error: any) {
-          console.error(`Failed to create WO for ${prediction.assetId}: ${error.message}`);
+          console.error(
+            `Failed to create WO for ${prediction.assetId}: ${error.message}`,
+          );
         }
       }
 
-      console.log(`Predictive maintenance job completed: ${JSON.stringify(stats)}`);
+      console.log(
+        `Predictive maintenance job completed: ${JSON.stringify(stats)}`,
+      );
 
       return stats;
-
     } catch (error: any) {
       console.error(`Predictive maintenance job failed: ${error.message}`);
       throw error;
@@ -117,7 +125,7 @@ export class PredictiveWOService {
    */
   async createPredictiveWorkOrder(
     modelName: string,
-    prediction: AssetPrediction
+    prediction: AssetPrediction,
   ): Promise<PredictiveWorkOrder> {
     console.log(`Creating predictive WO for asset: ${prediction.assetId}`);
 
@@ -132,19 +140,19 @@ export class PredictiveWOService {
     const assetOwner = await this.getAssetOwner(prediction.assetId);
 
     // Determine priority based on probability
-    let priority: 'low' | 'medium' | 'high' | 'critical';
+    let priority: "low" | "medium" | "high" | "critical";
     let daysUntilFailure: number;
     if ((prediction.failureProbability || 0) >= 0.9) {
-      priority = 'critical';
+      priority = "critical";
       daysUntilFailure = 1;
     } else if ((prediction.failureProbability || 0) >= 0.8) {
-      priority = 'high';
+      priority = "high";
       daysUntilFailure = 3;
     } else if ((prediction.failureProbability || 0) >= 0.7) {
-      priority = 'medium';
+      priority = "medium";
       daysUntilFailure = 7;
     } else {
-      priority = 'low'; // Default for probabilities below 0.7
+      priority = "low"; // Default for probabilities below 0.7
       daysUntilFailure = 30; // Default for lower risk
     }
 
@@ -155,10 +163,10 @@ export class PredictiveWOService {
     // However, the first fetch had topN: 5 (which I removed from call but added to service mock? No, I added explainPrediction to service mock but it just calls getExplanation).
     // Let's just use the 'explanation' variable we already have.
 
-    // If we really need to re-fetch or if the first fetch was for something else (it was for top features), 
+    // If we really need to re-fetch or if the first fetch was for something else (it was for top features),
     // we should use a different variable name if we want to fetch again.
     // But looking at the code, it seems it wants to attach 'shapExplanation' to the work order.
-    // The first fetch was used for 'topFactors'. 
+    // The first fetch was used for 'topFactors'.
     // Let's assume the first fetch is sufficient.
 
     const topFactors = explanation.topFeatures.slice(0, 3).map((f: any) => ({
@@ -167,37 +175,42 @@ export class PredictiveWOService {
     }));
 
     const factorsText = topFactors
-      .map((f: any) => `${f.feature} (${f.contribution > 0 ? '+' : ''}${f.contribution.toFixed(2)})`)
-      .join(', '); // Reverted to comma-separated for description consistency
+      .map(
+        (f: any) =>
+          `${f.feature} (${f.contribution > 0 ? "+" : ""}${f.contribution.toFixed(2)})`,
+      )
+      .join(", "); // Reverted to comma-separated for description consistency
 
     // Create work order object
     const workOrder: PredictiveWorkOrder = {
       assetId: prediction.assetId,
       assetName,
-      workOrderType: 'predictive',
+      workOrderType: "predictive",
       title: `Predictive Maintenance - ${assetName}`, // Reverted title to original format
       description: `ML model predicted failure probability: ${((prediction.failureProbability || 0) * 100).toFixed(1)}%.
 
 Top contributing factors: ${factorsText}
 
-Recommendation: ${(explanation as any).recommendation || 'Schedule inspection and preventive maintenance.'}
+Recommendation: ${(explanation as any).recommendation || "Schedule inspection and preventive maintenance."}
 
 This work order was automatically generated by the predictive maintenance system and requires supervisor approval before scheduling.`,
       priority,
-      status: 'draft',
+      status: "draft",
       assignedTo: assetOwner,
       failureProbability: prediction.failureProbability || 0,
       confidence: prediction.confidence || 0.8,
       topFactors,
       shapExplanation: explanation,
-      createdBy: 'ml_system',
+      createdBy: "ml_system",
       requiresApproval: true,
     };
 
     // Save to database (placeholder - in production, call work order service/repository)
     await this.saveWorkOrderToDatabase(workOrder);
 
-    console.log(`Created predictive WO for ${prediction.assetId} with priority ${priority}`);
+    console.log(
+      `Created predictive WO for ${prediction.assetId} with priority ${priority}`,
+    );
 
     return workOrder;
   }
@@ -220,7 +233,9 @@ This work order was automatically generated by the predictive maintenance system
   /**
    * Send notification to assigned user
    */
-  private async sendNotification(workOrder: PredictiveWorkOrder): Promise<void> {
+  private async sendNotification(
+    workOrder: PredictiveWorkOrder,
+  ): Promise<void> {
     // In production, this would:
     // 1. Send email to supervisor
     // 2. Send push notification
@@ -230,7 +245,7 @@ This work order was automatically generated by the predictive maintenance system
 
     // Placeholder notification
     const notification = {
-      to: workOrder.assignedTo || 'supervisor@example.com',
+      to: workOrder.assignedTo || "supervisor@example.com",
       subject: `[Action Required] Predictive Maintenance Alert - ${workOrder.assetName}`,
       body: `
 A predictive maintenance work order has been created and requires your approval:
@@ -262,13 +277,15 @@ Please review and approve/reject this work order in the dCMMS system.
    */
   private async getAssetOwner(assetId: string): Promise<string> {
     // TODO: Query from database
-    return 'supervisor@example.com';
+    return "supervisor@example.com";
   }
 
   /**
    * Save work order to database (placeholder)
    */
-  private async saveWorkOrderToDatabase(workOrder: PredictiveWorkOrder): Promise<void> {
+  private async saveWorkOrderToDatabase(
+    workOrder: PredictiveWorkOrder,
+  ): Promise<void> {
     // TODO: Save to PostgreSQL work_orders table
     console.log(`Saving WO to database: ${workOrder.title}`);
 

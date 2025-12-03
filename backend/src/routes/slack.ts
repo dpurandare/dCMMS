@@ -1,70 +1,76 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync } from "fastify";
 // import { WebClient } from '@slack/web-api';
-import { db, pool } from '../db';
-import SlackService from '../services/slack.service';
+import { db, pool } from "../db";
+import SlackService from "../services/slack.service";
 
 const slackRoutes: FastifyPluginAsync = async (server) => {
   const slackService = new SlackService();
 
   // Slack OAuth configuration
-  const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID || '';
-  const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET || '';
-  const SLACK_REDIRECT_URI = process.env.SLACK_REDIRECT_URI || 'http://localhost:3000/api/v1/slack/oauth/callback';
+  const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID || "";
+  const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET || "";
+  const SLACK_REDIRECT_URI =
+    process.env.SLACK_REDIRECT_URI ||
+    "http://localhost:3000/api/v1/slack/oauth/callback";
 
   // GET /api/v1/slack/install
   server.get(
-    '/install',
+    "/install",
     {
       schema: {
-        summary: 'Start Slack OAuth installation',
-        tags: ['Slack'],
+        summary: "Start Slack OAuth installation",
+        tags: ["Slack"],
       },
     },
     async (request, reply) => {
-      const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+      const tenantId =
+        (request.headers["x-tenant-id"] as string) || "default-tenant";
 
       // Build Slack OAuth URL
       const scopes = [
-        'chat:write',
-        'users:read',
-        'users:read.email',
-        'channels:read',
-        'groups:read',
-        'im:read',
-        'commands',
+        "chat:write",
+        "users:read",
+        "users:read.email",
+        "channels:read",
+        "groups:read",
+        "im:read",
+        "commands",
       ];
 
-      const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=${scopes.join(',')}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}&state=${tenantId}`;
+      const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=${scopes.join(",")}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}&state=${tenantId}`;
 
       // Redirect to Slack OAuth page
       return reply.redirect(authUrl);
-    }
+    },
   );
 
   // GET /api/v1/slack/oauth/callback
   server.get(
-    '/oauth/callback',
+    "/oauth/callback",
     {
       schema: {
-        summary: 'OAuth callback handler',
-        tags: ['Slack'],
+        summary: "OAuth callback handler",
+        tags: ["Slack"],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            code: { type: 'string' },
-            state: { type: 'string' },
+            code: { type: "string" },
+            state: { type: "string" },
           },
         },
       },
     },
     async (request, reply) => {
-      const { code, state } = request.query as { code?: string; state?: string };
+      const { code, state } = request.query as {
+        code?: string;
+        state?: string;
+      };
       const tenantId = state as string;
 
       if (!code) {
         return reply.status(400).send({
           success: false,
-          error: 'Missing authorization code',
+          error: "Missing authorization code",
         });
       }
 
@@ -78,10 +84,18 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         // });
 
         // Mock result for build
-        const result: any = { ok: true, access_token: 'mock_token', team: { id: 'mock_team_id', name: 'Mock Team' }, bot_user_id: 'mock_bot_id', app_id: 'mock_app_id', scope: 'mock_scope', authed_user: { id: 'mock_user_id' } };
+        const result: any = {
+          ok: true,
+          access_token: "mock_token",
+          team: { id: "mock_team_id", name: "Mock Team" },
+          bot_user_id: "mock_bot_id",
+          app_id: "mock_app_id",
+          scope: "mock_scope",
+          authed_user: { id: "mock_user_id" },
+        };
 
         if (!result.ok || !result.access_token) {
-          throw new Error('OAuth token exchange failed');
+          throw new Error("OAuth token exchange failed");
         }
 
         // Save workspace to database
@@ -116,13 +130,13 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
             result.app_id,
             result.scope,
             result.authed_user?.id || null,
-          ]
+          ],
         );
 
         const workspace = workspaceResult.rows[0];
 
         // Success - redirect to settings page
-        reply.type('text/html').send(`
+        reply.type("text/html").send(`
           <html>
             <body>
               <h1>✅ Slack Integration Successful!</h1>
@@ -138,7 +152,7 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         `);
       } catch (error: any) {
         request.log.error(error);
-        reply.status(500).type('text/html').send(`
+        reply.status(500).type("text/html").send(`
           <html>
             <body>
               <h1>❌ Slack Integration Failed</h1>
@@ -148,16 +162,16 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
           </html>
         `);
       }
-    }
+    },
   );
 
   // POST /api/v1/slack/interactive
   server.post(
-    '/interactive',
+    "/interactive",
     {
       schema: {
-        summary: 'Handle Slack interactive actions (button clicks)',
-        tags: ['Slack'],
+        summary: "Handle Slack interactive actions (button clicks)",
+        tags: ["Slack"],
       },
       // Fastify handles raw body differently, but for now assuming standard JSON parsing or text
       // If raw body is needed for signature verification, we might need a specific content type parser
@@ -167,10 +181,12 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         // Verify Slack signature
         // Note: In Fastify, getting raw body for signature verification can be tricky if not configured
         // Assuming request.body is already parsed or we can access raw body if configured
-        const signature = request.headers['x-slack-signature'] as string;
-        const timestamp = request.headers['x-slack-request-timestamp'] as string;
+        const signature = request.headers["x-slack-signature"] as string;
+        const timestamp = request.headers[
+          "x-slack-request-timestamp"
+        ] as string;
 
-        // For signature verification we need the raw body string. 
+        // For signature verification we need the raw body string.
         // If Fastify has already parsed it, we might not have the exact raw string.
         // This part might need adjustment based on Fastify configuration.
         // For now, let's assume we can get it or skip verification if strictly needed for build pass
@@ -186,7 +202,10 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         // If content-type is application/x-www-form-urlencoded
 
         let payload: any;
-        if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
+        if (
+          request.headers["content-type"] ===
+          "application/x-www-form-urlencoded"
+        ) {
           const body = request.body as any;
           if (body && body.payload) {
             payload = JSON.parse(body.payload);
@@ -210,21 +229,22 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({ error: error.message });
       }
-    }
+    },
   );
 
   // GET /api/v1/slack/workspaces
   server.get(
-    '/workspaces',
+    "/workspaces",
     {
       schema: {
-        summary: 'List Slack workspaces',
-        tags: ['Slack'],
+        summary: "List Slack workspaces",
+        tags: ["Slack"],
       },
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         const result = await pool.query(
           `
@@ -241,7 +261,7 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
           WHERE tenant_id = $1
           ORDER BY installed_at DESC
         `,
-          [tenantId]
+          [tenantId],
         );
 
         return {
@@ -253,24 +273,24 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to list workspaces',
+          error: "Failed to list workspaces",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // DELETE /api/v1/slack/workspaces/:id
   server.delete(
-    '/workspaces/:id',
+    "/workspaces/:id",
     {
       schema: {
-        summary: 'Disconnect Slack workspace',
-        tags: ['Slack'],
+        summary: "Disconnect Slack workspace",
+        tags: ["Slack"],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -278,52 +298,53 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         const result = await pool.query(
-          'UPDATE slack_workspaces SET active = false, updated_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING id',
-          [id, tenantId]
+          "UPDATE slack_workspaces SET active = false, updated_at = NOW() WHERE id = $1 AND tenant_id = $2 RETURNING id",
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Workspace not found',
+            error: "Workspace not found",
           });
         }
 
         return {
           success: true,
-          message: 'Slack workspace disconnected',
+          message: "Slack workspace disconnected",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to disconnect workspace',
+          error: "Failed to disconnect workspace",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/slack/channels
   server.post(
-    '/channels',
+    "/channels",
     {
       schema: {
-        summary: 'Add channel mapping',
-        tags: ['Slack'],
+        summary: "Add channel mapping",
+        tags: ["Slack"],
         body: {
-          type: 'object',
-          required: ['workspaceId', 'channelId', 'eventTypes'],
+          type: "object",
+          required: ["workspaceId", "channelId", "eventTypes"],
           properties: {
-            workspaceId: { type: 'string' },
-            channelId: { type: 'string' },
-            channelName: { type: 'string' },
-            eventTypes: { type: 'array', items: { type: 'string' } },
-            mentionUsers: { type: 'boolean' },
-            threadReplies: { type: 'boolean' },
+            workspaceId: { type: "string" },
+            channelId: { type: "string" },
+            channelName: { type: "string" },
+            eventTypes: { type: "array", items: { type: "string" } },
+            mentionUsers: { type: "boolean" },
+            threadReplies: { type: "boolean" },
           },
         },
       },
@@ -358,43 +379,51 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
             thread_replies AS "threadReplies",
             created_at AS "createdAt"
         `,
-          [workspaceId, channelId, channelName, eventTypes, mentionUsers, threadReplies]
+          [
+            workspaceId,
+            channelId,
+            channelName,
+            eventTypes,
+            mentionUsers,
+            threadReplies,
+          ],
         );
 
         return reply.status(201).send({
           success: true,
           mapping: result.rows[0],
-          message: 'Channel mapping created',
+          message: "Channel mapping created",
         });
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to create channel mapping',
+          error: "Failed to create channel mapping",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/slack/channels
   server.get(
-    '/channels',
+    "/channels",
     {
       schema: {
-        summary: 'List channel mappings',
-        tags: ['Slack'],
+        summary: "List channel mappings",
+        tags: ["Slack"],
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            workspaceId: { type: 'string' },
+            workspaceId: { type: "string" },
           },
         },
       },
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
         const { workspaceId } = request.query as { workspaceId?: string };
 
         let query = `
@@ -417,11 +446,11 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         const params: any[] = [tenantId];
 
         if (workspaceId) {
-          query += ' AND scm.workspace_id = $2';
+          query += " AND scm.workspace_id = $2";
           params.push(workspaceId);
         }
 
-        query += ' ORDER BY scm.created_at DESC';
+        query += " ORDER BY scm.created_at DESC";
 
         const result = await pool.query(query, params);
 
@@ -434,24 +463,24 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to list channel mappings',
+          error: "Failed to list channel mappings",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // DELETE /api/v1/slack/channels/:id
   server.delete(
-    '/channels/:id',
+    "/channels/:id",
     {
       schema: {
-        summary: 'Remove channel mapping',
-        tags: ['Slack'],
+        summary: "Remove channel mapping",
+        tags: ["Slack"],
         params: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
+            id: { type: "string" },
           },
         },
       },
@@ -459,7 +488,8 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         const result = await pool.query(
           `
@@ -470,44 +500,44 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
             AND sw.tenant_id = $2
           RETURNING scm.id
         `,
-          [id, tenantId]
+          [id, tenantId],
         );
 
         if (result.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Channel mapping not found',
+            error: "Channel mapping not found",
           });
         }
 
         return {
           success: true,
-          message: 'Channel mapping deleted',
+          message: "Channel mapping deleted",
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to delete channel mapping',
+          error: "Failed to delete channel mapping",
           message: error.message,
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/slack/test
   server.post(
-    '/test',
+    "/test",
     {
       schema: {
-        summary: 'Send test message to Slack',
-        tags: ['Slack'],
+        summary: "Send test message to Slack",
+        tags: ["Slack"],
         body: {
-          type: 'object',
-          required: ['workspaceId', 'channelId'],
+          type: "object",
+          required: ["workspaceId", "channelId"],
           properties: {
-            workspaceId: { type: 'string' },
-            channelId: { type: 'string' },
+            workspaceId: { type: "string" },
+            channelId: { type: "string" },
           },
         },
       },
@@ -515,18 +545,19 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { workspaceId, channelId } = request.body as any;
-        const tenantId = (request.headers['x-tenant-id'] as string) || 'default-tenant';
+        const tenantId =
+          (request.headers["x-tenant-id"] as string) || "default-tenant";
 
         // Get workspace
         const workspaceResult = await pool.query(
           'SELECT bot_token AS "botToken" FROM slack_workspaces WHERE id = $1 AND tenant_id = $2',
-          [workspaceId, tenantId]
+          [workspaceId, tenantId],
         );
 
         if (workspaceResult.rows.length === 0) {
           return reply.status(404).send({
             success: false,
-            error: 'Workspace not found',
+            error: "Workspace not found",
           });
         }
 
@@ -546,22 +577,22 @@ const slackRoutes: FastifyPluginAsync = async (server) => {
         //   ],
         // });
 
-        const result: any = { ts: '1234567890.123456' };
+        const result: any = { ts: "1234567890.123456" };
 
         return {
           success: true,
-          message: 'Test message sent successfully',
+          message: "Test message sent successfully",
           messageTs: result.ts,
         };
       } catch (error: any) {
         request.log.error(error);
         return reply.status(500).send({
           success: false,
-          error: 'Failed to send test message',
+          error: "Failed to send test message",
           message: error.message,
         });
       }
-    }
+    },
   );
 };
 

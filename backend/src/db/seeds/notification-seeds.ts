@@ -1,16 +1,16 @@
-import { db } from '../index';
-import { notificationTemplates, notificationRules, tenants } from '../schema';
+import { db } from "../index";
+import { notificationTemplates, notificationRules, tenants } from "../schema";
 
 export async function seedNotifications() {
-  console.log('🔔 Seeding notification templates and rules...');
+  console.log("🔔 Seeding notification templates and rules...");
 
   // Get default tenant
   const defaultTenant = await db.query.tenants.findFirst({
-    where: (tenants, { eq }) => eq(tenants.tenantId, 'default'),
+    where: (tenants, { eq }) => eq(tenants.tenantId, "default"),
   });
 
   if (!defaultTenant) {
-    console.error('Default tenant not found. Run main seed first.');
+    console.error("Default tenant not found. Run main seed first.");
     return;
   }
 
@@ -18,11 +18,11 @@ export async function seedNotifications() {
   const emailTemplates = [
     {
       tenantId: defaultTenant.id,
-      templateId: 'email_work_order_assigned',
-      name: 'Work Order Assigned',
-      eventType: 'work_order_assigned' as const,
-      channel: 'email' as const,
-      subject: 'Work Order Assigned: {wo_id}',
+      templateId: "email_work_order_assigned",
+      name: "Work Order Assigned",
+      eventType: "work_order_assigned" as const,
+      channel: "email" as const,
+      subject: "Work Order Assigned: {wo_id}",
       bodyTemplate: `
         <html>
           <body>
@@ -40,15 +40,20 @@ export async function seedNotifications() {
           </body>
         </html>
       `,
-      variables: JSON.stringify(['wo_id', 'asset_name', 'site_name', 'priority']),
+      variables: JSON.stringify([
+        "wo_id",
+        "asset_name",
+        "site_name",
+        "priority",
+      ]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'email_alert_critical',
-      name: 'Critical Alert',
-      eventType: 'alert_critical' as const,
-      channel: 'email' as const,
-      subject: 'CRITICAL ALERT: {asset_name}',
+      templateId: "email_alert_critical",
+      name: "Critical Alert",
+      eventType: "alert_critical" as const,
+      channel: "email" as const,
+      subject: "CRITICAL ALERT: {asset_name}",
       bodyTemplate: `
         <html>
           <body style="font-family: Arial, sans-serif;">
@@ -81,15 +86,21 @@ export async function seedNotifications() {
           </body>
         </html>
       `,
-      variables: JSON.stringify(['asset_name', 'site_name', 'alarm_severity', 'value', 'threshold']),
+      variables: JSON.stringify([
+        "asset_name",
+        "site_name",
+        "alarm_severity",
+        "value",
+        "threshold",
+      ]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'email_alert_high',
-      name: 'High Priority Alert',
-      eventType: 'alert_high' as const,
-      channel: 'email' as const,
-      subject: 'High Priority Alert: {asset_name}',
+      templateId: "email_alert_high",
+      name: "High Priority Alert",
+      eventType: "alert_high" as const,
+      channel: "email" as const,
+      subject: "High Priority Alert: {asset_name}",
       bodyTemplate: `
         <html>
           <body>
@@ -106,15 +117,20 @@ export async function seedNotifications() {
           </body>
         </html>
       `,
-      variables: JSON.stringify(['asset_name', 'site_name', 'value', 'threshold']),
+      variables: JSON.stringify([
+        "asset_name",
+        "site_name",
+        "value",
+        "threshold",
+      ]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'email_work_order_overdue',
-      name: 'Work Order Overdue',
-      eventType: 'work_order_overdue' as const,
-      channel: 'email' as const,
-      subject: 'Work Order Overdue: {wo_id}',
+      templateId: "email_work_order_overdue",
+      name: "Work Order Overdue",
+      eventType: "work_order_overdue" as const,
+      channel: "email" as const,
+      subject: "Work Order Overdue: {wo_id}",
       bodyTemplate: `
         <html>
           <body>
@@ -130,7 +146,7 @@ export async function seedNotifications() {
           </body>
         </html>
       `,
-      variables: JSON.stringify(['wo_id', 'asset_name', 'assigned_to']),
+      variables: JSON.stringify(["wo_id", "asset_name", "assigned_to"]),
     },
   ];
 
@@ -138,33 +154,41 @@ export async function seedNotifications() {
   const smsTemplates = [
     {
       tenantId: defaultTenant.id,
-      templateId: 'sms_alert_critical',
-      name: 'Critical Alert SMS',
-      eventType: 'alert_critical' as const,
-      channel: 'sms' as const,
+      templateId: "sms_alert_critical",
+      name: "Critical Alert SMS",
+      eventType: "alert_critical" as const,
+      channel: "sms" as const,
       subject: null,
-      bodyTemplate: 'CRITICAL: {asset_name} at {site_name}. Value: {value}, Threshold: {threshold}. Immediate action required!',
-      variables: JSON.stringify(['asset_name', 'site_name', 'value', 'threshold']),
+      bodyTemplate:
+        "CRITICAL: {asset_name} at {site_name}. Value: {value}, Threshold: {threshold}. Immediate action required!",
+      variables: JSON.stringify([
+        "asset_name",
+        "site_name",
+        "value",
+        "threshold",
+      ]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'sms_alert_high',
-      name: 'High Alert SMS',
-      eventType: 'alert_high' as const,
-      channel: 'sms' as const,
+      templateId: "sms_alert_high",
+      name: "High Alert SMS",
+      eventType: "alert_high" as const,
+      channel: "sms" as const,
       subject: null,
-      bodyTemplate: 'HIGH: {asset_name} alert. Value: {value}, Threshold: {threshold}. Please review.',
-      variables: JSON.stringify(['asset_name', 'value', 'threshold']),
+      bodyTemplate:
+        "HIGH: {asset_name} alert. Value: {value}, Threshold: {threshold}. Please review.",
+      variables: JSON.stringify(["asset_name", "value", "threshold"]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'sms_work_order_assigned',
-      name: 'Work Order Assigned SMS',
-      eventType: 'work_order_assigned' as const,
-      channel: 'sms' as const,
+      templateId: "sms_work_order_assigned",
+      name: "Work Order Assigned SMS",
+      eventType: "work_order_assigned" as const,
+      channel: "sms" as const,
       subject: null,
-      bodyTemplate: 'WO {wo_id} assigned to you. Asset: {asset_name}, Priority: {priority}. Check dCMMS app.',
-      variables: JSON.stringify(['wo_id', 'asset_name', 'priority']),
+      bodyTemplate:
+        "WO {wo_id} assigned to you. Asset: {asset_name}, Priority: {priority}. Check dCMMS app.",
+      variables: JSON.stringify(["wo_id", "asset_name", "priority"]),
     },
   ];
 
@@ -172,86 +196,86 @@ export async function seedNotifications() {
   const pushTemplates = [
     {
       tenantId: defaultTenant.id,
-      templateId: 'push_alert_critical',
-      name: 'Critical Alert Push',
-      eventType: 'alert_critical' as const,
-      channel: 'push' as const,
-      subject: 'CRITICAL ALERT',
-      bodyTemplate: '{asset_name}: {value} exceeds threshold {threshold}',
-      variables: JSON.stringify(['asset_name', 'value', 'threshold']),
+      templateId: "push_alert_critical",
+      name: "Critical Alert Push",
+      eventType: "alert_critical" as const,
+      channel: "push" as const,
+      subject: "CRITICAL ALERT",
+      bodyTemplate: "{asset_name}: {value} exceeds threshold {threshold}",
+      variables: JSON.stringify(["asset_name", "value", "threshold"]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'push_alert_high',
-      name: 'High Alert Push',
-      eventType: 'alert_high' as const,
-      channel: 'push' as const,
-      subject: 'High Priority Alert',
-      bodyTemplate: '{asset_name} requires attention',
-      variables: JSON.stringify(['asset_name']),
+      templateId: "push_alert_high",
+      name: "High Alert Push",
+      eventType: "alert_high" as const,
+      channel: "push" as const,
+      subject: "High Priority Alert",
+      bodyTemplate: "{asset_name} requires attention",
+      variables: JSON.stringify(["asset_name"]),
     },
     {
       tenantId: defaultTenant.id,
-      templateId: 'push_work_order_assigned',
-      name: 'Work Order Assigned Push',
-      eventType: 'work_order_assigned' as const,
-      channel: 'push' as const,
-      subject: 'New Work Order',
-      bodyTemplate: 'WO {wo_id} assigned: {asset_name}',
-      variables: JSON.stringify(['wo_id', 'asset_name']),
+      templateId: "push_work_order_assigned",
+      name: "Work Order Assigned Push",
+      eventType: "work_order_assigned" as const,
+      channel: "push" as const,
+      subject: "New Work Order",
+      bodyTemplate: "WO {wo_id} assigned: {asset_name}",
+      variables: JSON.stringify(["wo_id", "asset_name"]),
     },
   ];
 
   // Insert templates
-  await db.insert(notificationTemplates).values([
-    ...emailTemplates,
-    ...smsTemplates,
-    ...pushTemplates,
-  ]);
+  await db
+    .insert(notificationTemplates)
+    .values([...emailTemplates, ...smsTemplates, ...pushTemplates]);
 
-  console.log(`✅ Created ${emailTemplates.length + smsTemplates.length + pushTemplates.length} notification templates`);
+  console.log(
+    `✅ Created ${emailTemplates.length + smsTemplates.length + pushTemplates.length} notification templates`,
+  );
 
   // Seed Notification Rules
   const rules = [
     {
       tenantId: defaultTenant.id,
-      ruleId: 'rule_critical_alert',
-      name: 'Critical Alert Notification',
-      eventType: 'alert_critical' as const,
-      channels: JSON.stringify(['email', 'sms', 'push']),
-      conditions: JSON.stringify({ severity: 'critical' }),
+      ruleId: "rule_critical_alert",
+      name: "Critical Alert Notification",
+      eventType: "alert_critical" as const,
+      channels: JSON.stringify(["email", "sms", "push"]),
+      conditions: JSON.stringify({ severity: "critical" }),
       priority: 1,
       escalationMinutes: 30,
       isActive: true,
     },
     {
       tenantId: defaultTenant.id,
-      ruleId: 'rule_high_alert',
-      name: 'High Alert Notification',
-      eventType: 'alert_high' as const,
-      channels: JSON.stringify(['email', 'push']),
-      conditions: JSON.stringify({ severity: 'high' }),
+      ruleId: "rule_high_alert",
+      name: "High Alert Notification",
+      eventType: "alert_high" as const,
+      channels: JSON.stringify(["email", "push"]),
+      conditions: JSON.stringify({ severity: "high" }),
       priority: 2,
       escalationMinutes: 60,
       isActive: true,
     },
     {
       tenantId: defaultTenant.id,
-      ruleId: 'rule_medium_alert',
-      name: 'Medium Alert Notification',
-      eventType: 'alert_medium' as const,
-      channels: JSON.stringify(['email']),
-      conditions: JSON.stringify({ severity: 'medium' }),
+      ruleId: "rule_medium_alert",
+      name: "Medium Alert Notification",
+      eventType: "alert_medium" as const,
+      channels: JSON.stringify(["email"]),
+      conditions: JSON.stringify({ severity: "medium" }),
       priority: 3,
       escalationMinutes: null,
       isActive: true,
     },
     {
       tenantId: defaultTenant.id,
-      ruleId: 'rule_work_order_assigned',
-      name: 'Work Order Assigned Notification',
-      eventType: 'work_order_assigned' as const,
-      channels: JSON.stringify(['email', 'push']),
+      ruleId: "rule_work_order_assigned",
+      name: "Work Order Assigned Notification",
+      eventType: "work_order_assigned" as const,
+      channels: JSON.stringify(["email", "push"]),
       conditions: JSON.stringify({}),
       priority: 4,
       escalationMinutes: null,
@@ -259,10 +283,10 @@ export async function seedNotifications() {
     },
     {
       tenantId: defaultTenant.id,
-      ruleId: 'rule_work_order_overdue',
-      name: 'Work Order Overdue Notification',
-      eventType: 'work_order_overdue' as const,
-      channels: JSON.stringify(['email', 'sms']),
+      ruleId: "rule_work_order_overdue",
+      name: "Work Order Overdue Notification",
+      eventType: "work_order_overdue" as const,
+      channels: JSON.stringify(["email", "sms"]),
       conditions: JSON.stringify({}),
       priority: 2,
       escalationMinutes: null,
@@ -273,5 +297,5 @@ export async function seedNotifications() {
   await db.insert(notificationRules).values(rules);
 
   console.log(`✅ Created ${rules.length} notification rules`);
-  console.log('✅ Notification seed completed');
+  console.log("✅ Notification seed completed");
 }

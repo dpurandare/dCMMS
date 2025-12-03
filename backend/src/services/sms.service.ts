@@ -22,15 +22,15 @@ export interface SMSResult {
 
 export class SMSService {
   constructor() {
-    console.log('SMS service initialized (Mock Provider)');
+    console.log("SMS service initialized (Mock Provider)");
   }
 
   async sendSMS(options: SMSOptions): Promise<SMSResult> {
     console.log(`[Mock SMS] To: ${options.to}, Body: ${options.body}`);
     return {
       success: true,
-      messageId: 'mock-sms-id-' + Date.now(),
-      provider: 'mock',
+      messageId: "mock-sms-id-" + Date.now(),
+      provider: "mock",
       cost: 0,
     };
   }

@@ -1,6 +1,6 @@
-import { db } from '../db';
-import { sites, assets } from '../db/schema';
-import { eq, and, desc, asc, sql, like, or } from 'drizzle-orm';
+import { db } from "../db";
+import { sites, assets } from "../db/schema";
+import { eq, and, desc, asc, sql, like, or } from "drizzle-orm";
 
 export interface SiteFilters {
   status?: string;
@@ -11,7 +11,7 @@ export interface PaginationParams {
   page: number;
   limit: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface CreateSiteData {
@@ -20,7 +20,7 @@ export interface CreateSiteData {
   name: string;
   description?: string;
   type?: string;
-  energyType?: 'solar' | 'wind' | 'hydro' | 'biomass' | 'geothermal' | 'hybrid';
+  energyType?: "solar" | "wind" | "hydro" | "biomass" | "geothermal" | "hybrid";
   address?: string;
   city?: string;
   state?: string;
@@ -37,7 +37,7 @@ export interface UpdateSiteData {
   name?: string;
   description?: string;
   type?: string;
-  energyType?: 'solar' | 'wind' | 'hydro' | 'biomass' | 'geothermal' | 'hybrid';
+  energyType?: "solar" | "wind" | "hydro" | "biomass" | "geothermal" | "hybrid";
   address?: string;
   city?: string;
   state?: string;
@@ -57,7 +57,7 @@ export class SiteService {
   static generateSiteCode(name: string, tenantId: string): string {
     // Take first 3 chars of each word, max 8 chars total
     const words = name.trim().toUpperCase().split(/\s+/);
-    let code = '';
+    let code = "";
 
     for (const word of words) {
       if (code.length >= 8) break;
@@ -73,9 +73,14 @@ export class SiteService {
   static async list(
     tenantId: string,
     filters: SiteFilters,
-    pagination: PaginationParams
+    pagination: PaginationParams,
   ) {
-    const { page, limit, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+    const {
+      page,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
     const offset = (page - 1) * limit;
 
     // Build where conditions
@@ -86,8 +91,8 @@ export class SiteService {
         or(
           like(sites.name, `%${filters.search}%`),
           like(sites.siteId, `%${filters.search}%`),
-          like(sites.location, `%${filters.search}%`)
-        )!
+          like(sites.location, `%${filters.search}%`),
+        )!,
       );
     }
 
@@ -100,8 +105,9 @@ export class SiteService {
     const total = Number(countResult?.count || 0);
 
     // Get paginated results
-    const orderByColumn = (sites[sortBy as keyof typeof sites] || sites.createdAt) as any;
-    const orderFn = sortOrder === 'asc' ? asc : desc;
+    const orderByColumn = (sites[sortBy as keyof typeof sites] ||
+      sites.createdAt) as any;
+    const orderFn = sortOrder === "asc" ? asc : desc;
 
     const results = await db
       .select()
@@ -152,9 +158,15 @@ export class SiteService {
    * Create a new site
    */
   static async create(data: CreateSiteData) {
-    const location = [data.address, data.city, data.state, data.postalCode, data.country]
+    const location = [
+      data.address,
+      data.city,
+      data.state,
+      data.postalCode,
+      data.country,
+    ]
       .filter(Boolean)
-      .join(', ');
+      .join(", ");
 
     const [newSite] = await db
       .insert(sites)
@@ -162,9 +174,9 @@ export class SiteService {
         tenantId: data.tenantId,
         siteId: data.siteCode,
         name: data.name,
-        type: data.type || 'Unknown',
+        type: data.type || "Unknown",
         energyType: data.energyType,
-        location: location || 'Unknown',
+        location: location || "Unknown",
         // isActive removed
       })
       .returning();
@@ -199,7 +211,7 @@ export class SiteService {
       .where(and(eq(assets.siteId, id), eq(assets.tenantId, tenantId)));
 
     if (Number(assetCount?.count || 0) > 0) {
-      throw new Error('Cannot delete site with associated assets');
+      throw new Error("Cannot delete site with associated assets");
     }
 
     const [deleted] = await db
@@ -248,7 +260,7 @@ export class SiteService {
           count: Number(s.count),
         })),
         assetsByCriticality: criticalityStats.map((s) => ({
-          criticality: 'medium', // Default since criticality removed from schema
+          criticality: "medium", // Default since criticality removed from schema
           count: Number(s.count),
         })),
       },

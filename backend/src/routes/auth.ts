@@ -1,54 +1,57 @@
-import { FastifyPluginAsync } from 'fastify';
-import { AuthService } from '../services/auth.service';
-import { TokenService } from '../services/token.service';
+import { FastifyPluginAsync } from "fastify";
+import { AuthService } from "../services/auth.service";
+import { TokenService } from "../services/token.service";
 
 const authRoutes: FastifyPluginAsync = async (server) => {
   // POST /api/v1/auth/login
   server.post(
-    '/login',
+    "/login",
     {
       schema: {
-        description: 'User login with email and password',
-        tags: ['auth'],
+        description: "User login with email and password",
+        tags: ["auth"],
         body: {
-          type: 'object',
-          required: ['email', 'password'],
+          type: "object",
+          required: ["email", "password"],
           properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 8 },
+            email: { type: "string", format: "email" },
+            password: { type: "string", minLength: 8 },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              accessToken: { type: 'string' },
-              refreshToken: { type: 'string' },
-              expiresIn: { type: 'number' },
+              accessToken: { type: "string" },
+              refreshToken: { type: "string" },
+              expiresIn: { type: "number" },
               user: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  id: { type: 'string' },
-                  email: { type: 'string' },
-                  username: { type: 'string' },
-                  role: { type: 'string' },
+                  id: { type: "string" },
+                  email: { type: "string" },
+                  username: { type: "string" },
+                  role: { type: "string" },
                 },
               },
             },
           },
           401: {
-            type: 'object',
+            type: "object",
             properties: {
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
+              statusCode: { type: "number" },
+              error: { type: "string" },
+              message: { type: "string" },
             },
           },
         },
       },
     },
     async (request, reply) => {
-      const { email, password } = request.body as { email: string; password: string };
+      const { email, password } = request.body as {
+        email: string;
+        password: string;
+      };
 
       try {
         // Authenticate user
@@ -57,8 +60,8 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         if (!user) {
           return reply.status(401).send({
             statusCode: 401,
-            error: 'Unauthorized',
-            message: 'Invalid email or password',
+            error: "Unauthorized",
+            message: "Invalid email or password",
           });
         }
 
@@ -75,37 +78,37 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           },
         };
       } catch (error) {
-        request.log.error({ err: error }, 'Login error');
+        request.log.error({ err: error }, "Login error");
         return reply.status(500).send({
           statusCode: 500,
-          error: 'Internal Server Error',
-          message: 'An error occurred during login',
+          error: "Internal Server Error",
+          message: "An error occurred during login",
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/auth/refresh
   server.post(
-    '/refresh',
+    "/refresh",
     {
       schema: {
-        description: 'Refresh access token',
-        tags: ['auth'],
+        description: "Refresh access token",
+        tags: ["auth"],
         body: {
-          type: 'object',
-          required: ['refreshToken'],
+          type: "object",
+          required: ["refreshToken"],
           properties: {
-            refreshToken: { type: 'string' },
+            refreshToken: { type: "string" },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              accessToken: { type: 'string' },
-              refreshToken: { type: 'string' },
-              expiresIn: { type: 'number' },
+              accessToken: { type: "string" },
+              refreshToken: { type: "string" },
+              expiresIn: { type: "number" },
             },
           },
         },
@@ -116,7 +119,10 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
       try {
         // Verify refresh token
-        const decoded = await TokenService.verifyRefreshToken(server, refreshToken);
+        const decoded = await TokenService.verifyRefreshToken(
+          server,
+          refreshToken,
+        );
 
         // Get user details
         const user = await AuthService.getUserById(decoded.id);
@@ -124,8 +130,8 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         if (!user) {
           return reply.status(401).send({
             statusCode: 401,
-            error: 'Unauthorized',
-            message: 'User not found',
+            error: "Unauthorized",
+            message: "User not found",
           });
         }
 
@@ -134,23 +140,24 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         return tokens;
       } catch (error) {
-        request.log.error({ err: error }, 'Token refresh error');
+        request.log.error({ err: error }, "Token refresh error");
         return reply.status(401).send({
           statusCode: 401,
-          error: 'Unauthorized',
-          message: 'Invalid refresh token',
+          error: "Unauthorized",
+          message: "Invalid refresh token",
         });
       }
-    }
+    },
   );
 
   // POST /api/v1/auth/logout
   server.post(
-    '/logout',
+    "/logout",
     {
       schema: {
-        description: 'User logout',
-        tags: ['auth'],
+        description: "User logout",
+        tags: ["auth"],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         security: [{ bearerAuth: [] }],
       },
       preHandler: server.authenticate,
@@ -162,28 +169,28 @@ const authRoutes: FastifyPluginAsync = async (server) => {
       // 3. Log the logout event
 
       return {
-        message: 'Logged out successfully',
+        message: "Logged out successfully",
       };
-    }
+    },
   );
 
   // GET /api/v1/auth/me
   server.get(
-    '/me',
+    "/me",
     {
       schema: {
-        description: 'Get current user profile',
-        tags: ['auth'],
+        description: "Get current user profile",
+        tags: ["auth"],
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              id: { type: 'string' },
-              tenantId: { type: 'string' },
-              email: { type: 'string' },
-              username: { type: 'string' },
-              role: { type: 'string' },
+              id: { type: "string" },
+              tenantId: { type: "string" },
+              email: { type: "string" },
+              username: { type: "string" },
+              role: { type: "string" },
             },
           },
         },
@@ -200,7 +207,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         username: user.username,
         role: user.role,
       };
-    }
+    },
   );
 };
 

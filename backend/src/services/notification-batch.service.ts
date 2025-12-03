@@ -15,9 +15,9 @@
  *   await batchService.processScheduledDigests(); // Run via cron
  */
 
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
-import EmailService from './email.service';
+import { Pool } from "pg";
+import { randomUUID } from "crypto";
+import EmailService from "./email.service";
 
 // ==========================================
 // Types
@@ -27,7 +27,7 @@ export interface BatchConfig {
   id: string;
   userId: string;
   enabled: boolean;
-  frequency: 'daily' | 'weekly';
+  frequency: "daily" | "weekly";
   sendTime: string;
   sendDayOfWeek?: number;
   timezone: string;
@@ -77,11 +77,11 @@ export class NotificationBatchService {
     userId: string,
     priority: string,
     channel: string,
-    eventType: string
+    eventType: string,
   ): Promise<boolean> {
     const result = await this.db.query(
-      'SELECT should_batch_notification($1, $2, $3, $4) AS should_batch',
-      [userId, priority, channel, eventType]
+      "SELECT should_batch_notification($1, $2, $3, $4) AS should_batch",
+      [userId, priority, channel, eventType],
     );
 
     return result.rows[0]?.should_batch || false;
@@ -131,11 +131,23 @@ export class NotificationBatchService {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `,
-      [userId, notificationId, eventType, priority, channel, subject, body, JSON.stringify(variables), group]
+      [
+        userId,
+        notificationId,
+        eventType,
+        priority,
+        channel,
+        subject,
+        body,
+        JSON.stringify(variables),
+        group,
+      ],
     );
 
     const batchItemId = result.rows[0].id;
-    console.log(`Added notification to batch queue: ${batchItemId} (user: ${userId}, group: ${group})`);
+    console.log(
+      `Added notification to batch queue: ${batchItemId} (user: ${userId}, group: ${group})`,
+    );
 
     return batchItemId;
   }
@@ -144,18 +156,18 @@ export class NotificationBatchService {
    * Determine batch group based on event type
    */
   private determineBatchGroup(eventType: string): string {
-    if (eventType.startsWith('alarm_')) return 'alarms';
-    if (eventType.startsWith('work_order_')) return 'work_orders';
-    if (eventType.startsWith('inventory_')) return 'inventory';
-    if (eventType.startsWith('asset_')) return 'assets';
-    return 'general';
+    if (eventType.startsWith("alarm_")) return "alarms";
+    if (eventType.startsWith("work_order_")) return "work_orders";
+    if (eventType.startsWith("inventory_")) return "inventory";
+    if (eventType.startsWith("asset_")) return "assets";
+    return "general";
   }
 
   /**
    * Process scheduled digests (called by cron job)
    */
   async processScheduledDigests(): Promise<number> {
-    console.log('Processing scheduled notification digests...');
+    console.log("Processing scheduled notification digests...");
 
     // Get users with digests ready to send
     const result = await this.db.query(
@@ -177,7 +189,7 @@ export class NotificationBatchService {
         AND nbc.next_send_at <= NOW()
         AND u.active = true
       LIMIT 100
-    `
+    `,
     );
 
     const configs = result.rows;
@@ -190,7 +202,10 @@ export class NotificationBatchService {
         await this.sendDigest(config);
         sentCount++;
       } catch (error) {
-        console.error(`Failed to send digest for user ${config.userId}:`, error);
+        console.error(
+          `Failed to send digest for user ${config.userId}:`,
+          error,
+        );
       }
     }
 
@@ -209,16 +224,16 @@ export class NotificationBatchService {
     const periodEnd = new Date();
     const periodStart = new Date();
 
-    if (frequency === 'daily') {
+    if (frequency === "daily") {
       periodStart.setDate(periodStart.getDate() - 1);
-    } else if (frequency === 'weekly') {
+    } else if (frequency === "weekly") {
       periodStart.setDate(periodStart.getDate() - 7);
     }
 
     // Get pending batch items
     const itemsResult = await this.db.query(
-      'SELECT * FROM get_pending_batch_items($1, $2)',
-      [userId, periodStart]
+      "SELECT * FROM get_pending_batch_items($1, $2)",
+      [userId, periodStart],
     );
 
     const items: BatchItem[] = itemsResult.rows;
@@ -226,7 +241,13 @@ export class NotificationBatchService {
     if (items.length === 0) {
       console.log(`No pending items for user ${userId}, skipping digest`);
       // Update next send time anyway
-      await this.updateNextSendTime(config.id, frequency, config.sendTime, config.sendDayOfWeek, config.timezone);
+      await this.updateNextSendTime(
+        config.id,
+        frequency,
+        config.sendTime,
+        config.sendDayOfWeek,
+        config.timezone,
+      );
       return;
     }
 
@@ -234,7 +255,7 @@ export class NotificationBatchService {
     const digest = this.buildDigest(userId, periodStart, periodEnd, items);
 
     // Send digest email
-    if (config.channels.includes('email')) {
+    if (config.channels.includes("email")) {
       await this.sendDigestEmail(config.email, config.firstName, digest);
     }
 
@@ -242,7 +263,10 @@ export class NotificationBatchService {
     const batchId = randomUUID();
     const itemIds = items.map((item) => item.id);
 
-    await this.db.query('SELECT mark_batch_items_sent($1, $2)', [itemIds, batchId]);
+    await this.db.query("SELECT mark_batch_items_sent($1, $2)", [
+      itemIds,
+      batchId,
+    ]);
 
     // Record digest in history
     await this.recordDigestHistory({
@@ -252,14 +276,22 @@ export class NotificationBatchService {
       frequency,
       totalNotifications: items.length,
       notificationGroups: this.summarizeGroups(digest.groups),
-      channel: 'email',
+      channel: "email",
       batchId,
     });
 
     // Update config
-    await this.updateNextSendTime(config.id, frequency, config.sendTime, config.sendDayOfWeek, config.timezone);
+    await this.updateNextSendTime(
+      config.id,
+      frequency,
+      config.sendTime,
+      config.sendDayOfWeek,
+      config.timezone,
+    );
 
-    console.log(`✓ Sent ${frequency} digest to ${config.email} (${items.length} notifications)`);
+    console.log(
+      `✓ Sent ${frequency} digest to ${config.email} (${items.length} notifications)`,
+    );
   }
 
   /**
@@ -269,13 +301,13 @@ export class NotificationBatchService {
     userId: string,
     periodStart: Date,
     periodEnd: Date,
-    items: BatchItem[]
+    items: BatchItem[],
   ): DigestContent {
     // Group items by batch_group
     const groups: Record<string, BatchItem[]> = {};
 
     for (const item of items) {
-      const group = item.batchGroup || 'general';
+      const group = item.batchGroup || "general";
       if (!groups[group]) {
         groups[group] = [];
       }
@@ -297,7 +329,7 @@ export class NotificationBatchService {
   private async sendDigestEmail(
     email: string,
     firstName: string,
-    digest: DigestContent
+    digest: DigestContent,
   ): Promise<void> {
     const subject = `Your dCMMS Notification Digest (${digest.totalNotifications} updates)`;
 
@@ -321,13 +353,13 @@ export class NotificationBatchService {
 
     const periodStr = `${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`;
 
-    let groupsHTML = '';
+    let groupsHTML = "";
     const groupTitles: Record<string, string> = {
-      alarms: '🔔 Alarms',
-      work_orders: '🔧 Work Orders',
-      inventory: '📦 Inventory',
-      assets: '🏭 Assets',
-      general: '📋 General',
+      alarms: "🔔 Alarms",
+      work_orders: "🔧 Work Orders",
+      inventory: "📦 Inventory",
+      assets: "🏭 Assets",
+      general: "📋 General",
     };
 
     for (const [groupName, items] of Object.entries(groups)) {
@@ -342,7 +374,7 @@ export class NotificationBatchService {
       `;
 
       for (const item of items) {
-        const priorityColor = item.priority === 'medium' ? '#FFA500' : '#999';
+        const priorityColor = item.priority === "medium" ? "#FFA500" : "#999";
         const time = new Date(item.createdAt).toLocaleString();
 
         groupsHTML += `
@@ -351,8 +383,8 @@ export class NotificationBatchService {
               <div style="display: flex; align-items: center;">
                 <span style="display: inline-block; width: 8px; height: 8px; background: ${priorityColor}; border-radius: 50%; margin-right: 10px;"></span>
                 <div>
-                  ${item.subject ? `<strong>${item.subject}</strong><br>` : ''}
-                  <span style="color: #666;">${item.body.substring(0, 200)}${item.body.length > 200 ? '...' : ''}</span>
+                  ${item.subject ? `<strong>${item.subject}</strong><br>` : ""}
+                  <span style="color: #666;">${item.body.substring(0, 200)}${item.body.length > 200 ? "..." : ""}</span>
                   <br>
                   <small style="color: #999;">${time}</small>
                 </div>
@@ -391,7 +423,7 @@ export class NotificationBatchService {
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 12px;">
           <p>You're receiving this digest because you've enabled notification batching in your dCMMS preferences.</p>
-          <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/settings/notifications" style="color: #0066cc;">Manage notification preferences</a></p>
+          <p><a href="${process.env.APP_URL || "http://localhost:3000"}/settings/notifications" style="color: #0066cc;">Manage notification preferences</a></p>
         </div>
       </body>
       </html>
@@ -413,7 +445,7 @@ export class NotificationBatchService {
 
     for (const [groupName, items] of Object.entries(groups)) {
       text += `\n${groupName.toUpperCase()} (${items.length})\n`;
-      text += `${'='.repeat(50)}\n\n`;
+      text += `${"=".repeat(50)}\n\n`;
 
       for (const item of items) {
         text += `- ${item.subject || item.body.substring(0, 100)}\n`;
@@ -421,7 +453,7 @@ export class NotificationBatchService {
       }
     }
 
-    text += `\nManage preferences: ${process.env.APP_URL || 'http://localhost:3000'}/settings/notifications\n`;
+    text += `\nManage preferences: ${process.env.APP_URL || "http://localhost:3000"}/settings/notifications\n`;
 
     return text;
   }
@@ -429,7 +461,9 @@ export class NotificationBatchService {
   /**
    * Summarize groups for history
    */
-  private summarizeGroups(groups: Record<string, BatchItem[]>): Record<string, number> {
+  private summarizeGroups(
+    groups: Record<string, BatchItem[]>,
+  ): Record<string, number> {
     const summary: Record<string, number> = {};
     for (const [group, items] of Object.entries(groups)) {
       summary[group] = items.length;
@@ -470,7 +504,7 @@ export class NotificationBatchService {
         params.totalNotifications,
         JSON.stringify(params.notificationGroups),
         params.channel,
-      ]
+      ],
     );
   }
 
@@ -482,11 +516,11 @@ export class NotificationBatchService {
     frequency: string,
     sendTime: string,
     sendDayOfWeek: number | null,
-    timezone: string
+    timezone: string,
   ): Promise<void> {
     const result = await this.db.query(
-      'SELECT calculate_next_send_time($1, $2, $3, $4) AS next_send',
-      [frequency, sendTime, sendDayOfWeek, timezone]
+      "SELECT calculate_next_send_time($1, $2, $3, $4) AS next_send",
+      [frequency, sendTime, sendDayOfWeek, timezone],
     );
 
     const nextSend = result.rows[0].next_send;
@@ -500,7 +534,7 @@ export class NotificationBatchService {
         updated_at = NOW()
       WHERE id = $2
     `,
-      [nextSend, configId]
+      [nextSend, configId],
     );
   }
 
@@ -526,7 +560,7 @@ export class NotificationBatchService {
       FROM notification_batch_config
       WHERE user_id = $1
     `,
-      [userId]
+      [userId],
     );
 
     return result.rows[0] || null;
@@ -535,7 +569,10 @@ export class NotificationBatchService {
   /**
    * Update user's batch configuration
    */
-  async updateBatchConfig(userId: string, config: Partial<BatchConfig>): Promise<void> {
+  async updateBatchConfig(
+    userId: string,
+    config: Partial<BatchConfig>,
+  ): Promise<void> {
     const {
       enabled,
       frequency,
@@ -562,19 +599,35 @@ export class NotificationBatchService {
         updated_at = NOW()
       WHERE user_id = $1
     `,
-      [userId, enabled, frequency, sendTime, sendDayOfWeek, timezone, batchPriorities, channels, eventTypes]
+      [
+        userId,
+        enabled,
+        frequency,
+        sendTime,
+        sendDayOfWeek,
+        timezone,
+        batchPriorities,
+        channels,
+        eventTypes,
+      ],
     );
 
     // Recalculate next send time
     if (frequency || sendTime || sendDayOfWeek || timezone) {
       const configResult = await this.db.query(
-        'SELECT id, frequency, send_time, send_day_of_week, timezone FROM notification_batch_config WHERE user_id = $1',
-        [userId]
+        "SELECT id, frequency, send_time, send_day_of_week, timezone FROM notification_batch_config WHERE user_id = $1",
+        [userId],
       );
 
       if (configResult.rows.length > 0) {
         const c = configResult.rows[0];
-        await this.updateNextSendTime(c.id, c.frequency, c.send_time, c.send_day_of_week, c.timezone);
+        await this.updateNextSendTime(
+          c.id,
+          c.frequency,
+          c.send_time,
+          c.send_day_of_week,
+          c.timezone,
+        );
       }
     }
   }
