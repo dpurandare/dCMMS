@@ -187,10 +187,10 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           200: z.object({
             id: z.string().optional(), // ID might be missing if not saved? Service returns metrics object.
             modelName: z.string(),
-            meanAbsolutePercentageError: z.number(),
-            rootMeanSquaredErrorMw: z.number(),
-            rSquared: z.number(),
-            forecastSkillScore: z.number(),
+            meanAbsolutePercentageError: z.number().optional(),
+            rootMeanSquaredErrorMw: z.number().optional(),
+            rSquared: z.number().optional(),
+            forecastSkillScore: z.number().optional(),
             numForecasts: z.number(),
             numValidated: z.number(),
           }),

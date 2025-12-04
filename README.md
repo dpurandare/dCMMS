@@ -274,7 +274,21 @@ For detailed sprint tracking, see [SPRINT_STATUS_TRACKER.md](./SPRINT_STATUS_TRA
 
 ## Getting Started
 
-### Prerequisites
+### Quick Start
+
+To build and start the entire application stack locally using Docker:
+
+```bash
+./scripts/start-local.sh
+```
+
+This script will:
+1. Stop any running containers.
+2. Build the Docker images for backend, frontend, and ML services.
+3. Start all services defined in `docker-compose.yml`.
+4. Stream the logs for the backend and frontend.
+
+## Prerequisites
 
 **Minimum Requirements:**
 - Docker 20.10+ and Docker Compose 2.0+

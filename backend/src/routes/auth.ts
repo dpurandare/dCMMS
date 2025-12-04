@@ -29,6 +29,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
                 type: "object",
                 properties: {
                   id: { type: "string" },
+                  tenantId: { type: "string" },
                   email: { type: "string" },
                   username: { type: "string" },
                   role: { type: "string" },
@@ -72,6 +73,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           ...tokens,
           user: {
             id: user.id,
+            tenantId: user.tenantId,
             email: user.email,
             username: user.username,
             role: user.role,

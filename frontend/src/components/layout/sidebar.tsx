@@ -18,6 +18,9 @@ import {
   MoreVertical,
   LogOut,
   User,
+  Brain,
+  TrendingUp,
+  AlertTriangle,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -42,12 +45,18 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Work Orders', href: '/work-orders', icon: Wrench, badge: 12 },
+  { label: 'Work Orders', href: '/work-orders', icon: Wrench },
   { label: 'Assets', href: '/assets', icon: Package },
-  { label: 'Alerts', href: '/alerts', icon: Bell, badge: 8, badgeVariant: 'destructive' },
+  { label: 'Alerts', href: '/alerts', icon: Bell },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Reports', href: '/reports', icon: FileText },
   { label: 'Compliance', href: '/compliance-reports', icon: ScrollText },
+];
+
+const mlNavItems: NavItem[] = [
+  { label: 'Model Registry', href: '/ml/models', icon: Brain },
+  { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp },
+  { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle },
 ];
 
 const secondaryNavItems: NavItem[] = [
@@ -127,6 +136,43 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Machine Learning */}
+          <div className="px-3 py-2">
+            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-slate-500">
+              Machine Learning
+            </h2>
+            <div className="space-y-1">
+              {mlNavItems.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-all',
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    )}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 h-full w-0.5 rounded-r bg-blue-600" />
+                    )}
+                    <Icon
+                      className={cn(
+                        'h-5 w-5',
+                        isActive ? 'text-blue-600' : 'text-slate-600 group-hover:text-slate-900'
+                      )}
+                    />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Divider */}
           <Separator className="my-4" />

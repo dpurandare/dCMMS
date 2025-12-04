@@ -82,9 +82,27 @@ The project is actively using the following stack:
 ## 6. Build & Deployment
 
 ### 6.1 Local Development
-The project uses **Docker Compose** to orchestrate the entire stack locally.
--   **Command**: `docker-compose up -d`
--   **Services**: Starts Backend, Frontend, Databases (Postgres, Timescale, ClickHouse), Message Brokers (Kafka, EMQX), and Monitoring (Prometheus, Grafana).
+**Option A: Docker (Recommended for Full Stack)**
+Use the helper script to build and run everything:
+```bash
+./scripts/start-local.sh
+```
+
+**Option B: Manual (Service by Service)**
+1. **Start Infrastructure**:
+   ```bash
+   docker-compose up -d postgres redis kafka clickhouse timescaledb minio
+   ```
+2. **Start Backend**:
+   ```bash
+   cd backend
+   npm run dev
+   ```
+3. **Start Frontend**:
+   ```bash
+   cd frontend
+   npm run dev
+   ```
 
 ### 6.2 Infrastructure
 -   **IaC**: Terraform is used for provisioning cloud infrastructure (AWS/GCP).
