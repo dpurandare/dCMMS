@@ -94,9 +94,6 @@ export default function DashboardPage() {
     <DashboardLayout
       title="Dashboard"
       breadcrumbs={[{ label: 'Home' }]}
-      showNewButton={true}
-      newButtonText="New Work Order"
-      onNewClick={() => router.push('/work-orders/new')}
     >
       {/* Welcome Section */}
       <div className="mb-6">

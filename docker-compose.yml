@@ -118,7 +118,7 @@ services:
     image: redis:7.2-alpine
     container_name: dcmms-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass redis_password_dev
+    command: redis-server --appendonly yes --requirepass redis_password_dev --bind 0.0.0.0
     ports:
       - "6379:6379"
     volumes:
@@ -158,7 +158,7 @@ services:
       KAFKA_CFG_NUM_PARTITIONS: 12
       KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
     ports:
-      - "9092:9092"  # Internal
+      - "9093:9092"  # Internal mapped to 9093 on host
       - "9094:9094"  # External
     volumes:
       - kafka_data:/bitnami/kafka
@@ -260,7 +260,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
     ports:
-      - "9090:9090"
+      - "9095:9090"
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -284,7 +284,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_INSTALL_PLUGINS: grafana-clock-panel
     ports:
-      - "3000:3000"
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
@@ -370,7 +370,10 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://dcmms_user:dcmms_password_dev@postgres:5432/dcmms
-      REDIS_URL: redis://:redis_password_dev@redis:6379
+      REDIS_URL: redis://:redis_password_dev@172.28.0.5:6379
+      REDIS_HOST: 172.28.0.5
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_password_dev
       KAFKA_BROKERS: kafka:9092
     ports:
       - "3001:3001"
@@ -390,11 +393,14 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
       dockerfile: Dockerfile
     container_name: dcmms-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"
     depends_on:

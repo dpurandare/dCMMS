@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/store/auth-store';
+import { alertsService } from '@/services/alerts.service';
 import { Search, Bell, Plus, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +30,25 @@ export function TopBar({
   onNewClick,
 }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const unreadNotifications = 8;
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.tenantId) return;
+      try {
+        const { stats } = await alertsService.getAlertStats({ tenantId: user.tenantId });
+        setUnreadNotifications(stats.active);
+      } catch (error) {
+        console.error('Failed to fetch alert stats:', error);
+      }
+    };
+
+    fetchStats();
+    // Poll every minute
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, [user?.tenantId]);
 
   return (
     <div className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-6">
@@ -90,6 +110,7 @@ export function TopBar({
           size="icon"
           className="relative h-10 w-10"
           aria-label="Notifications"
+          onClick={() => window.location.href = '/alerts'}
         >
           <Bell className="h-5 w-5 text-slate-600" />
           {unreadNotifications > 0 && (

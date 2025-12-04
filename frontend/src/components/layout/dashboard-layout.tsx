@@ -27,7 +27,7 @@ export function DashboardLayout({
   title,
   breadcrumbs,
   showSearch = true,
-  showNewButton = true,
+  showNewButton = false,
   newButtonText = 'New Work Order',
   onNewClick,
 }: DashboardLayoutProps) {
