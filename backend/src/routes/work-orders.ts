@@ -51,7 +51,7 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const query = request.query as any;
 
       const filters = {
@@ -121,7 +121,7 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const workOrder = await WorkOrderService.getById(id, user.tenantId);
@@ -190,7 +190,7 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const body = request.body as any;
 
       // Generate work order ID
@@ -296,7 +296,7 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
       const body = request.body as any;
 
@@ -375,7 +375,7 @@ const workOrderRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const workOrder = await WorkOrderService.delete(id, user.tenantId);

@@ -191,7 +191,7 @@ export class SMSProviderService {
   /**
    * Check if user has opted out
    */
-  async checkOptOut(phoneNumber: string): Promise<boolean> {
+  async checkOptOut(_phoneNumber: string): Promise<boolean> {
     // TODO: Implement opt-out checking
     // Query database for opt-out list
     return false;

@@ -16,6 +16,7 @@ import { registerJwt } from "./plugins/jwt";
 import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
 import workOrderRoutes from "./routes/work-orders";
+import { dashboardRoutes } from "./routes/dashboards";
 import assetRoutes from "./routes/assets";
 import siteRoutes from "./routes/sites";
 import telemetryRoutes from "./routes/telemetry";
@@ -31,6 +32,7 @@ import complianceReportRoutes from "./routes/compliance-reports";
 import auditLogRoutes from "./routes/audit-logs";
 import mlFeatureRoutes from "./routes/ml-features";
 import forecastRoutes from "./routes/forecasts";
+import usersRoutes from "./routes/users";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -70,8 +72,13 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // CORS
   await server.register(cors, {
-    origin: process.env.CORS_ORIGIN?.split(",") || "*",
-    credentials: process.env.CORS_CREDENTIALS === "true",
+    origin: [
+      "http://localhost:3011",
+      "http://localhost:3001",
+      "http://localhost:4200",
+      "http://localhost:3000",
+    ],
+    credentials: true,
   });
 
   // Rate limiting
@@ -313,12 +320,14 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(integrationRoutes, { prefix: "/api/v1" });
   await server.register(analyticsAdminRoutes, { prefix: "/api/v1" });
   await server.register(analyticsRoutes, { prefix: "/api/v1" });
-  await server.register(reportRoutes, { prefix: "/api/v1" });
+  await server.register(reportRoutes, { prefix: "/api/v1/reports" });
   await server.register(complianceTemplateRoutes, { prefix: "/api/v1" });
   await server.register(complianceReportRoutes, { prefix: "/api/v1" });
   await server.register(auditLogRoutes, { prefix: "/api/v1" });
   await server.register(mlFeatureRoutes, { prefix: "/api/v1" });
   await server.register(forecastRoutes, { prefix: "/api/v1/forecasts" });
+  await server.register(dashboardRoutes, { prefix: "/api/v1/dashboards" });
+  await server.register(usersRoutes, { prefix: "/api/v1/users" });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

@@ -51,8 +51,8 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
-        const userId = (request.user as any)?.id;
+        const tenantId = request.user.tenantId;
+        const userId = request.user.id;
 
         if (!tenantId || !userId) {
           return reply.status(401).send({
@@ -137,7 +137,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -193,7 +193,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -254,7 +254,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -298,7 +298,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         // Audit log
         await auditService.logReportDownloaded(
           tenantId,
-          (request.user as any)!.id,
+          request.user.id,
           reportId,
           report.format,
           request.ip,
@@ -348,7 +348,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -377,7 +377,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         // Audit log
         await auditService.logReportStatusChanged(
           tenantId,
-          (request.user as any)!.id,
+          request.user.id,
           reportId,
           oldReport?.status || "unknown",
           status,

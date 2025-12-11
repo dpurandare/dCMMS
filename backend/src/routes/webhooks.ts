@@ -54,7 +54,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           maxRetries = 3,
         } = request.body as any;
 
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
         const userId = user.id;
 
@@ -145,7 +145,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
         const { active, eventType } = request.query as any;
 
@@ -223,7 +223,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
 
         const result = await pool.query(
@@ -312,7 +312,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
         const {
           name,
@@ -411,7 +411,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
 
         const result = await pool.query(
@@ -469,7 +469,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { id } = request.params as any;
         const { limit = 50, offset = 0 } = request.query as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
 
         // Verify webhook belongs to tenant
@@ -552,7 +552,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
 
         // Get webhook
@@ -644,7 +644,7 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as any;
-        const user = request.user as any;
+        const user = request.user;
         const tenantId = user.tenantId;
 
         // Verify webhook belongs to tenant

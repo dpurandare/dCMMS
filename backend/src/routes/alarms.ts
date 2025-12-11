@@ -32,7 +32,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
+        const tenantId = request.user.tenantId || "default-tenant";
         const {
           status,
           severity,
@@ -177,7 +177,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
+        const tenantId = request.user.tenantId || "default-tenant";
 
         const result = await pool.query(
           `
@@ -247,7 +247,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
+        const tenantId = request.user.tenantId || "default-tenant";
         const { startDate, endDate } = request.query as any;
 
         // Date range (default: last 30 days)
@@ -379,7 +379,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
+        const tenantId = request.user.tenantId || "default-tenant";
 
         const result = await pool.query(
           `
@@ -472,8 +472,8 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { id } = request.params as { id: string };
         const { comment } = request.body as { comment?: string };
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
-        const userId = (request.user as any)?.id;
+        const tenantId = request.user.tenantId || "default-tenant";
+        const userId = request.user.id;
 
         if (!userId) {
           return reply.status(401).send({
@@ -575,8 +575,8 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           comment?: string;
           rootCause?: string;
         };
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
-        const userId = (request.user as any)?.id;
+        const tenantId = request.user.tenantId || "default-tenant";
+        const userId = request.user.id;
 
         if (!userId) {
           return reply.status(401).send({
@@ -679,8 +679,8 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
       try {
         const { id } = request.params as { id: string };
         const { comment } = request.body as { comment: string };
-        const tenantId = (request.user as any)?.tenantId || "default-tenant";
-        const userId = (request.user as any)?.id;
+        const tenantId = request.user.tenantId || "default-tenant";
+        const userId = request.user.id;
 
         if (!userId) {
           return reply.status(401).send({

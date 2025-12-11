@@ -4531,6 +4531,234 @@ This appendix documents changes required throughout the task list based on stake
 - Discuss cloud migration plan and timeline
 - Obtain final sign-off for production deployment
 
+
+---
+
+## Sprint 19: Forecasting & Wind Energy Support (Weeks 41-46)
+
+**Goal:** Implement power forecasting models (ARIMA/SARIMA) and wind energy support
+**Story Points:** 41 points
+**Status:** 8/8 tasks complete (100%) - **COMPLETE**
+
+### Weather & Forecasting
+
+#### [DCMMS-151] Weather API Integration
+- Assignee: Backend Developer
+- Specification: Spec 12 (Integration), Spec 10 (Ingestion)
+- Story Points: 5
+- Dependencies: None
+- Acceptance Criteria:
+  - OpenWeatherMap integration implemented
+  - Weather data tables created (historical + forecast)
+  - Ingestion cron job configured (6-hourly refresh)
+  - Data includes: irradiation, wind speed, temperature
+  - API endpoints for retrieving weather data
+- Deliverables:
+  - `backend/src/services/weather-api.service.ts`
+  - `backend/src/routes/weather.ts`
+  - `backend/db/migrations/018_add_weather_forecasts.sql`
+- Testing: Integration tests with mock API
+
+#### [DCMMS-152] ARIMA/SARIMA Solar Forecasting
+- Assignee: ML Engineer
+- Specification: Spec 22 (AI/ML)
+- Story Points: 8
+- Dependencies: DCMMS-151
+- Acceptance Criteria:
+  - ARIMA/SARIMA implementation for solar generation
+  - Training pipeline for solar forecast models
+  - Prophet implementation as alternative
+  - Performance Target: MAPE <15%
+  - Forecast Horizon: 48 hours ahead, hourly granularity
+- Deliverables:
+  - `ml/models/arima_forecast.py`
+  - `ml/models/prophet_forecast.py`
+- Testing: Model validation tests, MAPE verification
+
+#### [DCMMS-153] ARIMA/SARIMA Wind Forecasting
+- Assignee: ML Engineer
+- Specification: Spec 22 (AI/ML)
+- Story Points: 5
+- Dependencies: DCMMS-152
+- Acceptance Criteria:
+  - Wind-specific SARIMA model
+  - Power curve integration
+  - Performance Target: MAE <10% of capacity
+  - Forecast Horizon: 24 hours ahead, 15-minute granularity
+- Deliverables:
+  - Wind forecasting model implementation
+- Testing: Model validation tests
+
+### Wind Energy Support
+
+#### [DCMMS-154] Wind Asset Type Templates
+- Assignee: Backend Developer
+- Specification: Spec 11 (Data Models)
+- Story Points: 5
+- Dependencies: None
+- Acceptance Criteria:
+  - Wind turbine asset type templates created
+  - Wind-specific telemetry schema defined (speed, direction, turbulence, yaw, pitch)
+  - Power curve modeling supported
+  - Wind work order templates (blade inspection, gearbox, yaw system)
+- Deliverables:
+  - `backend/db/migrations/020_add_wind_asset_metadata.sql`
+  - Asset templates
+- Testing: Schema validation
+
+#### [DCMMS-155] Wind-Specific Dashboards
+- Assignee: Frontend Developer
+- Specification: Spec 16 (Analytics)
+- Story Points: 5
+- Dependencies: DCMMS-154
+- Acceptance Criteria:
+  - Wind farm performance dashboard
+  - Turbine health heatmap implementation
+  - Wind power correlation visualization
+  - Real-time monitoring widgets
+- Deliverables:
+  - `frontend/src/components/wind/WindFarmDashboard.tsx`
+  - `frontend/src/components/wind/TurbineHealthHeatmap.tsx`
+  - `frontend/src/components/wind/WindPowerCorrelation.tsx`
+- Testing: Component tests
+
+### Forecast API & Integration
+
+#### [DCMMS-156] Forecast API Endpoints
+- Assignee: Backend Developer
+- Specification: Spec 01 (API)
+- Story Points: 5
+- Dependencies: DCMMS-152, DCMMS-153
+- Acceptance Criteria:
+  - Forecast API endpoints implemented
+  - `GET /api/v1/forecasts/generation`
+  - `POST /api/v1/forecasts/generation/generate`
+  - `GET /api/v1/weather/forecasts`
+  - Forecast accuracy tracking
+- Deliverables:
+  - `backend/src/routes/forecasts.ts`
+  - `backend/src/services/forecast.service.ts`
+  - `backend/db/migrations/019_add_generation_forecasts.sql`
+- Testing: API integration tests
+
+#### [DCMMS-157] Integration Testing
+- Assignee: QA Engineer
+- Specification: Spec 07 (Testing)
+- Story Points: 5
+- Dependencies: DCMMS-156
+- Acceptance Criteria:
+  - Integration tests for forecast API
+  - Forecast accuracy validation (backtesting)
+  - Performance testing (latency <500ms)
+  - Regression testing passed
+- Deliverables:
+  - `ml/tests/test_arima_forecast.py`
+  - `backend/test/e2e/forecasts.e2e.test.ts`
+- Testing: E2E test suite execution
+
+### Documentation
+
+#### [DCMMS-158] Documentation Update
+- Assignee: Technical Writer
+- Specification: Spec 19 (Documentation)
+- Story Points: 3
+- Dependencies: All Sprint 19 tasks
+- Acceptance Criteria:
+  - README.md updated with forecasting capabilities
+  - PRD_FINAL.md updated
+  - User guides created for forecasting and wind farm management
+  - API documentation updated
+  - ML model cards created
+- Deliverables:
+  - `docs/user-guide/forecasting-guide.md`
+  - `docs/user-guide/wind-farm-management.md`
+- Testing: Documentation review
+
+---
+
+## Sprint 20: Codebase Health Check & UI Verification (Weeks 47-48)
+
+**Goal:** Comprehensive UI audit, refactoring operational patterns, and ensuring feature parity between backend/frontend.
+**Story Points:** 34 points
+**Status:** 2/5 tasks in progress (40%) - **IN PROGRESS**
+
+### Verification & Audit
+
+#### [DCMMS-159] Global UI/UX Audit
+- Assignee: Frontend Developer
+- Specification: Spec 17 (UX)
+- Story Points: 8
+- Dependencies: None
+- Acceptance Criteria:
+  - Systematic walkthrough of all 20+ applications pages
+  - Verify data binding (no hardcoded placeholders)
+  - Verify loading states and error handling
+  - Verify responsive layout on mobile/tablet views
+  - Identification of repetitive bugs or anti-patterns
+- Deliverables:
+  - `docs/testing/ui-audit-report.md`
+  - List of corrective tasks
+- Testing: Manual walkthrough
+- **Progress:** User Management and Audit Logs UI implemented and verified.
+
+#### [DCMMS-160] Common Pattern Refactoring
+- Assignee: Full Stack Developer
+- Specification: N/A
+- Story Points: 8
+- Dependencies: DCMMS-159
+- Acceptance Criteria:
+  - Refactor identified recurring issues (from manual fixes)
+  - Standardize error handling components
+  - Standardize loading skeletons
+  - Ensure consistent form validation patterns
+- Deliverables:
+  - Codebase PRs for refactoring
+- Testing: Regression testing affected pages
+
+#### [DCMMS-161] Feature Parity Gap Analysis
+- Assignee: Product Manager + Developer
+- Specification: All Specs
+- Story Points: 5
+- Dependencies: None
+- Acceptance Criteria:
+  - Compare backend routes vs frontend components
+  - Identify backend features missing UI implementation
+  - Create tasks for missing UI components
+- Deliverables:
+  - `docs/testing/feature-gap-analysis.md`
+- Testing: N/A
+
+### Technical Debt
+
+#### [DCMMS-162] Linting & Type Safety Hardening
+- Assignee: Developer
+- Specification: Spec 07 (Testing)
+- Story Points: 5
+- Dependencies: None
+- Acceptance Criteria:
+  - 0 linting errors (ESLint)
+  - 0 TypeScript errors (Strict mode)
+  - Dependency audit (audit fix)
+- Deliverables:
+  - Clean `npm run lint` output
+  - Clean `npm run build`
+- Testing: CI pipeline green
+- **Progress:** Backend services refactored to remove `any` types. Global type augmentation complete. Lint warnings reduced significantly.
+
+#### [DCMMS-163] Legacy Code Cleanup
+- Assignee: Developer
+- Specification: N/A
+- Story Points: 8
+- Dependencies: None
+- Acceptance Criteria:
+  - Remove unused components and utils
+  - Remove commented-out code
+  - Consolidate duplicate types/interfaces
+- Deliverables:
+  - Smaller bundle size
+  - Cleaner codebase
+- Testing: Smoke tests
+
 ### Cloud-Agnostic Architecture - Throughout All Sprints
 
 **Global Change:** Replace all AWS-specific references with cloud-agnostic alternatives
@@ -4555,27 +4783,28 @@ This appendix documents changes required throughout the task list based on stake
 
 ## Change Summary by Sprint
 
-| Sprint | Original Weeks | New Weeks | Key Changes |
-|--------|---------------|-----------|-------------|
-| **0** | 1-2 | 1-4 | +2 weeks for high-fidelity mockups, cloud-agnostic arch, IdP adapter |
-| **1** | 3-4 | 5-6 | +IdP adapter implementation |
-| **2** | 5-6 | 7-8 | No major changes |
-| **3** | 7-8 | 9-10 | **Remove ERP integration**, add MDM-optional security |
-| **4** | 9-10 | 11-12 | No major changes |
-| **5** | 11-12 | 13-14 | No major changes |
-| **6** | 13-14 | 15-16 | +Multi-protocol SCADA adapters |
-| **7** | 15-16 | 17-18 | No major changes |
-| **8** | 17-18 | 19-20 | No major changes |
-| **9** | 19-20 | 21-22 | No major changes |
-| **10** | 21-22 | 23-24 | No major changes |
-| **11** | 23-24 | 25-26 | **CEA/MNRE only** (remove NERC/AEMO/NESO), +Interactive tutorials |
-| **12** | 25-26 | 27-28 | No major changes |
-| **13** | 27-28 | 29-30 | No major changes |
-| **14** | 29-30 | 31-32 | No major changes |
-| **15** | 31-32 | 33-34 | No major changes |
-| **16** | 33-34 | 35-36 | No major changes |
-| **17** | 35-36 | 37-38 | **Hindi only** (not 15+ languages), +ML model cards |
-| **18** | N/A | 39-40 | **NEW SPRINT:** Production readiness, final integration |
+| Sprint | Original Weeks | New Weeks | Key Changes                                                          |
+| ------ | -------------- | --------- | -------------------------------------------------------------------- |
+| **0**  | 1-2            | 1-4       | +2 weeks for high-fidelity mockups, cloud-agnostic arch, IdP adapter |
+| **1**  | 3-4            | 5-6       | +IdP adapter implementation                                          |
+| **2**  | 5-6            | 7-8       | No major changes                                                     |
+| **3**  | 7-8            | 9-10      | **Remove ERP integration**, add MDM-optional security                |
+| **4**  | 9-10           | 11-12     | No major changes                                                     |
+| **5**  | 11-12          | 13-14     | No major changes                                                     |
+| **6**  | 13-14          | 15-16     | +Multi-protocol SCADA adapters                                       |
+| **7**  | 15-16          | 17-18     | No major changes                                                     |
+| **8**  | 17-18          | 19-20     | No major changes                                                     |
+| **9**  | 19-20          | 21-22     | No major changes                                                     |
+| **10** | 21-22          | 23-24     | No major changes                                                     |
+| **11** | 23-24          | 25-26     | **CEA/MNRE only** (remove NERC/AEMO/NESO), +Interactive tutorials    |
+| **12** | 25-26          | 27-28     | No major changes                                                     |
+| **13** | 27-28          | 29-30     | No major changes                                                     |
+| **14** | 29-30          | 31-32     | No major changes                                                     |
+| **15** | 31-32          | 33-34     | No major changes                                                     |
+| **16** | 33-34          | 35-36     | No major changes                                                     |
+| **17** | 35-36          | 37-38     | **Hindi only** (not 15+ languages), +ML model cards                  |
+| **18** | N/A            | 39-40     | **NEW SPRINT:** Production readiness, final integration              |
+| **19** | N/A            | 41-46     | **NEW SPRINT:** Forecasting & Wind Support                           |
 
 ---
 
@@ -4614,7 +4843,7 @@ This appendix documents changes required throughout the task list based on stake
 
 ---
 
-**Last Updated:** November 15, 2025
+**Last Updated:** December 11, 2025
 **Maintained By:** Product Manager
 **Review Frequency:** Before each sprint planning session
 

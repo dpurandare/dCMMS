@@ -1,7 +1,5 @@
 import { FastifyInstance } from "fastify";
 import { createClient } from "@clickhouse/client";
-import { db } from "../db";
-import { eq } from "drizzle-orm";
 
 export type ReportDataSource =
   | "work_orders"
@@ -23,7 +21,7 @@ export type GroupByType =
 export interface ReportFilter {
   field: string;
   operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "in" | "like";
-  value: any;
+  value: string | number | boolean | string[] | number[];
 }
 
 export interface ReportAggregation {
@@ -142,8 +140,8 @@ export class ReportBuilderService {
   async executeReport(
     definition: ReportDefinition,
     tenantId: string,
-    options: ReportExecutionOptions = {},
-  ): Promise<any[]> {
+    _options: ReportExecutionOptions = {},
+  ): Promise<Record<string, unknown>[]> {
     this.fastify.log.info({ definition, tenantId }, "Executing report");
 
     try {
@@ -161,7 +159,7 @@ export class ReportBuilderService {
         format: "JSONEachRow",
       });
 
-      const data = (await result.json()) as any[];
+      const data = (await result.json()) as Record<string, unknown>[];
 
       this.fastify.log.info(
         { rows: data.length, datasource: definition.datasource },
@@ -361,7 +359,7 @@ export class ReportBuilderService {
   /**
    * Export report to CSV
    */
-  async exportToCSV(data: any[]): Promise<string> {
+  async exportToCSV(data: Record<string, unknown>[]): Promise<string> {
     if (data.length === 0) {
       return "";
     }
@@ -397,7 +395,7 @@ export class ReportBuilderService {
   /**
    * Export report to JSON
    */
-  async exportToJSON(data: any[]): Promise<string> {
+  async exportToJSON(data: Record<string, unknown>[]): Promise<string> {
     return JSON.stringify(data, null, 2);
   }
 

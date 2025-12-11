@@ -64,7 +64,7 @@ export interface NotificationRule {
   tenant_id: string;
   name: string;
   enabled: boolean;
-  trigger_conditions: Record<string, any>;
+  trigger_conditions: Record<string, unknown>;
   template_code: string;
   channels: string[];
   recipient_type: "user" | "role" | "dynamic";
@@ -83,10 +83,10 @@ export interface NotificationRequest {
   templateCode: string;
   userId: string;
   channels: ("email" | "sms" | "push")[];
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   priority?: "low" | "medium" | "high" | "critical";
   scheduledAt?: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   ruleId?: string;
 }
 
@@ -103,7 +103,7 @@ export interface QueuedNotification {
   scheduled_at: Date;
   retry_count: number;
   max_retries: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ==========================================
@@ -153,7 +153,7 @@ export class NotificationService {
     });
 
     // Conditional helper
-    Handlebars.registerHelper("eq", (a: any, b: any) => {
+    Handlebars.registerHelper("eq", (a: unknown, b: unknown) => {
       return a === b;
     });
   }
@@ -282,7 +282,7 @@ export class NotificationService {
    */
   private validateTemplateVariables(
     template: NotificationTemplate,
-    variables: Record<string, any>,
+    variables: Record<string, unknown>,
   ) {
     const requiredVars = template.variables || [];
     const missingVars = requiredVars.filter((v: string) => !(v in variables));
@@ -299,7 +299,7 @@ export class NotificationService {
    */
   private async renderTemplate(
     template: NotificationTemplate,
-    variables: Record<string, any>,
+    variables: Record<string, unknown>,
     channel: string,
   ): Promise<{ subject?: string; body: string }> {
     // Compile templates (use cache if available)
@@ -348,9 +348,9 @@ export class NotificationService {
     body: string;
     priority: string;
     scheduledAt: Date;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     ruleId?: string;
-    variables: Record<string, any>;
+    variables: Record<string, unknown>;
   }): Promise<string> {
     const id = randomUUID();
 
@@ -392,7 +392,7 @@ export class NotificationService {
     const periodSeconds = 60; // Per 60 seconds
 
     const windowStart = new Date(Date.now() - periodSeconds * 1000);
-    const windowEnd = new Date();
+    // const windowEnd = new Date();
 
     // Count notifications in current window
     const result = await this.db.query(
@@ -573,7 +573,7 @@ export class NotificationService {
   async evaluateRules(
     tenantId: string,
     eventType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
   ): Promise<NotificationRule[]> {
     const result = await this.db.query(
       `SELECT * FROM notification_rules
@@ -598,7 +598,7 @@ export class NotificationService {
   private ruleMatches(
     rule: NotificationRule,
     eventType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
   ): boolean {
     const conditions = rule.trigger_conditions;
 
@@ -637,7 +637,7 @@ export class NotificationService {
    */
   async resolveDynamicRecipients(
     recipientType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
   ): Promise<string[]> {
     const userIds: string[] = [];
 
@@ -685,7 +685,7 @@ export class NotificationService {
   private async triggerWebhooksAsync(
     tenantId: string,
     eventType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
   ): Promise<void> {
     try {
       await this.webhookService.triggerWebhooks(tenantId, eventType, eventData);
@@ -700,7 +700,7 @@ import { FastifyInstance } from "fastify";
 import { pool } from "../db";
 
 export function createNotificationService(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
 ): NotificationService {
   return new NotificationService(pool);
 }

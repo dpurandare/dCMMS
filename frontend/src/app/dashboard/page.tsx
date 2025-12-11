@@ -7,6 +7,7 @@ import { api } from '@/lib/api-client';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wrench, Package, Bell, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { AuthGuard } from '@/components/auth/auth-guard';
 
 interface StatCardProps {
   title: string;
@@ -58,37 +59,15 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
 
-  useEffect(() => {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    // Verify token is still valid
-    const verifyAuth = async () => {
-      try {
-        await api.auth.getMe();
-      } catch (error) {
-        console.error('Auth verification failed:', error);
-        logout();
-        router.push('/auth/login');
-      }
-    };
-
-    verifyAuth();
-  }, [isAuthenticated, router, logout]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-slate-600">Loading...</p>
-      </div>
-    );
-  }
+function DashboardContent() {
+  const { user } = useAuthStore();
 
   return (
     <DashboardLayout

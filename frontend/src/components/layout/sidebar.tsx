@@ -48,7 +48,7 @@ const mainNavItems: NavItem[] = [
   { label: 'Work Orders', href: '/work-orders', icon: Wrench },
   { label: 'Assets', href: '/assets', icon: Package },
   { label: 'Alerts', href: '/alerts', icon: Bell },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3 },
   { label: 'Reports', href: '/reports', icon: FileText },
   { label: 'Compliance', href: '/compliance-reports', icon: ScrollText },
 ];

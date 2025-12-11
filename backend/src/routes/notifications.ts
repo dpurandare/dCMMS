@@ -5,11 +5,7 @@ import {
   serializerCompiler,
 } from "fastify-type-provider-zod";
 import { db } from "../db";
-import {
-  notificationPreferences,
-  notificationHistory,
-  deviceTokens,
-} from "../db/schema";
+import { notificationPreferences, notificationHistory } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // Validation schemas
@@ -165,7 +161,13 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       const { userId } = request.params;
       const limit = parseInt(request.query.limit || "50");
       const offset = parseInt(request.query.offset || "0");
-      const { status, channel, eventType, startDate, endDate } = request.query;
+      const {
+        status,
+        channel,
+        eventType,
+        startDate: _startDate,
+        endDate: _endDate,
+      } = request.query;
 
       // Build where clause
       const whereConditions = [eq(notificationHistory.userId, userId)];

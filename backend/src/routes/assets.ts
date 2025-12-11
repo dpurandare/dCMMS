@@ -48,8 +48,8 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       },
       preHandler: server.authenticate,
     },
-    async (request, reply) => {
-      const user = request.user as any;
+    async (request, _reply) => {
+      const user = request.user;
       const query = request.query as any;
 
       const filters = {
@@ -114,7 +114,7 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const asset = await AssetService.getById(id, user.tenantId);
@@ -149,7 +149,7 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const hierarchy = await AssetService.getHierarchy(id, user.tenantId);
@@ -216,7 +216,7 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const body = request.body as any;
 
       // Generate asset tag if not provided
@@ -316,7 +316,7 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
       const body = request.body as any;
 
@@ -401,7 +401,7 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       try {

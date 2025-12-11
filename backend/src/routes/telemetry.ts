@@ -12,6 +12,23 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
     database: process.env.QUESTDB_DATABASE || "qdb",
   });
 
+  interface TelemetryQuery {
+    site_id?: string;
+    asset_id?: string;
+    sensor_type?: string;
+    sensor_id?: string;
+    start_time?: string;
+    end_time?: string;
+    aggregation?: string;
+    limit?: number;
+  }
+
+  interface TelemetryStatsQuery {
+    asset_id: string;
+    start_time?: string;
+    end_time?: string;
+  }
+
   // POST /api/v1/telemetry - Ingest telemetry events
   server.post(
     "/",
@@ -93,7 +110,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const events = request.body as any[];
-      const user = request.user as any;
+      const user = request.user;
 
       const accepted: any[] = [];
       const rejected: any[] = [];
@@ -211,8 +228,8 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const query = request.query as any;
-      const user = request.user as any;
+      const query = request.query as TelemetryQuery;
+      const user = request.user;
 
       // DCMMS-059: Use pre-computed aggregation tables for better performance
       // Choose appropriate table based on aggregation level
@@ -380,7 +397,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const query = request.query as any;
+      const query = request.query as TelemetryStatsQuery;
 
       try {
         let sql = `

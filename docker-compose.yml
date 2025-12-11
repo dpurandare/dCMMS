@@ -370,8 +370,8 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://dcmms_user:dcmms_password_dev@postgres:5432/dcmms
-      REDIS_URL: redis://:redis_password_dev@172.28.0.5:6379
-      REDIS_HOST: 172.28.0.5
+      REDIS_URL: redis://:redis_password_dev@redis:6379
+      REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: redis_password_dev
       KAFKA_BROKERS: kafka:9092

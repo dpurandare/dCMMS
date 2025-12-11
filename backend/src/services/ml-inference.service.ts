@@ -12,6 +12,22 @@ export interface AssetPrediction {
   confidence?: number; // Added for compatibility
 }
 
+export interface PredictionResult {
+  modelName: string;
+  assetId: string;
+  prediction: number;
+  confidence: number;
+  timestamp: Date;
+  cached: boolean;
+}
+
+export interface PredictionLog {
+  id: string;
+  timestamp: Date;
+  model: string;
+  result: string;
+}
+
 export class MLInferenceService {
   constructor() {
     console.log("ML Inference Service initialized (Mock Provider)");
@@ -21,7 +37,7 @@ export class MLInferenceService {
     modelName: string,
     assetId: string,
     useCache: boolean = true,
-  ): Promise<any> {
+  ): Promise<PredictionResult> {
     return {
       modelName,
       assetId,
@@ -33,8 +49,8 @@ export class MLInferenceService {
   }
 
   async predictAllAssets(
-    modelName: string,
-    riskLevel?: string,
+    _modelName: string,
+    _riskLevel?: string,
   ): Promise<AssetPrediction[]> {
     return [
       {
@@ -54,7 +70,7 @@ export class MLInferenceService {
     ];
   }
 
-  getPredictionLogs(limit: number): any[] {
+  getPredictionLogs(_limit: number): PredictionLog[] {
     return [
       {
         id: "log-1",

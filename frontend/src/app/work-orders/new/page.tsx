@@ -60,7 +60,7 @@ export default function NewWorkOrderPage() {
 
     // Auto-fill site when asset is selected (in real app, fetch from API)
     if (field === 'assetId' && value) {
-      setFormData((prev) => ({ ...prev, siteId: 'site-001' }));
+      setFormData((prev) => ({ ...prev, siteId: '2438a667-79be-46c1-bac2-005e37c45936' }));
     }
   };
 
@@ -110,8 +110,11 @@ export default function NewWorkOrderPage() {
       setIsSubmitting(true);
       const submitData = {
         ...formData,
-        status: saveAsDraft ? 'draft' : 'scheduled',
-        estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : null,
+        assignedTo: formData.assignedToId === 'unassigned' || !formData.assignedToId ? undefined : formData.assignedToId,
+        status: saveAsDraft ? 'draft' : 'open',
+        estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : undefined,
+        scheduledStartDate: formData.scheduledStartDate ? new Date(formData.scheduledStartDate).toISOString() : undefined,
+        scheduledEndDate: formData.scheduledEndDate ? new Date(formData.scheduledEndDate).toISOString() : undefined,
         tasks: tasks.map((t) => ({
           title: t.title,
           description: t.description,
@@ -122,6 +125,9 @@ export default function NewWorkOrderPage() {
           quantity: p.quantity,
         })),
       };
+
+      // Remove assignedToId as it's not in the schema
+      delete (submitData as any).assignedToId;
 
       await api.workOrders.create(submitData);
       router.push('/work-orders');
@@ -257,9 +263,9 @@ export default function NewWorkOrderPage() {
                       <SelectValue placeholder="Select an asset" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="asset-001">Inverter 001</SelectItem>
-                      <SelectItem value="asset-002">Transformer A</SelectItem>
-                      <SelectItem value="asset-003">Solar Panel Array B</SelectItem>
+                      <SelectItem value="a735da65-d873-4e68-bb0c-a81903eafe84">Inverter 001</SelectItem>
+                      <SelectItem value="3153d572-62f6-497c-b6fc-3194ed3f17f9">Transformer A</SelectItem>
+                      <SelectItem value="904e47a9-4f0b-4e91-81fc-340e784c9b1e">Solar Panel Array B</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -272,8 +278,8 @@ export default function NewWorkOrderPage() {
                       <SelectValue placeholder="Auto-filled from asset" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="site-001">Demo Solar Farm</SelectItem>
-                      <SelectItem value="site-002">Wind Farm North</SelectItem>
+                      <SelectItem value="2438a667-79be-46c1-bac2-005e37c45936">Demo Solar Farm</SelectItem>
+                      <SelectItem value="1b5f3ed6-ee6a-4e26-9830-b7e0d5ce772a">Wind Farm North</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-slate-500">Automatically filled based on selected asset</p>
@@ -287,10 +293,10 @@ export default function NewWorkOrderPage() {
                       <SelectValue placeholder="Select a technician" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      <SelectItem value="user-001">John Smith</SelectItem>
-                      <SelectItem value="user-002">Jane Doe</SelectItem>
-                      <SelectItem value="user-003">Mike Johnson</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="3147f7c7-f258-46c6-a241-939372fc90d7">John Smith</SelectItem>
+                      <SelectItem value="22ed914e-c406-4b8a-837f-8c1e2f876429">Jane Doe</SelectItem>
+                      <SelectItem value="6bc1b177-294b-44c8-8996-3c82e6476e94">Mike Johnson</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

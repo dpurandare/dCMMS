@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import { AuthService } from "../services/auth.service";
+import { AuthService, UserPayload } from "../services/auth.service";
 import { TokenService } from "../services/token.service";
 
 const authRoutes: FastifyPluginAsync = async (server) => {
@@ -200,7 +200,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user as UserPayload;
 
       return {
         id: user.id,
