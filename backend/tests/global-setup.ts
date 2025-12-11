@@ -13,6 +13,9 @@ export default async () => {
 
   // Set global test environment variables
   process.env.NODE_ENV = 'test';
+  if (!process.env.TEST_DATABASE_URL) {
+    process.env.TEST_DATABASE_URL = 'postgresql://dcmms_user:dcmms_password_dev@localhost:5434/dcmms_test';
+  }
 
   // Wait for test database to be ready (if using Docker)
   if (process.env.CI !== 'true') {
@@ -41,7 +44,7 @@ async function waitForDatabase(maxAttempts = 30): Promise<void> {
     try {
       const { Client } = require('pg');
       const client = new Client({
-        connectionString: process.env.TEST_DATABASE_URL || 'postgresql://test_user:test_password@localhost:5432/dcmms_test',
+        connectionString: process.env.TEST_DATABASE_URL || 'postgresql://dcmms_user:dcmms_password_dev@localhost:5434/dcmms_test',
       });
 
       await client.connect();

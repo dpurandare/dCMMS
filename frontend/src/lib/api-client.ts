@@ -32,7 +32,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean 
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -183,6 +183,40 @@ export const api = {
     },
     delete: async (id: string) => {
       const response = await apiClient.delete(`/sites/${id}`);
+      return response.data;
+    },
+  },
+
+  // Users endpoints
+  users: {
+    list: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/users', { params });
+      return response.data;
+    },
+    create: async (data: any) => {
+      const response = await apiClient.post('/users', data);
+      return response.data;
+    },
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/users/${id}`);
+      return response.data;
+    },
+  },
+  // Audit Logs endpoints
+  auditLogs: {
+    list: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/audit-logs', { params });
+      return response.data;
+    },
+    export: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/audit-logs/export', { 
+        params,
+        responseType: 'blob' 
+      });
+      return response.data;
+    },
+    getStatistics: async (params?: Record<string, any>) => {
+      const response = await apiClient.get('/audit-logs/statistics', { params });
       return response.data;
     },
   },

@@ -20,6 +20,10 @@ const kpiQuerySchema = z.object({
 export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+
   const kpiService = createKPICalculationService(fastify);
 
   // Get KPIs for dashboard
@@ -64,7 +68,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         // Get tenant ID from authenticated user
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -130,7 +134,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -208,7 +212,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({

@@ -190,9 +190,9 @@ export class WeatherAPIService {
    * Note: This requires a paid subscription to OpenWeatherMap
    */
   async fetchHistoricalWeather(
-    siteLocation: SiteLocation,
-    startDate: Date,
-    endDate: Date,
+    _siteLocation: SiteLocation,
+    _startDate: Date,
+    _endDate: Date,
   ): Promise<WeatherForecast[]> {
     // Implementation depends on OpenWeatherMap Historical API
     // For now, return empty array

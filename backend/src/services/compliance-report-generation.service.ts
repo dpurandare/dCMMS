@@ -13,7 +13,7 @@ export interface GenerateReportRequest {
   siteId?: string;
   startDate?: Date;
   endDate?: Date;
-  manualData?: Record<string, any>;
+  manualData?: Record<string, unknown>;
   watermark?: "DRAFT" | "FINAL";
   format?: "pdf" | "csv" | "json";
 }
@@ -24,7 +24,7 @@ export interface GeneratedReport {
   tenantId: string;
   templateId: string;
   siteId?: string;
-  reportData: any;
+  reportData: Record<string, unknown>;
   status: "draft" | "final" | "submitted";
   format: string;
   filePath: string;
@@ -171,8 +171,8 @@ export class ComplianceReportGenerationService {
    * Generate PDF report
    */
   private async generatePDF(
-    template: any,
-    reportData: any,
+    template: Record<string, any>,
+    reportData: Record<string, any>,
     reportName: string,
     watermark: string,
   ): Promise<string> {
@@ -247,7 +247,7 @@ export class ComplianceReportGenerationService {
    */
   private addPDFHeader(
     doc: PDFKit.PDFDocument,
-    template: any,
+    template: Record<string, any>,
     reportName: string,
     watermark: string,
   ): void {
@@ -298,8 +298,8 @@ export class ComplianceReportGenerationService {
    */
   private addPDFContent(
     doc: PDFKit.PDFDocument,
-    template: any,
-    reportData: any,
+    template: Record<string, any>,
+    reportData: Record<string, any>,
   ): void {
     // Required fields section
     doc
@@ -372,7 +372,10 @@ export class ComplianceReportGenerationService {
   /**
    * Add table to PDF
    */
-  private addPDFTable(doc: PDFKit.PDFDocument, data: any[]): void {
+  private addPDFTable(
+    doc: PDFKit.PDFDocument,
+    data: Record<string, any>[],
+  ): void {
     if (data.length === 0) return;
 
     // Get column headers from first row
@@ -451,8 +454,8 @@ export class ComplianceReportGenerationService {
    * Generate CSV report
    */
   private async generateCSV(
-    template: any,
-    reportData: any,
+    template: Record<string, any>,
+    reportData: Record<string, any>,
     reportName: string,
   ): Promise<string> {
     const fileName = `${reportName}.csv`;
@@ -495,8 +498,8 @@ export class ComplianceReportGenerationService {
    * Generate JSON report
    */
   private async generateJSON(
-    template: any,
-    reportData: any,
+    template: Record<string, any>,
+    reportData: Record<string, any>,
     reportName: string,
   ): Promise<string> {
     const fileName = `${reportName}.json`;
@@ -544,7 +547,10 @@ export class ComplianceReportGenerationService {
 
     if (filters?.status) {
       whereConditions.push(
-        eq(complianceGeneratedReports.status, filters.status as any),
+        eq(
+          complianceGeneratedReports.status,
+          filters.status as "draft" | "final" | "submitted",
+        ),
       );
     }
 
@@ -606,7 +612,7 @@ export class ComplianceReportGenerationService {
   /**
    * Helper: Format field value for display
    */
-  private formatFieldValue(value: any): string {
+  private formatFieldValue(value: unknown): string {
     if (value === null || value === undefined) return "N/A";
     if (Array.isArray(value)) return `${value.length} items`;
     if (typeof value === "object") return JSON.stringify(value);

@@ -14,8 +14,8 @@
  */
 
 import crypto from "crypto";
-import axios, { AxiosError } from "axios";
-import { db, pool } from "../db";
+import axios from "axios";
+import { pool } from "../db";
 
 // ==========================================
 // Types
@@ -37,8 +37,8 @@ export interface WebhookPayload {
   eventType: string;
   timestamp: string;
   tenantId: string;
-  data: Record<string, any>;
-  metadata?: Record<string, any>;
+  data: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WebhookDeliveryResult {
@@ -153,8 +153,8 @@ export class WebhookService {
           };
         }
       }
-    } catch (error: any) {
-      const responseTime = Date.now() - startTime;
+    } catch (error: unknown) {
+      // const responseTime = Date.now() - startTime;
       const errorMessage = this.getErrorMessage(error);
 
       console.error(`✗ Webhook error: ${webhook.url} - ${errorMessage}`);
@@ -197,7 +197,7 @@ export class WebhookService {
   async triggerWebhooks(
     tenantId: string,
     eventType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
   ): Promise<WebhookDeliveryResult[]> {
     // Get webhooks for this event type
     const webhooks = await this.getWebhooksForEvent(tenantId, eventType);
@@ -330,7 +330,7 @@ export class WebhookService {
   private async logDeliveryAttempt(
     webhookId: string,
     eventType: string,
-    eventData: Record<string, any>,
+    eventData: Record<string, unknown>,
     url: string,
     requestBody: string,
     attemptNumber: number,
@@ -381,7 +381,7 @@ export class WebhookService {
     },
   ): Promise<void> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramCount = 1;
 
     if (updates.status !== undefined) {
@@ -461,7 +461,7 @@ export class WebhookService {
   /**
    * Get error message from axios error
    */
-  private getErrorMessage(error: any): string {
+  private getErrorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
       if (error.code === "ECONNABORTED") {
         return "Request timeout";
@@ -475,7 +475,7 @@ export class WebhookService {
         return "No response received";
       }
     }
-    return error.message || "Unknown error";
+    return (error as Error).message || "Unknown error";
   }
 
   /**
@@ -533,7 +533,9 @@ export class WebhookService {
 
 import { FastifyInstance } from "fastify";
 
-export function createWebhookService(fastify: FastifyInstance): WebhookService {
+export function createWebhookService(
+  _fastify: FastifyInstance,
+): WebhookService {
   return new WebhookService();
 }
 

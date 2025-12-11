@@ -126,11 +126,11 @@ export class PushNotificationService {
     tokens: Array<{ id: string; token: string; deviceType: string }>,
     title: string,
     body: string,
-    data?: Record<string, any>,
-    badge?: number,
-    sound?: string,
-    clickAction?: string,
-    imageUrl?: string,
+    _data?: Record<string, any>,
+    _badge?: number,
+    _sound?: string,
+    _clickAction?: string,
+    _imageUrl?: string,
   ): Promise<PushDeliveryStatus> {
     try {
       // TODO: Implement FCM integration
@@ -363,7 +363,7 @@ export class PushNotificationService {
    */
   async sendSilentNotification(
     userId: string,
-    data: Record<string, any>,
+    _data: Record<string, any>,
   ): Promise<PushDeliveryStatus> {
     this.fastify.log.info({ userId }, "Sending silent push notification");
 

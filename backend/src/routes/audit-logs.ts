@@ -67,7 +67,7 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -131,7 +131,7 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({
@@ -198,7 +198,7 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tenantId = (request.user as any)?.tenantId;
+        const tenantId = request.user.tenantId;
 
         if (!tenantId) {
           return reply.status(401).send({

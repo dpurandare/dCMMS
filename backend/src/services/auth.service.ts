@@ -18,6 +18,14 @@ export interface UserPayload {
   role: string;
 }
 
+export interface RefreshTokenPayload {
+  id: string;
+  tenantId: string;
+  type: "refresh";
+  iat?: number;
+  exp?: number;
+}
+
 export class AuthService {
   /**
    * Hash password with bcrypt

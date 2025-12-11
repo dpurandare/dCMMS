@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import { z } from "zod";
+
 import { pool } from "../db";
 
 const healthRoutes: FastifyPluginAsync = async (server) => {
@@ -11,7 +11,7 @@ const healthRoutes: FastifyPluginAsync = async (server) => {
         tags: ["health"],
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       let dbStatus = "disconnected";
 
       try {
@@ -38,7 +38,7 @@ const healthRoutes: FastifyPluginAsync = async (server) => {
         tags: ["health"],
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
         await pool.query("SELECT 1");
         return reply.status(200).send({ status: "ready" });
@@ -56,7 +56,7 @@ const healthRoutes: FastifyPluginAsync = async (server) => {
         tags: ["health"],
       },
     },
-    async (request, reply) => {
+    async (_request, _reply) => {
       return { status: "alive" };
     },
   );

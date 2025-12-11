@@ -135,7 +135,7 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const userRole = (request.user as any)?.role;
+        const userRole = request.user.role;
 
         if (userRole !== "super_admin" && userRole !== "tenant_admin") {
           return reply.status(403).send({

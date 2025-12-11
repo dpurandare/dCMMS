@@ -20,6 +20,7 @@ interface DashboardLayoutProps {
   showNewButton?: boolean;
   newButtonText?: string;
   onNewClick?: () => void;
+  actions?: React.ReactNode;
 }
 
 export function DashboardLayout({
@@ -30,6 +31,7 @@ export function DashboardLayout({
   showNewButton = false,
   newButtonText = 'New Work Order',
   onNewClick,
+  actions,
 }: DashboardLayoutProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -61,6 +63,7 @@ export function DashboardLayout({
           showNewButton={showNewButton}
           newButtonText={newButtonText}
           onNewClick={onNewClick}
+          actions={actions}
         />
 
         {/* Main Content */}

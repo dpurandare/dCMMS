@@ -47,7 +47,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
         const { full } = request.body;
 
         fastify.log.info(
-          { full, userId: (request.user as any)?.id },
+          { full, userId: request.user.id },
           "ETL sync triggered manually",
         );
 
@@ -88,7 +88,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
         const targetDate = date ? new Date(date) : undefined;
 
         fastify.log.info(
-          { date: targetDate, userId: (request.user as any)?.id },
+          { date: targetDate, userId: request.user.id },
           "KPI calculation triggered manually",
         );
 
@@ -198,7 +198,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
           const { query } = request.body;
 
           fastify.log.info(
-            { query, userId: (request.user as any)?.id },
+            { query, userId: request.user.id },
             "Executing custom ClickHouse query",
           );
 

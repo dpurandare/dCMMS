@@ -216,7 +216,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
 
         await performanceService.acknowledgeAlert(
           safeAlertId,
-          (request.user as any)?.id || "system",
+          request.user.id || "system",
         );
 
         return {

@@ -39,7 +39,7 @@ export class SMSService {
     return true;
   }
 
-  async isOptedOut(phone: string): Promise<boolean> {
+  async isOptedOut(_phone: string): Promise<boolean> {
     return false;
   }
 

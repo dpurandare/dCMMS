@@ -46,7 +46,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const query = request.query as any;
 
       const filters = {
@@ -103,7 +103,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const site = await SiteService.getById(id, user.tenantId);
@@ -139,7 +139,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       const stats = await SiteService.getStatistics(id, user.tenantId);
@@ -198,7 +198,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const body = request.body as any;
 
       // Generate site code if not provided
@@ -281,7 +281,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
       const body = request.body as any;
 
@@ -341,7 +341,7 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const user = request.user as any;
+      const user = request.user;
       const { id } = request.params as { id: string };
 
       try {

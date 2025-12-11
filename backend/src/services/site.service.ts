@@ -54,7 +54,7 @@ export class SiteService {
   /**
    * Generate site code from name
    */
-  static generateSiteCode(name: string, tenantId: string): string {
+  static generateSiteCode(name: string, _tenantId: string): string {
     // Take first 3 chars of each word, max 8 chars total
     const words = name.trim().toUpperCase().split(/\s+/);
     let code = "";

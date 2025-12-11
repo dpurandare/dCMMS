@@ -18,6 +18,7 @@ interface TopBarProps {
   showNewButton?: boolean;
   newButtonText?: string;
   onNewClick?: () => void;
+  actions?: React.ReactNode;
 }
 
 export function TopBar({
@@ -28,6 +29,7 @@ export function TopBar({
   showNewButton = true,
   newButtonText = 'New Work Order',
   onNewClick,
+  actions,
 }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -93,8 +95,11 @@ export function TopBar({
           </div>
         )}
 
+        {/* Custom Actions */}
+        {actions}
+
         {/* New Work Order Button */}
-        {showNewButton && (
+        {showNewButton && !actions && (
           <Button
             onClick={onNewClick}
             className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-700"

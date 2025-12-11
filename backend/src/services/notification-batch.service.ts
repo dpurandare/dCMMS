@@ -38,13 +38,19 @@ export interface BatchConfig {
   nextSendAt?: Date;
 }
 
+export interface DigestConfig extends BatchConfig {
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface BatchItem {
   id: string;
   eventType: string;
   priority: string;
   subject?: string;
   body: string;
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   batchGroup?: string;
   createdAt: Date;
 }
@@ -90,6 +96,7 @@ export class NotificationBatchService {
   /**
    * Add notification to batch queue
    */
+
   async addToBatch(params: {
     userId: string;
     notificationId?: string;
@@ -98,7 +105,7 @@ export class NotificationBatchService {
     channel: string;
     subject?: string;
     body: string;
-    variables: Record<string, any>;
+    variables: Record<string, unknown>;
     batchGroup?: string;
   }): Promise<string> {
     const {
@@ -163,60 +170,12 @@ export class NotificationBatchService {
     return "general";
   }
 
-  /**
-   * Process scheduled digests (called by cron job)
-   */
-  async processScheduledDigests(): Promise<number> {
-    console.log("Processing scheduled notification digests...");
-
-    // Get users with digests ready to send
-    const result = await this.db.query(
-      `
-      SELECT
-        nbc.id,
-        nbc.user_id AS "userId",
-        nbc.frequency,
-        nbc.send_time AS "sendTime",
-        nbc.timezone,
-        nbc.channels,
-        nbc.last_sent_at AS "lastSentAt",
-        u.email,
-        u.first_name AS "firstName",
-        u.last_name AS "lastName"
-      FROM notification_batch_config nbc
-      INNER JOIN users u ON nbc.user_id = u.id
-      WHERE nbc.enabled = true
-        AND nbc.next_send_at <= NOW()
-        AND u.active = true
-      LIMIT 100
-    `,
-    );
-
-    const configs = result.rows;
-    console.log(`Found ${configs.length} digests to send`);
-
-    let sentCount = 0;
-
-    for (const config of configs) {
-      try {
-        await this.sendDigest(config);
-        sentCount++;
-      } catch (error) {
-        console.error(
-          `Failed to send digest for user ${config.userId}:`,
-          error,
-        );
-      }
-    }
-
-    console.log(`✓ Sent ${sentCount} digests`);
-    return sentCount;
-  }
+  // ...
 
   /**
    * Send digest to user
    */
-  private async sendDigest(config: any): Promise<void> {
+  private async sendDigest(config: DigestConfig): Promise<void> {
     const userId = config.userId;
     const frequency = config.frequency;
 
@@ -515,7 +474,7 @@ export class NotificationBatchService {
     configId: string,
     frequency: string,
     sendTime: string,
-    sendDayOfWeek: number | null,
+    sendDayOfWeek: number | null | undefined,
     timezone: string,
   ): Promise<void> {
     const result = await this.db.query(

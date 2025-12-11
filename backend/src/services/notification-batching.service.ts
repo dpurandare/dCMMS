@@ -21,7 +21,7 @@ export interface QueuedNotification {
   subject?: string;
   body: string;
   templateId?: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 /**
@@ -345,7 +345,7 @@ export class NotificationBatchingService {
 
     // Add each notification
     for (const notification of notifications) {
-      const data = JSON.parse(notification.data || "{}");
+      // const data = JSON.parse(notification.data || "{}");
       const time = new Date(notification.createdAt).toLocaleString();
 
       digest += `
@@ -371,7 +371,10 @@ export class NotificationBatchingService {
   /**
    * Get recipient based on channel
    */
-  private getRecipient(user: any, channel: NotificationChannel): string {
+  private getRecipient(
+    user: typeof users.$inferSelect,
+    channel: NotificationChannel,
+  ): string {
     switch (channel) {
       case "email":
         return user.email;
@@ -561,9 +564,9 @@ export class NotificationBatchingService {
   private async updateNotificationStatus(
     historyId: string,
     status: "sent" | "delivered" | "failed",
-    error?: any,
+    error?: unknown,
   ): Promise<void> {
-    const updateData: any = {
+    const updateData: Partial<typeof notificationHistory.$inferSelect> = {
       status,
       updatedAt: new Date(),
     };
@@ -574,7 +577,11 @@ export class NotificationBatchingService {
       updateData.deliveredAt = new Date();
     } else if (status === "failed") {
       updateData.failedAt = new Date();
-      updateData.errorMessage = error?.message || "Unknown error";
+      if (error instanceof Error) {
+        updateData.errorMessage = error.message;
+      } else {
+        updateData.errorMessage = String(error) || "Unknown error";
+      }
     }
 
     await db
@@ -593,7 +600,7 @@ export class NotificationBatchingService {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - 30);
 
-      const deleted = await db
+      await db
         .delete(notificationQueue)
         .where(
           and(

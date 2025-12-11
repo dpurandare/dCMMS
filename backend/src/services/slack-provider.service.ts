@@ -1,13 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { db } from "../db";
-import { notificationHistory } from "../db/schema";
-import { eq } from "drizzle-orm";
 
 export interface SlackMessage {
   channel: string;
   text: string;
-  blocks?: any[];
-  attachments?: any[];
+  blocks?: Record<string, unknown>[];
+  attachments?: Record<string, unknown>[];
 }
 
 export interface SlackSendResult {
@@ -51,7 +48,7 @@ export class SlackProviderService {
     text: string;
     severity?: "critical" | "high" | "medium" | "low" | "info";
     title?: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
     actions?: Array<{
       type: string;
       text: string;
@@ -116,14 +113,16 @@ export class SlackProviderService {
         messageId: result.message?.ts,
         timestamp: result.ts,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       this.fastify.log.error(
         { error, channel },
         "Failed to send Slack message",
       );
       return {
         status: "failed",
-        error: error.message || "Unknown error",
+        error: errorMessage,
       };
     }
   }
@@ -135,20 +134,20 @@ export class SlackProviderService {
     title: string;
     text: string;
     severity?: "critical" | "high" | "medium" | "low" | "info";
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
     actions?: Array<{
       type: string;
       text: string;
       value: string;
       url?: string;
     }>;
-  }): any[] {
+  }): Record<string, unknown>[] {
     const { title, text, severity, data, actions } = params;
 
-    const blocks: any[] = [];
+    const blocks: Record<string, unknown>[] = [];
 
     // Determine color based on severity
-    const color = this.getSeverityColor(severity);
+    // const color = this.getSeverityColor(severity);
     const emoji = this.getSeverityEmoji(severity);
 
     // Header block with emoji
@@ -190,7 +189,7 @@ export class SlackProviderService {
 
     // Add additional data fields if provided
     if (data && Object.keys(data).length > 0) {
-      const fields: any[] = [];
+      const fields: Record<string, unknown>[] = [];
 
       for (const [key, value] of Object.entries(data)) {
         if (value !== undefined && value !== null) {
@@ -211,7 +210,7 @@ export class SlackProviderService {
 
     // Add action buttons if provided
     if (actions && actions.length > 0) {
-      const elements: any[] = [];
+      const elements: Record<string, unknown>[] = [];
 
       for (const action of actions) {
         if (action.url) {
@@ -421,7 +420,7 @@ export class SlackProviderService {
             }
           : undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.fastify.log.error({ error }, "Failed to exchange Slack OAuth code");
       throw error;
     }

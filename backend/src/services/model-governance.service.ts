@@ -13,7 +13,59 @@ export type ModelStage =
 
 export interface ModelDocumentation {
   modelId: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+export interface Model {
+  id: string;
+  modelName: string;
+  version: string;
+  description: string;
+  owner: string;
+  stage: ModelStage | string;
+  updatedBy?: string;
+  updatedAt?: Date;
+  retiredBy?: string;
+  reason?: string;
+  retiredAt?: Date;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  modelId: string;
+  requestedBy: string;
+  approvers: string[];
+  status: "pending" | "approved" | "rejected";
+  approvedBy?: string;
+  approvedAt?: Date;
+  rejectedBy?: string;
+  reason?: string;
+  rejectedAt?: Date;
+}
+
+export interface ChecklistItem {
+  modelId: string;
+  itemId: string;
+  completed: boolean;
+  completedBy: string;
+  evidence?: string;
+  notes?: string;
+  updatedAt: Date;
+}
+
+export interface Incident {
+  id: string;
+  modelId?: string; // Optional because updateIncident doesn't return modelId in mock
+  severity?: string;
+  type?: string;
+  description?: string;
+  impact?: string;
+  reportedBy?: string;
+  status: string;
+  resolution?: string;
+  resolvedBy?: string;
+  actionsTaken?: string[];
+  updatedAt?: Date;
 }
 
 export class ModelGovernanceService {
@@ -26,7 +78,7 @@ export class ModelGovernanceService {
     version: string,
     description: string,
     owner: string,
-  ): Promise<any> {
+  ): Promise<Model> {
     return {
       id: "mock-model-id",
       modelName,
@@ -41,7 +93,7 @@ export class ModelGovernanceService {
     modelId: string,
     newStage: ModelStage,
     updatedBy: string,
-  ): Promise<any> {
+  ): Promise<Partial<Model>> {
     return { id: modelId, stage: newStage, updatedBy, updatedAt: new Date() };
   }
 
@@ -49,7 +101,7 @@ export class ModelGovernanceService {
     modelId: string,
     requestedBy: string,
     approvers: string[],
-  ): Promise<any> {
+  ): Promise<ApprovalRequest> {
     return {
       id: "mock-approval-id",
       modelId,
@@ -59,7 +111,10 @@ export class ModelGovernanceService {
     };
   }
 
-  async approveModel(modelId: string, approvedBy: string): Promise<any> {
+  async approveModel(
+    modelId: string,
+    approvedBy: string,
+  ): Promise<ApprovalRequest> {
     return {
       id: "mock-approval-id",
       modelId,
@@ -73,7 +128,7 @@ export class ModelGovernanceService {
     modelId: string,
     rejectedBy: string,
     reason: string,
-  ): Promise<any> {
+  ): Promise<ApprovalRequest> {
     return {
       id: "mock-approval-id",
       modelId,
@@ -91,7 +146,7 @@ export class ModelGovernanceService {
     completedBy: string,
     evidence?: string,
     notes?: string,
-  ): Promise<any> {
+  ): Promise<ChecklistItem> {
     return {
       modelId,
       itemId,
@@ -103,11 +158,15 @@ export class ModelGovernanceService {
     };
   }
 
-  async addDocumentation(doc: ModelDocumentation): Promise<any> {
+  async addDocumentation(
+    doc: ModelDocumentation,
+  ): Promise<ModelDocumentation & { id: string; createdAt: Date }> {
     return { ...doc, id: "mock-doc-id", createdAt: new Date() };
   }
 
-  async getDocumentation(modelId: string): Promise<any> {
+  async getDocumentation(
+    modelId: string,
+  ): Promise<{ modelId: string; content: string; lastUpdated: Date }> {
     return { modelId, content: "Mock documentation", lastUpdated: new Date() };
   }
 
@@ -117,7 +176,7 @@ export class ModelGovernanceService {
     reason: string,
     replacementModelId?: string,
     dataRetentionPolicy?: string,
-  ): Promise<any> {
+  ): Promise<Partial<Model>> {
     return {
       id: modelId,
       stage: "retired",
@@ -134,7 +193,7 @@ export class ModelGovernanceService {
     description: string,
     impact: string,
     reportedBy: string,
-  ): Promise<any> {
+  ): Promise<Incident> {
     return {
       id: "mock-incident-id",
       modelId,
@@ -153,7 +212,7 @@ export class ModelGovernanceService {
     resolution?: string,
     resolvedBy?: string,
     actionsTaken?: string[],
-  ): Promise<any> {
+  ): Promise<Incident> {
     return {
       id: incidentId,
       status,
@@ -164,7 +223,7 @@ export class ModelGovernanceService {
     };
   }
 
-  async getModelsByStage(stage: ModelStage): Promise<any[]> {
+  async getModelsByStage(stage: ModelStage): Promise<Partial<Model>[]> {
     return [
       { id: "mock-model-1", name: "Model 1", stage },
       { id: "mock-model-2", name: "Model 2", stage },

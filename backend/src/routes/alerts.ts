@@ -44,6 +44,9 @@ export default async function alertRoutes(fastify: FastifyInstance) {
   // Initialize alert notification handler
   const alertNotificationHandler = createAlertNotificationHandler(fastify);
 
+  // Require authentication for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+
   // List alerts
   fastify.get<{
     Querystring: {
@@ -523,7 +526,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     };
   }>("/alerts/stats", async (request, reply) => {
     try {
-      const { tenantId, siteId, startDate, endDate } = request.query;
+      const {
+        tenantId,
+        siteId,
+        startDate: _startDate,
+        endDate: _endDate,
+      } = request.query;
 
       // Build where conditions
       const conditions = [eq(alerts.tenantId, tenantId)];

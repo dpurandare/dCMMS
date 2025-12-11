@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { UserPayload } from "./auth.service";
+import { UserPayload, RefreshTokenPayload } from "./auth.service";
 
 export interface TokenPair {
   accessToken: string;
@@ -28,16 +28,15 @@ export class TokenService {
       },
     );
 
-    const refreshToken = server.jwt.sign(
-      {
-        id: user.id,
-        tenantId: user.tenantId,
-        type: "refresh",
-      },
-      {
-        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || "7d",
-      },
-    );
+    const refreshTokenPayload: RefreshTokenPayload = {
+      id: user.id,
+      tenantId: user.tenantId,
+      type: "refresh",
+    };
+
+    const refreshToken = server.jwt.sign(refreshTokenPayload, {
+      expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || "7d",
+    });
 
     // Parse expiry time (e.g., "15m" -> 900 seconds)
     const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
@@ -56,12 +55,12 @@ export class TokenService {
   static async verifyRefreshToken(
     server: FastifyInstance,
     refreshToken: string,
-  ): Promise<any> {
+  ): Promise<RefreshTokenPayload> {
     try {
-      const decoded = server.jwt.verify(refreshToken);
+      const decoded = server.jwt.verify<RefreshTokenPayload>(refreshToken);
 
       // Check if it's a refresh token
-      if ((decoded as any).type !== "refresh") {
+      if (decoded.type !== "refresh") {
         throw new Error("Invalid token type");
       }
 

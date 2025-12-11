@@ -7,9 +7,9 @@
 export interface SlackMessageOptions {
   channel: string;
   text: string;
-  blocks?: any[];
+  blocks?: Record<string, unknown>[];
   threadTs?: string;
-  attachments?: any[];
+  attachments?: Record<string, unknown>[];
 }
 
 export interface SlackResult {
@@ -84,8 +84,8 @@ export class SlackService {
   async updateMessage(
     channel: string,
     messageTs: string,
-    text: string,
-    blocks?: any[],
+    _text: string,
+    _blocks?: Record<string, unknown>[],
   ): Promise<SlackResult> {
     console.log(
       `[Mock Slack] Updating message in channel: ${channel}, ts: ${messageTs}`,
@@ -94,24 +94,24 @@ export class SlackService {
   }
 
   async getUserByEmail(
-    email: string,
+    _email: string,
   ): Promise<{ id: string; name: string } | null> {
     return { id: "mock_user_id", name: "Mock User" };
   }
 
-  async getChannelByName(name: string): Promise<string | null> {
+  async getChannelByName(_name: string): Promise<string | null> {
     return "mock_channel_id";
   }
 
   verifySlackRequest(
-    requestBody: string,
-    timestamp: string,
-    signature: string,
+    _requestBody: string,
+    _timestamp: string,
+    _signature: string,
   ): boolean {
     return true;
   }
 
-  async handleInteractiveAction(payload: any): Promise<void> {
+  async handleInteractiveAction(_payload: unknown): Promise<void> {
     console.log("[Mock Slack] Handling interactive action");
   }
 

@@ -44,7 +44,7 @@ async function seed() {
     console.log("Creating users...");
     const passwordHash = await AuthService.hashPassword("Password123!");
 
-    const [adminUser] = await db
+    await db
       .insert(users)
       .values({
         tenantId: tenant.id,

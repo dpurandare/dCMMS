@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
@@ -51,16 +51,7 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchAsset();
-  }, [isAuthenticated, params.id]);
-
-  const fetchAsset = async () => {
+  const fetchAsset = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.assets.getById(params.id);
@@ -71,7 +62,16 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchAsset();
+  }, [isAuthenticated, router, fetchAsset]);
 
   const handleDelete = async () => {
     try {

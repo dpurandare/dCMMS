@@ -1171,3 +1171,70 @@ export const windWorkOrderTemplatesRelations = relations(
     }),
   }),
 );
+
+// ==========================================
+// SPRINT 20: Analytics Dashboard
+// ==========================================
+
+export const dashboards = pgTable("dashboards", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  layout: varchar("layout", { length: 50 }).default("grid"),
+  refreshInterval: integer("refresh_interval").default(300), // seconds
+  widgets: text("widgets").notNull().default("[]"), // JSON stored as text
+  permissions: text("permissions").default("{}"), // JSON stored as text
+  isPublic: boolean("is_public").notNull().default(false),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const dashboardsRelations = relations(dashboards, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [dashboards.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [dashboards.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// ==========================================
+// SPRINT 21: Reports
+// ==========================================
+
+export const reports = pgTable("reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  datasource: varchar("datasource", { length: 50 }).notNull(),
+  config: text("config").notNull(), // JSON stored as text
+  isPublic: boolean("is_public").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [reports.tenantId],
+    references: [tenants.id],
+  }),
+  creator: one(users, {
+    fields: [reports.createdBy],
+    references: [users.id],
+  }),
+}));
