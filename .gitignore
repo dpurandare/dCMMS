@@ -148,3 +148,4 @@ tramp
 *.tmp
 *.temp
 venv/
+!mobile/lib/
