@@ -737,4 +737,40 @@ Three pull requests restored missing work:
 
 **Maintained By:** Product Manager
 **Update Frequency:** After each sprint completion / major PR merge
-**Last Verified:** November 19, 2025, 09:30 UTC
+
+---
+
+## Gap Remediation - Phase 0: Emergency Workflow Fixes
+**Goal:** Unblock Technician and Buyer personas (Mobile Offline + Safety Gates)
+**Status:** In Progress
+**Reference:** `docs/GAP_REMEDIATION_PLAN.md`
+
+### ✅ Sprint 3 (Remediation): Safety & Compliance
+**Goal:** Enforce permits for critical work
+**Status:** ✅ Complete
+
+- [x] **DCMMS-025-R** - Permit Management API
+  - Verified: `backend/src/services/permit.service.ts`
+  - Verified: `backend/src/routes/permits.ts`
+  - Notes: Full CRUD implemented.
+
+- [x] **DCMMS-026-R** - Safety Gates
+  - Verified: `PermitGuard` logic in `WorkOrderService`
+  - Verified: `backend/test/e2e/permits.e2e.test.ts`
+  - Notes: Blocks critical/emergency WO transition without active permit.
+
+### 🔄 Sprint 4 (Remediation): Mobile Offline Foundation
+**Goal:** Unblock Technician offline workflow
+**Status:** 🔄 In Progress
+
+- [x] **DCMMS-001E** - Mobile Project Setup
+  - Verified: `mobile/` Flutter project structure
+  - Verified: `mobile/lib/core/database/database.dart` (Drift setup)
+
+- [ ] **DCMMS-0XX-R** - Offline Sync Engine
+  - Pending: `SyncRepository` implementation
+  - Pending: Queue management
+  - Pending: Conflict resolution
+
+- [ ] **DCMMS-0XX-R** - Offline Authentication
+  - Pending: Long-lived token / PIN logic

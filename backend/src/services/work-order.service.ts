@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { workOrders, workOrderTasks, workOrderParts, workOrderLabor } from "../db/schema";
-import { eq, and, desc, asc, sql, like, or, inArray, gte, lte } from "drizzle-orm";
+import { workOrders, workOrderTasks, workOrderParts, workOrderLabor, permits } from "../db/schema";
+import { eq, and, desc, asc, sql, like, or, inArray, gte, lte, gt } from "drizzle-orm";
 import { WorkOrderStateMachine, WorkOrderStatus } from "./work-order-state";
 
 export interface CreateWorkOrderData {
@@ -60,7 +60,7 @@ export class WorkOrderService {
    */
   static async generateWorkOrderId(tenantId: string): Promise<string> {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const prefix = `WO-${dateStr}`;
+    const prefix = `WO - ${dateStr} `;
 
     // Simple robust sequence generation could use a sequence table or just count for the day
     // For now, simpler: getting count of WOs created today
@@ -75,7 +75,7 @@ export class WorkOrderService {
     // WO-20231212-A1B2
 
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}-${randomSuffix}`;
+    return `${prefix} -${randomSuffix} `;
   }
 
   static async create(data: CreateWorkOrderData) {
@@ -131,8 +131,8 @@ export class WorkOrderService {
     if (filters.search) {
       conditions.push(
         or(
-          like(workOrders.title, `%${filters.search}%`),
-          like(workOrders.workOrderId, `%${filters.search}%`)
+          like(workOrders.title, `% ${filters.search}% `),
+          like(workOrders.workOrderId, `% ${filters.search}% `)
         )!
       );
     }
@@ -225,7 +225,7 @@ export class WorkOrderService {
       );
       if (!canTransition) {
         throw new Error(
-          `Invalid status transition from ${existing.status} to ${data.status}`
+          `Invalid status transition from ${existing.status} to ${data.status} `
         );
       }
 
@@ -279,6 +279,23 @@ export class WorkOrderService {
   }
 
   static async transitionStatus(id: string, tenantId: string, action: string) {
+    if (action === "in_progress") {
+      const wo = await this.getById(id, tenantId);
+      // Safety Gate: Critical or Emergency WOs require an Active Permit
+      if (wo.priority === "critical" || wo.type === "emergency") {
+        const activePermit = await db.query.permits.findFirst({
+          where: and(
+            eq(permits.workOrderId, id),
+            eq(permits.status, "active"),
+            gt(permits.validUntil, new Date())
+          )
+        });
+
+        if (!activePermit) {
+          throw new Error("Safety Violation: Active Permit required for Critical/Emergency work.");
+        }
+      }
+    }
     return this.update(id, tenantId, { status: action as WorkOrderStatus });
   }
 

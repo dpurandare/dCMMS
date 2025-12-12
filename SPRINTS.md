@@ -81,3 +81,14 @@ This document maps the implementation tasks (DCMMS-XXX) to their respective Spri
 ## Sprint 19: Energy Bias Fix & Forecasting
 **Focus:** Wind/Solar Bias Fix, Weather API
 - DCMMS-158
+
+## Gap Remediation: Phase 0 (Dec 2025)
+**Focus:** Emergency Workflow Fixes (Mobile, Safety)
+
+### Sprint 3 (Remediation): Safety & Compliance
+**Focus:** Permit Management, Safety Gates
+- DCMMS-025-R, DCMMS-026-R
+
+### Sprint 4 (Remediation): Mobile Offline Foundation
+**Focus:** Offline Sync, Local DB, Technician Auth
+- DCMMS-MO-01 to DCMMS-MO-05
