@@ -42,9 +42,11 @@ export const workOrderPriorityEnum = pgEnum("work_order_priority", [
 export const workOrderStatusEnum = pgEnum("work_order_status", [
   "draft",
   "open",
+  "scheduled",
   "in_progress",
   "on_hold",
   "completed",
+  "closed",
   "cancelled",
 ]);
 
@@ -123,6 +125,20 @@ export const energyTypeEnum = pgEnum("energy_type", [
   "hybrid",
 ]);
 
+export const assetTypeEnum = pgEnum("asset_type", [
+  "inverter",
+  "transformer",
+  "panel",
+  "disconnector",
+  "meter",
+  "turbine",
+  "access_point",
+  "gateway",
+  "weather_station",
+  "sensor",
+  "other",
+]);
+
 // ==========================================
 // TABLES
 // ==========================================
@@ -167,7 +183,16 @@ export const sites = pgTable("sites", {
   name: varchar("name", { length: 255 }).notNull(),
   type: varchar("type", { length: 50 }).notNull(),
   energyType: energyTypeEnum("energy_type"), // Energy generation type (solar, wind, etc.)
-  location: text("location").notNull(),
+  location: text("location"),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+  country: varchar("country", { length: 100 }),
+  timezone: varchar("timezone", { length: 50 }),
+  contactName: varchar("contact_name", { length: 100 }),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 50 }),
   capacityMw: decimal("capacity_mw", { precision: 10, scale: 2 }),
   commissionDate: timestamp("commission_date"),
   config: text("config").default("{}"),
@@ -187,7 +212,7 @@ export const assets = pgTable("assets", {
   parentAssetId: uuid("parent_asset_id"),
   assetId: varchar("asset_id", { length: 100 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  type: varchar("type", { length: 100 }).notNull(),
+  type: assetTypeEnum("type").notNull().default("other"),
   manufacturer: varchar("manufacturer", { length: 255 }),
   model: varchar("model", { length: 255 }),
   serialNumber: varchar("serial_number", { length: 255 }),
@@ -196,6 +221,10 @@ export const assets = pgTable("assets", {
   status: assetStatusEnum("status").notNull().default("operational"),
   specifications: text("specifications").default("{}"),
   location: text("location"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  tags: text("tags").default("[]"), // JSON array of strings
+  image: text("image"),
   metadata: text("metadata").default("{}"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -248,6 +277,81 @@ export const workOrderTasks = pgTable("work_order_tasks", {
   completedAt: timestamp("completed_at"),
   completedBy: uuid("completed_by").references(() => users.id),
   notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const parts = pgTable("parts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  partNumber: varchar("part_number", { length: 100 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  quantity: integer("quantity").notNull().default(0),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).default("0"),
+  location: varchar("location", { length: 100 }),
+  minimumStockLevel: integer("minimum_stock_level").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  metadata: text("metadata").default("{}"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const workOrderParts = pgTable("work_order_parts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  partId: uuid("part_id")
+    .notNull()
+    .references(() => parts.id, { onDelete: "restrict" }),
+  quantityRequired: integer("quantity_required").notNull().default(1),
+  quantityUsed: integer("quantity_used").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const workOrderLabor = pgTable("work_order_labor", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+  hours: decimal("hours", { precision: 6, scale: 2 }).notNull(),
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  date: timestamp("date").notNull().defaultNow(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const permits = pgTable("permits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  permitId: varchar("permit_id", { length: 100 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(), // hot_work, confined_space, electrical
+  status: varchar("status", { length: 50 }).notNull().default("draft"), // draft, active, expired, revoked, closed
+  workOrderId: uuid("work_order_id").references(() => workOrders.id, {
+    onDelete: "set null",
+  }),
+  assetId: uuid("asset_id").references(() => assets.id, {
+    onDelete: "set null",
+  }),
+  validFrom: timestamp("valid_from").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  issuedBy: uuid("issued_by").references(() => users.id),
+  approvedBy: uuid("approved_by").references(() => users.id),
+  description: text("description"),
+  safetyChecks: text("safety_checks").default("[]"), // JSON list of checks
+  metadata: text("metadata").default("{}"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -913,6 +1017,8 @@ export const workOrdersRelations = relations(workOrders, ({ one, many }) => ({
     relationName: "createdBy",
   }),
   tasks: many(workOrderTasks),
+  parts: many(workOrderParts),
+  labor: many(workOrderLabor),
 }));
 
 export const workOrderTasksRelations = relations(workOrderTasks, ({ one }) => ({
@@ -922,6 +1028,36 @@ export const workOrderTasksRelations = relations(workOrderTasks, ({ one }) => ({
   }),
   completedByUser: one(users, {
     fields: [workOrderTasks.completedBy],
+    references: [users.id],
+  }),
+}));
+
+export const partsRelations = relations(parts, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [parts.tenantId],
+    references: [tenants.id],
+  }),
+  workOrderParts: many(workOrderParts),
+}));
+
+export const workOrderPartsRelations = relations(workOrderParts, ({ one }) => ({
+  workOrder: one(workOrders, {
+    fields: [workOrderParts.workOrderId],
+    references: [workOrders.id],
+  }),
+  part: one(parts, {
+    fields: [workOrderParts.partId],
+    references: [parts.id],
+  }),
+}));
+
+export const workOrderLaborRelations = relations(workOrderLabor, ({ one }) => ({
+  workOrder: one(workOrders, {
+    fields: [workOrderLabor.workOrderId],
+    references: [workOrders.id],
+  }),
+  user: one(users, {
+    fields: [workOrderLabor.userId],
     references: [users.id],
   }),
 }));

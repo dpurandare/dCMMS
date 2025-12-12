@@ -34,6 +34,11 @@ export interface CreateAssetData {
   installationDate?: Date;
   warrantyExpiryDate?: Date;
   specifications?: any;
+  latitude?: number;
+  longitude?: number;
+  tags?: string[];
+  image?: string;
+  metadata?: any;
 }
 
 export interface UpdateAssetData {
@@ -50,6 +55,12 @@ export interface UpdateAssetData {
   warrantyExpiryDate?: Date;
   specifications?: any;
   lastMaintenanceDate?: Date;
+  latitude?: number;
+  longitude?: number;
+  tags?: string[];
+  image?: string;
+  metadata?: any;
+  parentAssetId?: string;
 }
 
 export class AssetService {
@@ -75,7 +86,7 @@ export class AssetService {
         and(
           eq(assets.tenantId, tenantId),
           eq(assets.siteId, siteId),
-          like(assets.type, `${type}%`),
+          eq(assets.type, type as any),
         ),
       );
 
@@ -117,6 +128,7 @@ export class AssetService {
         or(
           like(assets.name, `%${filters.search}%`),
           like(assets.serialNumber, `%${filters.search}%`),
+          like(assets.tags, `%${filters.search}%`), // Simple text search in JSON string
         )!,
       );
     }
@@ -189,7 +201,13 @@ export class AssetService {
       .values({
         ...assetData,
         assetId: assetTag,
+        type: data.type as any,
         status: (data.status || "operational") as any,
+        latitude: data.latitude ? data.latitude.toString() : undefined,
+        longitude: data.longitude ? data.longitude.toString() : undefined,
+        tags: data.tags ? JSON.stringify(data.tags) : "[]",
+        image: data.image,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : "{}",
         // criticality: data.criticality || 'medium',
       })
       .returning()) as any[];
@@ -215,11 +233,26 @@ export class AssetService {
    * Update asset
    */
   static async update(id: string, tenantId: string, data: UpdateAssetData) {
+    // Check for circular reference if parentAssetId is being updated
+    if (data.parentAssetId !== undefined) {
+      if (data.parentAssetId === id) {
+        throw new Error("Circular reference: Asset cannot be its own parent");
+      }
+      if (data.parentAssetId) {
+        await this.checkCircularReference(id, data.parentAssetId, tenantId);
+      }
+    }
+
     const [updated] = (await db
       .update(assets)
       .set({
         ...data,
         updatedAt: new Date(),
+        ...(data.latitude && { latitude: data.latitude.toString() }),
+        ...(data.longitude && { longitude: data.longitude.toString() }),
+        ...(data.tags && { tags: JSON.stringify(data.tags) }),
+        ...(data.image && { image: data.image }),
+        ...(data.metadata && { metadata: JSON.stringify(data.metadata) }),
       } as any)
       .where(and(eq(assets.id, id), eq(assets.tenantId, tenantId)))
       .returning()) as any[];
@@ -251,7 +284,8 @@ export class AssetService {
     }
 
     const [deleted] = (await db
-      .delete(assets)
+      .update(assets)
+      .set({ status: "decommissioned", updatedAt: new Date() } as any)
       .where(and(eq(assets.id, id), eq(assets.tenantId, tenantId)))
       .returning()) as any[];
 
@@ -261,31 +295,87 @@ export class AssetService {
   /**
    * Get asset hierarchy (parent + children)
    */
-  static async getHierarchy(id: string, tenantId: string) {
+  static async getHierarchy(id: string, tenantId: string): Promise<any> {
     const asset = (await this.getById(id, tenantId)) as any;
 
     if (!asset) {
       return null;
     }
 
-    // Get parent if exists
-    let parent = null;
-    if (asset.parentAssetId) {
-      [parent] = await db
-        .select()
-        .from(assets)
-        .where(
-          and(
-            eq(assets.id, asset.parentAssetId),
-            eq(assets.tenantId, tenantId),
-          ),
-        )
-        .limit(1);
-    }
+    // Get children
+    const children = (await db
+      .select()
+      .from(assets)
+      .where(and(eq(assets.parentAssetId, id), eq(assets.tenantId, tenantId)))) as any[];
+
+    // Recursively get hierarchy for children
+    const childrenWithHierarchy = await Promise.all(
+      children.map((child) => this.getHierarchy(child.id, tenantId)),
+    );
 
     return {
       ...asset,
-      parent,
+      children: childrenWithHierarchy,
     };
+  }
+
+  /**
+   * Check for circular reference
+   * Throws error if circular reference is detected
+   */
+  static async checkCircularReference(
+    assetId: string,
+    targetParentId: string,
+    tenantId: string,
+  ) {
+    let currentId: string | null = targetParentId;
+    let depth = 0;
+    const MAX_DEPTH = 10;
+
+    while (currentId && depth < MAX_DEPTH) {
+      if (currentId === assetId) {
+        throw new Error("Circular reference detected");
+      }
+
+      const [parent] = await db
+        .select({ parentAssetId: assets.parentAssetId })
+        .from(assets)
+        .where(and(eq(assets.id, currentId), eq(assets.tenantId, tenantId)));
+
+      if (!parent) break;
+      currentId = parent.parentAssetId;
+      depth++;
+    }
+  }
+
+  /**
+   * Add tag to asset
+   */
+  static async addTag(id: string, tenantId: string, tag: string) {
+    const asset = (await this.getById(id, tenantId)) as any;
+    if (!asset) throw new Error("Asset not found");
+
+    const tags = JSON.parse(asset.tags || "[]");
+    if (!tags.includes(tag)) {
+      tags.push(tag);
+      await this.update(id, tenantId, { tags });
+    }
+    return tags;
+  }
+
+  /**
+   * Remove tag from asset
+   */
+  static async removeTag(id: string, tenantId: string, tag: string) {
+    const asset = (await this.getById(id, tenantId)) as any;
+    if (!asset) throw new Error("Asset not found");
+
+    const tags = JSON.parse(asset.tags || "[]");
+    const newTags = tags.filter((t: string) => t !== tag);
+
+    if (newTags.length !== tags.length) {
+      await this.update(id, tenantId, { tags: newTags });
+    }
+    return newTags;
   }
 }
