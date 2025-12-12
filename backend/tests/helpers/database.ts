@@ -37,11 +37,12 @@ export class DatabaseHelper {
 
     const tables = [
       'audit_logs',
-      // 'work_order_parts',
+      'work_order_labor',
+      'work_order_parts',
       'work_order_tasks',
       'work_orders',
       'alerts',
-      // 'parts',
+      'parts',
       'assets',
       'sites',
       'users',

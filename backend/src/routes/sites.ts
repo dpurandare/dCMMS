@@ -1,7 +1,81 @@
 import { FastifyPluginAsync } from "fastify";
+import { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import { SiteService } from "../services/site.service";
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 
-const siteRoutes: FastifyPluginAsync = async (server) => {
+const siteRoutes: FastifyPluginAsync = async (fastify) => {
+  // Set up Zod validation for this plugin context
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
+
+  const server = fastify.withTypeProvider<ZodTypeProvider>();
+
+  // Use the shared authentication preHandler (assuming it exists on the instance)
+  // We need to cast server to any because withTypeProvider changes the type signature
+  // and authenticate might not be visible in the ZodTypeProvider version if not typed globally
+  const authenticate = (fastify as any).authenticate;
+
+  // Schema definitions
+  const SiteSchema = z.object({
+    id: z.string().uuid(),
+    siteId: z.string(),
+    name: z.string(),
+    description: z.string().nullable().optional(),
+    type: z.string().optional(),
+    energyType: z.enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"]).nullable().optional(),
+    location: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
+    state: z.string().nullable().optional(),
+    postalCode: z.string().nullable().optional(),
+    country: z.string().nullable().optional(),
+    timezone: z.string().nullable().optional(),
+    contactName: z.string().nullable().optional(),
+    contactEmail: z.string().email().nullable().optional(),
+    contactPhone: z.string().nullable().optional(),
+    assetCount: z.number().optional(),
+    createdAt: z.date().optional(),
+    updatedAt: z.date().optional(),
+  });
+
+  const CreateSiteSchema = z.object({
+    siteId: z.string().min(2).max(20).optional(),
+    name: z.string().min(1).max(255),
+    description: z.string().optional(),
+    type: z.string().optional(),
+    energyType: z.enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"]).optional(),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
+    country: z.string().optional(),
+    timezone: z.string().optional(),
+    contactName: z.string().optional(),
+    contactEmail: z.string().email().optional(),
+    contactPhone: z.string().optional(),
+    isActive: z.boolean().optional(),
+  });
+
+  const UpdateSiteSchema = CreateSiteSchema.partial();
+
+  const SiteStatisticsSchema = z.object({
+    site: SiteSchema,
+    statistics: z.object({
+      assetsByStatus: z.array(z.object({
+        status: z.string(),
+        count: z.number()
+      })),
+      assetsByCriticality: z.array(z.object({
+        criticality: z.string(),
+        count: z.number()
+      })),
+    })
+  });
+
   // GET /api/v1/sites
   server.get(
     "/",
@@ -10,55 +84,42 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
         description: "List sites with pagination and filters",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "number", default: 1 },
-            limit: { type: "number", default: 20 },
-            status: { type: "string", enum: ["active", "inactive"] },
-            search: { type: "string" },
-            sortBy: { type: "string", default: "createdAt" },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
-          },
-        },
+        querystring: z.object({
+          page: z.coerce.number().default(1),
+          limit: z.coerce.number().default(20),
+          status: z.string().optional(),
+          search: z.string().optional(),
+          sortBy: z.string().default("createdAt"),
+          sortOrder: z.enum(["asc", "desc"]).default("desc"),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              data: { type: "array" },
-              pagination: {
-                type: "object",
-                properties: {
-                  page: { type: "number" },
-                  limit: { type: "number" },
-                  total: { type: "number" },
-                  totalPages: { type: "number" },
-                },
-              },
-            },
-          },
+          200: z.object({
+            data: z.array(SiteSchema),
+            pagination: z.object({
+              page: z.number(),
+              limit: z.number(),
+              total: z.number(),
+              totalPages: z.number(),
+            }),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
-    async (request, reply) => {
-      const user = request.user;
-      const query = request.query as any;
+    async (request) => {
+      const user = request.user as any;
+      const { page, limit, status, search, sortBy, sortOrder } = request.query;
 
       const filters = {
-        status: query.status,
-        search: query.search,
+        status,
+        search,
       };
 
       const pagination = {
-        page: query.page || 1,
-        limit: Math.min(query.limit || 20, 100),
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
+        page,
+        limit: Math.min(limit, 100),
+        sortBy,
+        sortOrder,
       };
 
       const result = await SiteService.list(user.tenantId, filters, pagination);
@@ -74,37 +135,23 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
         description: "Get site by ID with asset count",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              siteCode: { type: "string" },
-              name: { type: "string" },
-              assetCount: { type: "number" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: SiteSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       const site = await SiteService.getById(id, user.tenantId);
 
@@ -129,18 +176,23 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
           "Get site statistics (asset counts by status and criticality)",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        response: {
+          200: SiteStatisticsSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+        }
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       const stats = await SiteService.getStatistics(id, user.tenantId);
 
@@ -164,63 +216,25 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
         description: "Create a new site",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["name"],
-          properties: {
-            siteCode: { type: "string", minLength: 2, maxLength: 20 },
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: { type: "string" },
-            address: { type: "string" },
-            city: { type: "string" },
-            state: { type: "string" },
-            postalCode: { type: "string" },
-            country: { type: "string" },
-            timezone: { type: "string" },
-            contactName: { type: "string" },
-            contactEmail: { type: "string", format: "email" },
-            contactPhone: { type: "string" },
-            isActive: { type: "boolean" },
-          },
-        },
+        body: CreateSiteSchema,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              siteCode: { type: "string" },
-              name: { type: "string" },
-            },
-          },
+          201: SiteSchema,
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const body = request.body as any;
+      const user = request.user as any;
+      const body = request.body;
 
-      // Generate site code if not provided
-      const siteCode =
-        body.siteCode || SiteService.generateSiteCode(body.name, user.tenantId);
+      // Generate site ID if not provided
+      const siteId =
+        body.siteId || SiteService.generateSiteCode(body.name, user.tenantId);
 
       const site = await SiteService.create({
         tenantId: user.tenantId,
-        siteCode,
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        address: body.address,
-        city: body.city,
-        state: body.state,
-        postalCode: body.postalCode,
-        country: body.country,
-        timezone: body.timezone,
-        contactName: body.contactName,
-        contactEmail: body.contactEmail,
-        contactPhone: body.contactPhone,
-        isActive: body.isActive,
+        siteId,
+        ...body,
       });
 
       return reply.status(201).send(site);
@@ -235,55 +249,25 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
         description: "Update site",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: { type: "string" },
-            address: { type: "string" },
-            city: { type: "string" },
-            state: { type: "string" },
-            postalCode: { type: "string" },
-            country: { type: "string" },
-            timezone: { type: "string" },
-            contactName: { type: "string" },
-            contactEmail: { type: "string", format: "email" },
-            contactPhone: { type: "string" },
-            isActive: { type: "boolean" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        body: UpdateSiteSchema,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              siteCode: { type: "string" },
-              name: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: SiteSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
-      const body = request.body as any;
+      const user = request.user as any;
+      const { id } = request.params;
+      const body = request.body;
 
       const site = await SiteService.update(id, user.tenantId, body);
 
@@ -307,42 +291,30 @@ const siteRoutes: FastifyPluginAsync = async (server) => {
         description: "Delete site (soft delete, cannot delete if has assets)",
         tags: ["sites"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          400: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: z.object({
+            message: z.string(),
+          }),
+          400: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       try {
         const site = await SiteService.delete(id, user.tenantId);

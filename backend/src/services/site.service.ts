@@ -16,7 +16,7 @@ export interface PaginationParams {
 
 export interface CreateSiteData {
   tenantId: string;
-  siteCode: string;
+  siteId: string;
   name: string;
   description?: string;
   type?: string;
@@ -92,6 +92,8 @@ export class SiteService {
           like(sites.name, `%${filters.search}%`),
           like(sites.siteId, `%${filters.search}%`),
           like(sites.location, `%${filters.search}%`),
+          like(sites.city, `%${filters.search}%`),
+          like(sites.state, `%${filters.search}%`),
         )!,
       );
     }
@@ -172,12 +174,20 @@ export class SiteService {
       .insert(sites)
       .values({
         tenantId: data.tenantId,
-        siteId: data.siteCode,
+        siteId: data.siteId,
         name: data.name,
         type: data.type || "Unknown",
         energyType: data.energyType,
         location: location || "Unknown",
-        // isActive removed
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        timezone: data.timezone,
+        contactName: data.contactName,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
       })
       .returning();
 
@@ -215,7 +225,8 @@ export class SiteService {
     }
 
     const [deleted] = await db
-      .delete(sites)
+      .update(sites)
+      .set({ isActive: false, updatedAt: new Date() })
       .where(and(eq(sites.id, id), eq(sites.tenantId, tenantId)))
       .returning();
 

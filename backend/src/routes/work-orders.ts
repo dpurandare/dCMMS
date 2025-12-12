@@ -1,398 +1,360 @@
-import { FastifyPluginAsync } from "fastify";
+import { FastifyInstance } from "fastify";
+import { ZodTypeProvider, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import { z } from "zod";
 import { WorkOrderService } from "../services/work-order.service";
+import { workOrderStatusEnum } from "../db/schema";
 
-const workOrderRoutes: FastifyPluginAsync = async (server) => {
-  // GET /api/v1/work-orders
-  server.get(
-    "/",
-    {
-      schema: {
-        description: "List work orders with pagination and filters",
-        tags: ["work-orders"],
-        security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "number", default: 1 },
-            limit: { type: "number", default: 20 },
-            status: { type: "string" },
-            priority: { type: "string" },
-            type: { type: "string" },
-            assignedTo: { type: "string" },
-            siteId: { type: "string" },
-            assetId: { type: "string" },
-            search: { type: "string" },
-            sortBy: { type: "string", default: "createdAt" },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              data: { type: "array" },
-              pagination: {
-                type: "object",
-                properties: {
-                  page: { type: "number" },
-                  limit: { type: "number" },
-                  total: { type: "number" },
-                  totalPages: { type: "number" },
-                },
-              },
-            },
-          },
-        },
-      },
-      preHandler: server.authenticate,
-    },
-    async (request, reply) => {
-      const user = request.user;
-      const query = request.query as any;
+const WorkOrderStatusSchema = z.enum([
+  "draft",
+  "open",
+  "scheduled",
+  "in_progress",
+  "on_hold",
+  "completed",
+  "closed",
+  "cancelled",
+]);
 
-      const filters = {
-        status: query.status,
-        priority: query.priority,
-        type: query.type,
-        assignedTo: query.assignedTo,
-        siteId: query.siteId,
-        assetId: query.assetId,
-        search: query.search,
-      };
+const WorkOrderTypeSchema = z.enum([
+  "preventive",
+  "corrective",
+  "predictive",
+  "inspection",
+  "emergency",
+]);
 
-      const pagination = {
-        page: query.page || 1,
-        limit: Math.min(query.limit || 20, 100), // Max 100 items per page
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-      };
+const WorkOrderPrioritySchema = z.enum([
+  "critical",
+  "high",
+  "medium",
+  "low",
+]);
 
-      const result = await WorkOrderService.list(
-        user.tenantId,
-        filters,
-        pagination,
-      );
-      return result;
-    },
-  );
+const CreateWorkOrderSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  type: WorkOrderTypeSchema,
+  priority: WorkOrderPrioritySchema,
+  siteId: z.string().uuid(),
+  assetId: z.string().uuid().optional(),
+  assignedTo: z.string().uuid().optional(),
+  scheduledStart: z.string().datetime().optional(),
+  scheduledEnd: z.string().datetime().optional(),
+  estimatedHours: z.number().optional(),
+  metadata: z.any().optional(),
+});
 
-  // GET /api/v1/work-orders/:id
-  server.get(
-    "/:id",
-    {
-      schema: {
-        description: "Get work order by ID",
-        tags: ["work-orders"],
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              workOrderId: { type: "string" },
-              title: { type: "string" },
-              description: { type: "string" },
-              type: { type: "string" },
-              priority: { type: "string" },
-              status: { type: "string" },
-              tasks: { type: "array" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
-        },
-      },
-      preHandler: server.authenticate,
-    },
-    async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+const UpdateWorkOrderSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  type: WorkOrderTypeSchema.optional(),
+  priority: WorkOrderPrioritySchema.optional(),
+  status: WorkOrderStatusSchema.optional(),
+  assignedTo: z.string().uuid().optional(),
+  scheduledStart: z.string().datetime().optional(),
+  scheduledEnd: z.string().datetime().optional(),
+  estimatedHours: z.number().optional(),
+  actualHours: z.number().optional(),
+  metadata: z.any().optional(),
+});
 
-      const workOrder = await WorkOrderService.getById(id, user.tenantId);
+const TransitionSchema = z.object({
+  status: WorkOrderStatusSchema
+});
 
-      if (!workOrder) {
-        return reply.status(404).send({
-          statusCode: 404,
-          error: "Not Found",
-          message: "Work order not found",
-        });
-      }
+const CreateTaskSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  taskOrder: z.number().int()
+});
 
-      return workOrder;
-    },
-  );
+const UpdateTaskSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  isCompleted: z.boolean().optional(),
+  notes: z.string().optional()
+});
 
-  // POST /api/v1/work-orders
+const AddPartSchema = z.object({
+  partId: z.string().uuid(),
+  quantityRequired: z.number().int().positive(),
+  notes: z.string().optional()
+});
+
+const AddLaborSchema = z.object({
+  userId: z.string().uuid(),
+  hours: z.number().positive(),
+  description: z.string().optional()
+});
+
+export const workOrderRoutes = async (app: FastifyInstance) => {
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+  const server = app.withTypeProvider<ZodTypeProvider>();
+  const authenticate = (app as any).authenticate;
+
   server.post(
     "/",
     {
       schema: {
-        description: "Create a new work order",
         tags: ["work-orders"],
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["title", "type", "priority", "siteId"],
-          properties: {
-            title: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: {
-              type: "string",
-              enum: [
-                "corrective",
-                "preventive",
-                "predictive",
-                "inspection",
-                "emergency",
-              ],
-            },
-            priority: {
-              type: "string",
-              enum: ["critical", "high", "medium", "low"],
-            },
-            status: { type: "string", enum: ["draft", "open"] },
-            siteId: { type: "string", format: "uuid" },
-            assetId: { type: "string", format: "uuid" },
-            assignedTo: { type: "string", format: "uuid" },
-            scheduledStartDate: { type: "string", format: "date-time" },
-            scheduledEndDate: { type: "string", format: "date-time" },
-            estimatedHours: { type: "number" },
-          },
-        },
+        body: CreateWorkOrderSchema,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              workOrderId: { type: "string" },
-              title: { type: "string" },
-              status: { type: "string" },
-            },
-          },
+          201: z.object({
+            id: z.string().uuid(),
+            workOrderId: z.string(),
+            status: z.string(),
+          }),
         },
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const body = request.body as any;
-
-      // Generate work order ID
-      const workOrderId = await WorkOrderService.generateWorkOrderId(
-        user.tenantId,
-      );
-
-      const workOrder = await WorkOrderService.create({
+      const user = request.user as any;
+      const data = {
+        ...request.body,
         tenantId: user.tenantId,
-        workOrderId,
-        title: body.title,
-        description: body.description,
-        type: body.type,
-        priority: body.priority,
-        status: body.status || "draft",
-        siteId: body.siteId,
-        assetId: body.assetId,
-        assignedTo: body.assignedTo,
-        scheduledEndDate: body.scheduledEndDate
-          ? new Date(body.scheduledEndDate)
-          : undefined,
-        estimatedHours: body.estimatedHours?.toString(),
         createdBy: user.id,
-      });
+        scheduledStart: request.body.scheduledStart ? new Date(request.body.scheduledStart) : undefined,
+        scheduledEnd: request.body.scheduledEnd ? new Date(request.body.scheduledEnd) : undefined,
+      };
 
+      const workOrder = await WorkOrderService.create(data);
       return reply.status(201).send(workOrder);
-    },
+    }
   );
 
-  // PATCH /api/v1/work-orders/:id
+  server.get(
+    "/",
+    {
+      schema: {
+        tags: ["work-orders"],
+        querystring: z.object({
+          page: z.coerce.number().default(1),
+          limit: z.coerce.number().default(10),
+          status: z.string().optional(),
+          priority: z.string().optional(),
+          type: z.string().optional(),
+          siteId: z.string().uuid().optional(),
+          assignedTo: z.string().uuid().optional(),
+          assetId: z.string().uuid().optional(),
+          search: z.string().optional(),
+          sortBy: z.string().optional(),
+          sortOrder: z.enum(["asc", "desc"]).optional(),
+        }),
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: authenticate,
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { page, limit, sortBy, sortOrder, ...filters } = request.query;
+
+      return WorkOrderService.list(
+        user.tenantId,
+        filters,
+        { page, limit, sortBy, sortOrder }
+      );
+    }
+  );
+
+  server.get(
+    "/:id",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: authenticate,
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      return WorkOrderService.getById(id, user.tenantId);
+    }
+  );
+
   server.patch(
     "/:id",
     {
       schema: {
-        description: "Update work order",
         tags: ["work-orders"],
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        body: UpdateWorkOrderSchema,
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            title: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: {
-              type: "string",
-              enum: [
-                "corrective",
-                "preventive",
-                "predictive",
-                "inspection",
-                "emergency",
-              ],
-            },
-            priority: {
-              type: "string",
-              enum: ["critical", "high", "medium", "low"],
-            },
-            status: {
-              type: "string",
-              enum: [
-                "draft",
-                "open",
-                "in_progress",
-                "on_hold",
-                "completed",
-                "cancelled",
-              ],
-            },
-            assignedTo: { type: "string", format: "uuid" },
-            scheduledStartDate: { type: "string", format: "date-time" },
-            scheduledEndDate: { type: "string", format: "date-time" },
-            actualStartDate: { type: "string", format: "date-time" },
-            actualEndDate: { type: "string", format: "date-time" },
-            estimatedHours: { type: "number" },
-            actualHours: { type: "number" },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              workOrderId: { type: "string" },
-              title: { type: "string" },
-              status: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
-        },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
-    async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
-      const body = request.body as any;
-
-      const updates: any = {};
-
-      if (body.title !== undefined) updates.title = body.title;
-      if (body.description !== undefined)
-        updates.description = body.description;
-      if (body.type !== undefined) updates.type = body.type;
-      if (body.priority !== undefined) updates.priority = body.priority;
-      if (body.status !== undefined) updates.status = body.status;
-      if (body.assignedTo !== undefined) updates.assignedTo = body.assignedTo;
-      if (body.estimatedHours !== undefined)
-        updates.estimatedHours = body.estimatedHours.toString();
-      if (body.actualHours !== undefined)
-        updates.actualHours = body.actualHours.toString();
-
-      if (body.scheduledStartDate)
-        updates.scheduledStartDate = new Date(body.scheduledStartDate);
-      if (body.scheduledEndDate)
-        updates.scheduledEndDate = new Date(body.scheduledEndDate);
-      if (body.actualStartDate)
-        updates.actualStartDate = new Date(body.actualStartDate);
-      if (body.actualEndDate)
-        updates.actualEndDate = new Date(body.actualEndDate);
-
-      const workOrder = await WorkOrderService.update(
-        id,
-        user.tenantId,
-        updates,
-      );
-
-      if (!workOrder) {
-        return reply.status(404).send({
-          statusCode: 404,
-          error: "Not Found",
-          message: "Work order not found",
-        });
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      const data = {
+        ...request.body,
+        scheduledStart: request.body.scheduledStart ? new Date(request.body.scheduledStart) : undefined,
+        scheduledEnd: request.body.scheduledEnd ? new Date(request.body.scheduledEnd) : undefined,
       }
-
-      return workOrder;
-    },
+      return WorkOrderService.update(id, user.tenantId, data);
+    }
   );
 
-  // DELETE /api/v1/work-orders/:id
+  server.post(
+    "/:id/transition",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid() }),
+        body: TransitionSchema,
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      const { status } = request.body;
+      return WorkOrderService.transitionStatus(id, user.tenantId, status);
+    }
+  );
+
+  // Tasks
+  server.post(
+    "/:id/tasks",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid() }),
+        body: CreateTaskSchema,
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      return WorkOrderService.addTask(id, user.tenantId, request.body);
+    }
+  );
+
+  server.patch(
+    "/:id/tasks/:taskId",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid(), taskId: z.string().uuid() }),
+        body: UpdateTaskSchema,
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { taskId } = request.params;
+      // Note: updateTask checks tenant via WO association
+      return WorkOrderService.updateTask(taskId, user.tenantId, request.body);
+    }
+  );
+
+  server.delete(
+    "/:id/tasks/:taskId",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid(), taskId: z.string().uuid() }),
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { taskId } = request.params;
+      await WorkOrderService.deleteTask(taskId, user.tenantId);
+      return { success: true };
+    }
+  );
+
+  // Parts
+  server.post(
+    "/:id/parts",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid() }),
+        body: AddPartSchema,
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      return WorkOrderService.addPart(id, user.tenantId, request.body);
+    }
+  );
+
+  server.delete(
+    "/:id/parts/:partId",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid(), partId: z.string().uuid() }),
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { partId } = request.params;
+      await WorkOrderService.removePart(partId, user.tenantId);
+      return { success: true };
+    }
+  );
+
+  // Labor
+  server.post(
+    "/:id/labor",
+    {
+      schema: {
+        tags: ["work-orders"],
+        params: z.object({ id: z.string().uuid() }),
+        body: AddLaborSchema,
+        security: [{ bearerAuth: [] }]
+      },
+      preHandler: authenticate
+    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      return WorkOrderService.addLabor(id, user.tenantId, request.body);
+    }
+  );
+
   server.delete(
     "/:id",
     {
       schema: {
-        description: "Delete work order (soft delete)",
         tags: ["work-orders"],
+        params: z.object({
+          id: z.string().uuid(),
+        }),
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
         response: {
-          200: {
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
-        },
+          200: z.object({ success: z.boolean() })
+        }
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
-    async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
-
-      const workOrder = await WorkOrderService.delete(id, user.tenantId);
-
-      if (!workOrder) {
-        return reply.status(404).send({
-          statusCode: 404,
-          error: "Not Found",
-          message: "Work order not found",
-        });
-      }
-
-      return {
-        message: "Work order deleted successfully",
-      };
-    },
+    async (request) => {
+      const user = request.user as any;
+      const { id } = request.params;
+      await WorkOrderService.delete(id, user.tenantId);
+      return { success: true };
+    }
   );
 };
-
 export default workOrderRoutes;

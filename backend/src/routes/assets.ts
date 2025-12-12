@@ -1,7 +1,72 @@
 import { FastifyPluginAsync } from "fastify";
+import { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import { AssetService } from "../services/asset.service";
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 
-const assetRoutes: FastifyPluginAsync = async (server) => {
+const assetRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.setValidatorCompiler(validatorCompiler);
+  fastify.setSerializerCompiler(serializerCompiler);
+
+  const server = fastify.withTypeProvider<ZodTypeProvider>();
+  const authenticate = (fastify as any).authenticate;
+
+  // Schema Definitions
+  const AssetSchema = z.object({
+    id: z.string().uuid(),
+    tenantId: z.string().uuid(),
+    siteId: z.string().uuid(),
+    parentAssetId: z.string().uuid().nullable().optional(),
+    assetId: z.string(),
+    name: z.string(),
+    description: z.string().nullable().optional(),
+    type: z.string(),
+    manufacturer: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+    serialNumber: z.string().nullable().optional(),
+    location: z.string().nullable().optional(),
+    latitude: z.string().nullable().optional(), // Decimal as string from DB
+    longitude: z.string().nullable().optional(),
+    status: z.string(),
+    tags: z.string().nullable().optional(), // JSON string
+    image: z.string().nullable().optional(),
+    metadata: z.string().nullable().optional(), // JSON string
+    createdAt: z.date(),
+    updatedAt: z.date(),
+    children: z.array(z.any()).optional(), // Recursive definition hard in Zod, keeping Any for now
+  });
+
+  const CreateAssetSchema = z.object({
+    siteId: z.string().uuid(),
+    assetTag: z.string().optional(), // Optional, auto-generated
+    name: z.string().min(1).max(255),
+    description: z.string().optional(),
+    type: z.enum([
+      "inverter", "transformer", "panel", "disconnector", "meter",
+      "turbine", "access_point", "gateway", "weather_station", "sensor", "other"
+    ]).default("other"),
+    manufacturer: z.string().optional(),
+    model: z.string().optional(),
+    serialNumber: z.string().optional(),
+    location: z.string().optional(),
+    parentAssetId: z.string().uuid().optional(),
+    status: z.enum(["operational", "down", "maintenance", "retired"]).default("operational"),
+    criticality: z.enum(["critical", "high", "medium", "low"]).optional(),
+    installationDate: z.string().optional(),
+    warrantyExpiryDate: z.string().optional(),
+    specifications: z.any().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    tags: z.array(z.string()).optional(),
+    image: z.string().optional(),
+    metadata: z.any().optional(),
+  });
+
+  const UpdateAssetSchema = CreateAssetSchema.partial();
+
   // GET /api/v1/assets
   server.get(
     "/",
@@ -10,61 +75,40 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
         description: "List assets with pagination and filters",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "number", default: 1 },
-            limit: { type: "number", default: 20 },
-            siteId: { type: "string" },
-            status: { type: "string" },
-            criticality: { type: "string" },
-            parentAssetId: { type: "string" },
-            search: { type: "string" },
-            sortBy: { type: "string", default: "createdAt" },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
-          },
-        },
+        querystring: z.object({
+          page: z.coerce.number().default(1),
+          limit: z.coerce.number().default(20),
+          siteId: z.string().uuid().optional(),
+          status: z.string().optional(),
+          criticality: z.string().optional(),
+          parentAssetId: z.string().uuid().optional(),
+          search: z.string().optional(),
+          sortBy: z.string().default("createdAt"),
+          sortOrder: z.enum(["asc", "desc"]).default("desc"),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              data: { type: "array" },
-              pagination: {
-                type: "object",
-                properties: {
-                  page: { type: "number" },
-                  limit: { type: "number" },
-                  total: { type: "number" },
-                  totalPages: { type: "number" },
-                },
-              },
-            },
-          },
+          200: z.object({
+            data: z.array(AssetSchema),
+            pagination: z.object({
+              page: z.number(),
+              limit: z.number(),
+              total: z.number(),
+              totalPages: z.number(),
+            }),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
-    async (request, _reply) => {
-      const user = request.user;
-      const query = request.query as any;
-
-      const filters = {
-        siteId: query.siteId,
-        status: query.status,
-        criticality: query.criticality,
-        parentAssetId: query.parentAssetId,
-        search: query.search,
-      };
+    async (request) => {
+      const user = request.user as any;
+      const { page, limit, sortBy, sortOrder, ...filters } = request.query;
 
       const pagination = {
-        page: query.page || 1,
-        limit: Math.min(query.limit || 20, 100),
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
+        page,
+        limit: Math.min(limit, 100),
+        sortBy,
+        sortOrder,
       };
 
       const result = await AssetService.list(
@@ -84,38 +128,23 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
         description: "Get asset by ID with children",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              assetTag: { type: "string" },
-              name: { type: "string" },
-              status: { type: "string" },
-              children: { type: "array" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: AssetSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       const asset = await AssetService.getById(id, user.tenantId);
 
@@ -136,21 +165,26 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
     "/:id/hierarchy",
     {
       schema: {
-        description: "Get asset hierarchy (parent and children)",
+        description: "Get asset hierarchy (recursive)",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        response: {
+          200: AssetSchema, // Recursive schema checks are lax in Zod usually, or use lazy
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       const hierarchy = await AssetService.getHierarchy(id, user.tenantId);
 
@@ -174,50 +208,16 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
         description: "Create a new asset",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["siteId", "name", "type"],
-          properties: {
-            siteId: { type: "string", format: "uuid" },
-            assetTag: { type: "string" },
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: { type: "string" },
-            manufacturer: { type: "string" },
-            model: { type: "string" },
-            serialNumber: { type: "string" },
-            location: { type: "string" },
-            parentAssetId: { type: "string", format: "uuid" },
-            status: {
-              type: "string",
-              enum: ["operational", "down", "maintenance", "retired"],
-            },
-            criticality: {
-              type: "string",
-              enum: ["critical", "high", "medium", "low"],
-            },
-            installationDate: { type: "string", format: "date-time" },
-            warrantyExpiryDate: { type: "string", format: "date-time" },
-            specifications: { type: "object" },
-          },
-        },
+        body: CreateAssetSchema,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              assetTag: { type: "string" },
-              name: { type: "string" },
-              status: { type: "string" },
-            },
-          },
+          201: AssetSchema,
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const body = request.body as any;
+      const user = request.user as any;
+      const body = request.body;
 
       // Generate asset tag if not provided
       const assetTag =
@@ -230,25 +230,10 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
 
       const asset = await AssetService.create({
         tenantId: user.tenantId,
-        siteId: body.siteId,
         assetTag,
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        manufacturer: body.manufacturer,
-        model: body.model,
-        serialNumber: body.serialNumber,
-        location: body.location,
-        parentAssetId: body.parentAssetId,
-        status: body.status,
-        criticality: body.criticality,
-        installationDate: body.installationDate
-          ? new Date(body.installationDate)
-          : undefined,
-        warrantyExpiryDate: body.warrantyExpiryDate
-          ? new Date(body.warrantyExpiryDate)
-          : undefined,
-        specifications: body.specifications,
+        ...body,
+        installationDate: body.installationDate ? new Date(body.installationDate) : undefined,
+        warrantyExpiryDate: body.warrantyExpiryDate ? new Date(body.warrantyExpiryDate) : undefined,
       });
 
       return reply.status(201).send(asset);
@@ -263,87 +248,29 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
         description: "Update asset",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            type: { type: "string" },
-            manufacturer: { type: "string" },
-            model: { type: "string" },
-            serialNumber: { type: "string" },
-            location: { type: "string" },
-            status: {
-              type: "string",
-              enum: ["operational", "down", "maintenance", "retired"],
-            },
-            criticality: {
-              type: "string",
-              enum: ["critical", "high", "medium", "low"],
-            },
-            installationDate: { type: "string", format: "date-time" },
-            warrantyExpiryDate: { type: "string", format: "date-time" },
-            lastMaintenanceDate: { type: "string", format: "date-time" },
-            specifications: { type: "object" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        body: UpdateAssetSchema,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              assetTag: { type: "string" },
-              name: { type: "string" },
-              status: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: AssetSchema,
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
-      const body = request.body as any;
+      const user = request.user as any;
+      const { id } = request.params;
+      const body = request.body;
 
-      const updates: any = {};
-
-      if (body.name !== undefined) updates.name = body.name;
-      if (body.description !== undefined)
-        updates.description = body.description;
-      if (body.type !== undefined) updates.type = body.type;
-      if (body.manufacturer !== undefined)
-        updates.manufacturer = body.manufacturer;
-      if (body.model !== undefined) updates.model = body.model;
-      if (body.serialNumber !== undefined)
-        updates.serialNumber = body.serialNumber;
-      if (body.location !== undefined) updates.location = body.location;
-      if (body.status !== undefined) updates.status = body.status;
-      if (body.criticality !== undefined)
-        updates.criticality = body.criticality;
-      if (body.specifications !== undefined)
-        updates.specifications = body.specifications;
-
-      if (body.installationDate)
-        updates.installationDate = new Date(body.installationDate);
-      if (body.warrantyExpiryDate)
-        updates.warrantyExpiryDate = new Date(body.warrantyExpiryDate);
-      if (body.lastMaintenanceDate)
-        updates.lastMaintenanceDate = new Date(body.lastMaintenanceDate);
+      const updates: any = { ...body };
+      if (body.installationDate) updates.installationDate = new Date(body.installationDate);
+      if (body.warrantyExpiryDate) updates.warrantyExpiryDate = new Date(body.warrantyExpiryDate);
 
       const asset = await AssetService.update(id, user.tenantId, updates);
 
@@ -364,45 +291,33 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
     "/:id",
     {
       schema: {
-        description: "Delete asset (cannot delete if has children)",
+        description: "Delete asset",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "string", format: "uuid" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              message: { type: "string" },
-            },
-          },
-          400: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
-          404: {
-            type: "object",
-            properties: {
-              statusCode: { type: "number" },
-              error: { type: "string" },
-              message: { type: "string" },
-            },
-          },
+          200: z.object({
+            message: z.string(),
+          }),
+          400: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const user = request.user;
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
 
       try {
         const asset = await AssetService.delete(id, user.tenantId);
@@ -431,56 +346,43 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
     },
   );
 
-  // GET /api/v1/assets/:id/health-score
-  server.get(
-    "/:id/health-score",
+  // POST /api/v1/assets/:id/tags
+  server.post(
+    "/:id/tags",
     {
       schema: {
-        description: "Get asset health score",
+        description: "Add tag to asset",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: {
-            id: { type: "string" },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        body: z.object({
+          tag: z.string().min(1),
+        }),
         response: {
-          200: {
-            type: "object",
-            properties: {
-              assetId: { type: "string" },
-              score: { type: "number" },
-              category: { type: "string" },
-              components: { type: "object" },
-              recentAlarms: { type: "number" },
-              recentWorkOrders: { type: "number" },
-              anomalyCount: { type: "number" },
-              assetAge: { type: "number" },
-              daysSinceLastMaintenance: { type: "number" },
-              calculatedAt: { type: "string" },
-            },
-          },
+          200: z.object({
+            tags: z.array(z.string()),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      const user = request.user as any;
+      const { id } = request.params;
+      const { tag } = request.body;
 
       try {
-        // Import health scoring service
-        const { createAssetHealthScoringService } =
-          await import("../services/asset-health-scoring.service");
-        const healthService = createAssetHealthScoringService(server);
-
-        // Calculate health score
-        const healthScore = await healthService.calculateHealthScore(id);
-
-        return healthScore;
+        const tags = await AssetService.addTag(id, user.tenantId, tag);
+        return { tags };
       } catch (error: any) {
-        if (error.message.includes("not found")) {
+        if (error.message === "Asset not found") {
           return reply.status(404).send({
             statusCode: 404,
             error: "Not Found",
@@ -492,66 +394,46 @@ const assetRoutes: FastifyPluginAsync = async (server) => {
     },
   );
 
-  // GET /api/v1/assets/health-scores
-  server.get(
-    "/health-scores",
+  // DELETE /api/v1/assets/:id/tags/:tag
+  server.delete(
+    "/:id/tags/:tag",
     {
       schema: {
-        description: "Get health scores for multiple assets (bulk)",
+        description: "Remove tag from asset",
         tags: ["assets"],
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            assetIds: {
-              type: "array",
-              items: { type: "string" },
-              description: "Array of asset IDs",
-            },
-          },
-        },
+        params: z.object({
+          id: z.string().uuid(),
+          tag: z.string(),
+        }),
         response: {
-          200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                assetId: { type: "string" },
-                score: { type: "number" },
-                category: { type: "string" },
-                calculatedAt: { type: "string" },
-              },
-            },
-          },
+          200: z.object({
+            tags: z.array(z.string()),
+          }),
+          404: z.object({
+            statusCode: z.number(),
+            error: z.string(),
+            message: z.string(),
+          }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: authenticate,
     },
     async (request, reply) => {
-      const query = request.query as any;
-      const assetIds = query.assetIds || [];
-
-      if (!Array.isArray(assetIds) || assetIds.length === 0) {
-        return reply.status(400).send({
-          statusCode: 400,
-          error: "Bad Request",
-          message: "assetIds must be a non-empty array",
-        });
-      }
+      const user = request.user as any;
+      const { id, tag } = request.params;
 
       try {
-        // Import health scoring service
-        const { createAssetHealthScoringService } =
-          await import("../services/asset-health-scoring.service");
-        const healthService = createAssetHealthScoringService(server);
-
-        // Calculate health scores for all assets
-        const healthScores =
-          await healthService.calculateBulkHealthScores(assetIds);
-
-        return healthScores;
+        const tags = await AssetService.removeTag(id, user.tenantId, tag);
+        return { tags };
       } catch (error: any) {
-        server.log.error({ error }, "Failed to calculate bulk health scores");
+        if (error.message === "Asset not found") {
+          return reply.status(404).send({
+            statusCode: 404,
+            error: "Not Found",
+            message: "Asset not found",
+          });
+        }
         throw error;
       }
     },
