@@ -1062,6 +1062,25 @@ export const workOrderLaborRelations = relations(workOrderLabor, ({ one }) => ({
   }),
 }));
 
+export const permitsRelations = relations(permits, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [permits.tenantId],
+    references: [tenants.id],
+  }),
+  workOrder: one(workOrders, {
+    fields: [permits.workOrderId],
+    references: [workOrders.id],
+  }),
+  issuer: one(users, {
+    fields: [permits.issuedBy],
+    references: [users.id],
+  }),
+  approver: one(users, {
+    fields: [permits.approvedBy],
+    references: [users.id],
+  }),
+}));
+
 export const alertsRelations = relations(alerts, ({ one }) => ({
   tenant: one(tenants, {
     fields: [alerts.tenantId],

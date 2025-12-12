@@ -22,6 +22,7 @@ import siteRoutes from "./routes/sites";
 import telemetryRoutes from "./routes/telemetry";
 import notificationRoutes from "./routes/notifications";
 import webhookRoutes from "./routes/webhooks";
+import permitRoutes from "./routes/permits";
 import alertRoutes from "./routes/alerts";
 import integrationRoutes from "./routes/integrations";
 import analyticsAdminRoutes from "./routes/analytics-admin";
@@ -311,6 +312,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(healthRoutes, { prefix: "/health" });
   await server.register(authRoutes, { prefix: "/api/v1/auth" });
   await server.register(workOrderRoutes, { prefix: "/api/v1/work-orders" });
+  await server.register(permitRoutes, { prefix: "/api/v1/permits" });
   await server.register(assetRoutes, { prefix: "/api/v1/assets" });
   await server.register(siteRoutes, { prefix: "/api/v1/sites" });
   await server.register(telemetryRoutes, { prefix: "/api/v1/telemetry" });

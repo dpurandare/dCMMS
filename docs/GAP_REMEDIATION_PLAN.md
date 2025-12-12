@@ -20,8 +20,8 @@ The immediate goal is to **bridge the gap between the Analytics-heavy current im
 - [ ] **Auth**: Implement "Long-lived Token" or "Offline PIN" strategy.
 
 #### 0.2 Safety Gates (Compliance Risk)
-- [ ] **Schema**: Implement `Permit` table (LOTO).
-- [ ] **Guard**: Add `PermitGuard` to critical WO transitions (e.g., cannot start 'High Voltage' task without active permit).
+- [x] **Schema**: Implement `Permit` table (LOTO).
+- [x] **Guard**: Add `PermitGuard` to critical WO transitions (e.g., cannot start 'High Voltage' task without active permit).
 
 ### Phase 1: Operational Tables (Weeks 2-3)
 **Goal:** Enable basic material handling.
