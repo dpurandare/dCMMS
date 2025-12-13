@@ -44,6 +44,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   google_fonts: ^6.3.3
   flutter_animate: ^4.5.2
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:

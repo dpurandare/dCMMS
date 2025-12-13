@@ -148,35 +148,40 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string,
-  ): Promise<EmailDeliveryStatus> {
+    text?: string
+  ): Promise<EmailDeliveryStatus> { // Removed trailing comma here
     try {
-      // TODO: Implement SMTP integration using Nodemailer
-      // const nodemailer = require('nodemailer');
-      // const transporter = nodemailer.createTransport({
-      //   host: process.env.SMTP_HOST,
-      //   port: parseInt(process.env.SMTP_PORT || '587'),
-      //   secure: process.env.SMTP_SECURE === 'true',
-      //   auth: {
-      //     user: process.env.SMTP_USER,
-      //     pass: process.env.SMTP_PASSWORD,
-      //   },
-      // });
-      // const info = await transporter.sendMail({
-      //   from: `${this.fromName} <${this.fromEmail}>`,
-      //   to,
-      //   subject,
-      //   html,
-      //   text: text || this.stripHtml(html),
-      // });
+      // Implement SMTP integration using Nodemailer
+      const nodemailer = await import("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
 
-      this.fastify.log.info({ to, subject }, "[SMTP] Email would be sent here");
+      const info = await transporter.sendMail({
+        from: `"${this.fromName}" <${this.fromEmail}>`, // Fixed "from" format
+        to,
+        subject,
+        html,
+        text: text || this.stripHtml(html),
+      });
+
+      this.fastify.log.info(
+        { to, subject, messageId: info.messageId },
+        "[SMTP] Email sent via Nodemailer"
+      );
 
       return {
-        messageId: `smtp-${Date.now()}`,
+        messageId: info.messageId,
         status: "sent",
       };
     } catch (error) {
+      this.fastify.log.error({ error, to, subject }, "SMTP Send Error"); // Log the error
       throw new Error(`SMTP error: ${(error as Error).message}`);
     }
   }

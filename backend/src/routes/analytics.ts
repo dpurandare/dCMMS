@@ -80,18 +80,56 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
         const { site_id, start_date, end_date } = request.query;
 
         // Parse dates if provided
-        const startDate = start_date ? new Date(start_date) : undefined;
-        const endDate = end_date ? new Date(end_date) : undefined;
+        const endDate = end_date ? new Date(end_date) : new Date();
+        // Default to 30 days if no start date
+        const startDate = start_date
+          ? new Date(start_date)
+          : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        // Calculate KPIs
-        const kpis = await kpiService.calculateKPIs({
+        // Calculate current KPIs
+        const currentKpis = await kpiService.calculateKPIs({
           tenantId,
           siteId: site_id,
           startDate,
           endDate,
         });
 
-        return reply.send(kpis);
+        // Calculate previous period dates
+        const duration = endDate.getTime() - startDate.getTime();
+        const prevEndDate = new Date(startDate.getTime());
+        const prevStartDate = new Date(prevEndDate.getTime() - duration);
+
+        // Calculate previous KPIs
+        const prevKpis = await kpiService.calculateKPIs({
+          tenantId,
+          siteId: site_id,
+          startDate: prevStartDate,
+          endDate: prevEndDate,
+        });
+
+        // helper to calculate trend
+        const calculateTrend = (current: number, previous: number) => {
+          if (previous === 0) return { value: 0, direction: "neutral" };
+          const change = ((current - previous) / previous) * 100;
+          return {
+            value: parseFloat(Math.abs(change).toFixed(1)),
+            direction: change > 0 ? "up" : change < 0 ? "down" : "neutral",
+            // Context aware direction could be added here (e.g. MTTR down is good, Availability down is bad)
+            // For now, we just report the math direction.
+          };
+        };
+
+        const summaryTrends = {
+          mttr: calculateTrend(currentKpis.mttr, prevKpis.mttr),
+          mtbf: calculateTrend(currentKpis.mtbf, prevKpis.mtbf),
+          completionRate: calculateTrend(currentKpis.completionRate, prevKpis.completionRate),
+          availability: calculateTrend(currentKpis.availability, prevKpis.availability),
+        };
+
+        return reply.send({
+          ...currentKpis,
+          summaryTrends
+        });
       } catch (error) {
         fastify.log.error({ error }, "Failed to get KPIs");
         return reply.status(500).send({
@@ -106,11 +144,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     Querystring: {
       site_id?: string;
       metric:
-        | "mttr"
-        | "mtbf"
-        | "completion_rate"
-        | "availability"
-        | "pm_compliance";
+      | "mttr"
+      | "mtbf"
+      | "completion_rate"
+      | "availability"
+      | "pm_compliance";
       days?: number;
     };
   }>(
@@ -169,11 +207,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
             date: start.toISOString().split("T")[0],
             value:
               kpis[
-                metric === "completion_rate"
-                  ? "completionRate"
-                  : metric === "pm_compliance"
-                    ? "pmCompliance"
-                    : metric
+              metric === "completion_rate"
+                ? "completionRate"
+                : metric === "pm_compliance"
+                  ? "pmCompliance"
+                  : metric
               ],
           });
         }

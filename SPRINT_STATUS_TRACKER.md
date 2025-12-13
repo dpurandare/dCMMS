@@ -15,7 +15,7 @@
 | -------------------------- | ------------------------------- |
 | **Total Sprints**          | 19 (Sprint 0-18)                |
 | **Completed Sprints**      | 19 (100%)                       |
-| **In Progress Sprints**    | 0                               |
+| **In Progress Sprints**    | Sprint 4 (Mobile Work Orders)   |
 | **Total Tasks**            | 107 planned (107 complete)      |
 | **Completed Tasks**        | 107 (100%)                      |
 | **Story Points Delivered** | 500+ points (541 total planned) |
@@ -23,6 +23,18 @@
 ---
 
 ## Sprint Completion Status
+
+### 🔄 Sprint 4: Work Order Frontend & Mobile App (Weeks 11-12) - **IN PROGRESS**
+**Goal:** Implement Work Order UI and Mobile Offline capabilities
+
+- [ ] **DCMMS-038** - Mobile Foundation & Auth
+- [ ] **DCMMS-039** - Mobile Work Order List
+- [ ] **DCMMS-040** - Mobile Work Order Details
+- [ ] **DCMMS-041** - Mobile Sync Service
+
+**Status:** 🔄 In Progress (0/4 tasks)
+
+---
 
 ### ✅ Sprint 0: Foundation Setup (Weeks 1-4) - **COMPLETE**
 **Goal:** Cloud-agnostic architecture, design system, high-fidelity UI mockups, and development environment
