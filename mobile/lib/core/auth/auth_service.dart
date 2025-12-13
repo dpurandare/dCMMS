@@ -14,29 +14,35 @@ class AuthService {
   Future<bool> login(String email, String password) async {
     try {
       // 1. Call API
-      // final response = await _dio.post('/auth/login', data: {'email': email, 'password': password});
-      // final token = response.data['token'];
-      // final user = response.data['user'];
+      // Use 10.0.2.2 for Android Emulator to access host localhost
+      // In a real app, this should be configurable
+      _dio.options.baseUrl = 'http://10.0.2.2:3001/api/v1';
 
-      // MOCK implementation for now
-      await Future.delayed(const Duration(seconds: 1));
-      if (email == 'fail') throw Exception('Invalid credentials');
-
-      const token = 'mock_token_123';
-      final user = User(
-        id: 'user_1',
-        username: 'Test User',
-        email: email,
-        role: 'technician',
+      final response = await _dio.post(
+        '/auth/login',
+        data: {'email': email, 'password': password},
       );
 
-      // 2. Store Token
-      await _storage.write(key: 'auth_token', value: token);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final token = response.data['token'];
+        final userData = response.data['user'];
 
-      // 3. Store User Locally
-      await _db.insertUser(user);
+        final user = User(
+          id: userData['id'],
+          username: userData['username'],
+          email: userData['email'],
+          role: userData['role'],
+        );
 
-      return true;
+        // 2. Store Token
+        await _storage.write(key: 'auth_token', value: token);
+
+        // 3. Store User Locally
+        await _db.insertUser(user);
+
+        return true;
+      }
+      return false;
     } catch (e) {
       print('Login error: $e');
       return false;

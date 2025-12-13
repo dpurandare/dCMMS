@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TurbineHealthHeatmap, TurbineHealth } from './TurbineHealthHeatmap';
 import { WindPowerCorrelation, PowerCorrelationPoint } from './WindPowerCorrelation';
+import { AdvancedForecastDashboard } from './AdvancedForecastDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Activity, Wind, Zap, AlertTriangle } from 'lucide-react';
@@ -70,6 +71,7 @@ export function WindFarmDashboard({ turbines, correlationData, theoreticalCurve 
                 <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="performance">Performance Analysis</TabsTrigger>
+                    <TabsTrigger value="forecasting">Forecasting 2.0 🚀</TabsTrigger>
                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
                 </TabsList>
 
@@ -96,7 +98,11 @@ export function WindFarmDashboard({ turbines, correlationData, theoreticalCurve 
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                <TabsContent value="forecasting">
+                    <AdvancedForecastDashboard siteId="mock-site-id" />
+                </TabsContent>
             </Tabs>
-        </div>
+        </div >
     );
 }

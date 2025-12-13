@@ -24,7 +24,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           siteId: z.string().uuid(),
           assetId: z.string().uuid().optional(),
           forecastHorizonHours: z.number().min(1).max(168), // Max 7 days
-          modelType: z.enum(["arima", "sarima", "prophet"]).optional(),
+          modelType: z.enum(["arima", "sarima", "prophet", "lstm", "transformer"]).optional(),
           energyType: z.enum(["solar", "wind"]).optional(),
         }),
         response: {

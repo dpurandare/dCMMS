@@ -41,8 +41,8 @@ numba>=0.57.0,<1.0.0        # JIT compilation for performance
 # Optional: Deep Learning Forecasting (LSTM, Transformer)
 # These are for future Sprint 20+ implementations
 # =======================================================
-# torch==2.1.0                    # PyTorch for LSTM/Transformer
-# pytorch-forecasting==1.0.0      # Time-series specific PyTorch
+torch>=2.2.0                    # PyTorch for LSTM/Transformer
+# pytorch-forecasting==1.0.0      # Time-series specific PyTorch (Incompatible with Py3.12)
 # tensorflow==2.14.0              # Alternative to PyTorch
 # keras==2.14.0                   # High-level neural network API
 
