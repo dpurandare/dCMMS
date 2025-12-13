@@ -62,11 +62,11 @@ export default function AnalyticsPage() {
                             icon={<Activity className="h-4 w-4" />}
                             loading={loading}
                             error={error || undefined}
-                            trend={{
-                                value: 0, // TODO: Calculate actual trend
-                                direction: "neutral",
-                                label: "vs last 30 days"
-                            }}
+                            trend={kpis?.summaryTrends?.availability ? {
+                                value: kpis.summaryTrends.availability.value,
+                                direction: kpis.summaryTrends.availability.direction as "up" | "down" | "neutral",
+                                label: "vs last period"
+                            } : undefined}
                         />
                         <KPICard
                             title="MTTR"
@@ -75,6 +75,11 @@ export default function AnalyticsPage() {
                             icon={<Clock className="h-4 w-4" />}
                             loading={loading}
                             error={error || undefined}
+                            trend={kpis?.summaryTrends?.mttr ? {
+                                value: kpis.summaryTrends.mttr.value,
+                                direction: kpis.summaryTrends.mttr.direction as "up" | "down" | "neutral",
+                                label: "vs last period"
+                            } : undefined}
                         />
                         <KPICard
                             title="MTBF"
@@ -83,6 +88,11 @@ export default function AnalyticsPage() {
                             icon={<TrendingUp className="h-4 w-4" />}
                             loading={loading}
                             error={error || undefined}
+                            trend={kpis?.summaryTrends?.mtbf ? {
+                                value: kpis.summaryTrends.mtbf.value,
+                                direction: kpis.summaryTrends.mtbf.direction as "up" | "down" | "neutral",
+                                label: "vs last period"
+                            } : undefined}
                         />
                         <KPICard
                             title="Completion Rate"
@@ -91,6 +101,11 @@ export default function AnalyticsPage() {
                             icon={<CheckCircle className="h-4 w-4" />}
                             loading={loading}
                             error={error || undefined}
+                            trend={kpis?.summaryTrends?.completionRate ? {
+                                value: kpis.summaryTrends.completionRate.value,
+                                direction: kpis.summaryTrends.completionRate.direction as "up" | "down" | "neutral",
+                                label: "vs last period"
+                            } : undefined}
                         />
                     </div>
 

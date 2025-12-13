@@ -25,6 +25,12 @@ export interface KPIResult {
         startDate: string;
         endDate: string;
     };
+    summaryTrends?: {
+        mttr: { value: number; direction: string };
+        mtbf: { value: number; direction: string };
+        completionRate: { value: number; direction: string };
+        availability: { value: number; direction: string };
+    };
 }
 
 export interface KPITrend {
