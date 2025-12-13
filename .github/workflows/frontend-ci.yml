@@ -1,15 +1,16 @@
 name: Frontend CI/CD
 
 on:
-  push:
-    branches: [ main, develop, 'feature/**', 'claude/**' ]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-ci.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'frontend/**'
+  workflow_dispatch:
+  # push:
+  #   branches: [ main, develop, 'feature/**', 'claude/**' ]
+  #   paths:
+  #     - 'frontend/**'
+  #     - '.github/workflows/frontend-ci.yml'
+  # pull_request:
+  #   branches: [ main, develop ]
+  #   paths:
+  #     - 'frontend/**'
 
 env:
   NODE_VERSION: '20.x'
