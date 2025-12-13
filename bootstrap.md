@@ -55,6 +55,7 @@ The project is actively using the following stack:
     -   Feature Store: Feast
     -   Orchestration: Metaflow
     -   Tracking: MLflow
+    -   Deep Learning: PyTorch (LSTM/Transformer)
 -   **Telemetry**:
     -   Processing: Apache Flink
 -   **Infrastructure**:
@@ -113,6 +114,6 @@ Use the helper script to build and run everything:
 -   **Workflows**: Automated testing, linting, and docker builds on pull requests.
 
 ## 7. Next Steps
--   Continue implementation of Release 0 (MVP) features.
--   Ensure test coverage for new modules.
--   Refine ML pipelines and telemetry integration.
+-   Deployment Planning for Release 3 (Deep Learning & Mobile Customization).
+-   Performance benchmarking for new forecasting models.
+-   Mobile app beta testing with field technicians.

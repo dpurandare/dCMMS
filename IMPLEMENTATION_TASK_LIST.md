@@ -4847,3 +4847,116 @@ This appendix documents changes required throughout the task list based on stake
 **Maintained By:** Product Manager
 **Review Frequency:** Before each sprint planning session
 
+---
+
+## Gap Remediation: Interactive Tutorials (Phase 1)
+
+**Goal:** Implement missing interactive tutorial code (Shepherd.js) to match training documentation.
+**Status:** **COMPLETE**
+
+### Tutorial Implementation
+
+#### [DCMMS-150-R] Interactive In-App Tutorials
+- Status: **COMPLETE**
+- Assignee: Frontend Developer
+- Specification: Spec 17 (UX Design Training)
+- Story Points: 5
+- Dependencies: None
+- Acceptance Criteria:
+  - Shepherd.js installed in frontend
+  - Tutorial module created in `frontend/src/tutorial`
+  - Tours implemented:
+    - First Login Welcome Tour (5 steps)
+    - Create Your First Work Order (8 steps)
+    - Investigate an Anomaly (6 steps)
+    - Build a Custom Dashboard (10 steps)
+  - Tutorial Manager/Context for state management
+  - Triggers implemented (First login, Help menu)
+- Deliverables:
+  - `frontend/src/tutorial/`
+  - `frontend/src/components/common/TutorialProvider.tsx`
+- Testing: Manual verification of all tours
+
+---
+
+## Sprint 20: Advanced Intelligence & Mobile Customization (Weeks 47-50)
+
+**Goal:** Implement Deep Learning forecasting (LSTM/Transformer) and customizable mobile UX
+
+**Specifications:** Spec 25 (Advanced Forecasting)
+
+**Sprint Capacity:** 45 points
+
+### Advanced Forecasting
+
+#### [DCMMS-160] Deep Learning Infrastructure
+- **Assignee:** ML Engineer
+- **Specification:** Spec 25
+- **Story Points:** 5
+- **Dependencies:** None
+- **Acceptance Criteria:**
+  - PyTorch environment configured with GPU support
+  - `requirements-forecasting.txt` updated
+  - Model registry updated for deep learning models
+- **Testing:** Unit tests for environment availability
+
+#### [DCMMS-161] LSTM Wind Forecasting Model
+- **Assignee:** ML Engineer
+- **Specification:** Spec 25
+- **Story Points:** 8
+- **Dependencies:** DCMMS-160
+- **Acceptance Criteria:**
+  - `SolarLSTMForecaster` implemented in `ml/models/lstm_forecast.py`
+  - Stacked LSTM architecture for time-series prediction
+  - Training pipeline functional
+  - Inference API integration
+- **Testing:** Unit tests for convergence, API integration tests
+
+#### [DCMMS-162] Transformer Solar Forecasting Model
+- **Assignee:** ML Engineer
+- **Specification:** Spec 25
+- **Story Points:** 8
+- **Dependencies:** DCMMS-160
+- **Acceptance Criteria:**
+  - `SolarTransformerForecaster` implemented in `ml/models/transformer_forecast.py`
+  - Positional encoding and attention mechanism
+  - Optimized for seasonal solar data
+- **Testing:** Unit tests, comparison with ARIMA
+
+#### [DCMMS-163] Forecasting 2.0 API
+- **Assignee:** Backend Developer
+- **Specification:** Spec 25
+- **Story Points:** 4
+- **Dependencies:** DCMMS-161, DCMMS-162
+- **Acceptance Criteria:**
+  - Update `ForecastService` to support `lstm` and `transformer` types
+  - Update Zod schema for validation
+  - Ensure backward compatibility
+- **Testing:** Integration tests for new endpoints
+
+### Mobile Experience 2.0
+
+#### [DCMMS-164] Advanced Forecast Dashboard
+- **Assignee:** Frontend Developer
+- **Specification:** Spec 25
+- **Story Points:** 10
+- **Dependencies:** DCMMS-163
+- **Acceptance Criteria:**
+  - New "Forecasting 2.0" tab in Wind Farm Dashboard
+  - Model comparison UI (Model Tournament)
+  - Confidence interval visualization
+  - Asynchronous "data crunching" progress indicators
+- **Testing:** UX validation, browser tests
+
+#### [DCMMS-165] Mobile Customizable Dashboard
+- **Assignee:** Mobile Developer
+- **Specification:** Spec 04 (Mobile)
+- **Story Points:** 10
+- **Dependencies:** None
+- **Acceptance Criteria:**
+  - Drag-and-drop widget reordering using `ReorderableListView`
+  - State management via Riverpod `Notifier`
+  - Layout persistence using `shared_preferences`
+- **Testing:** Manual on-device testing, persistence verification
+
+**Sprint 20 Total:** 45 points

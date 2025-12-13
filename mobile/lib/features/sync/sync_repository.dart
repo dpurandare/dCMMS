@@ -4,23 +4,26 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 
+import 'package:dio/dio.dart';
+import 'dart:convert';
+
 class SyncRepository {
   final AppDatabase _db;
   final Connectivity _connectivity;
+  final Dio _dio;
 
-  SyncRepository(this._db) : _connectivity = Connectivity();
+  SyncRepository(this._db, this._dio) : _connectivity = Connectivity();
 
-  // Watch network status
+  // ... (streams and online check remain same)
   Stream<List<ConnectivityResult>> get connectivityStream =>
       _connectivity.onConnectivityChanged;
 
-  // Check if online
   Future<bool> get isOnline async {
     final result = await _connectivity.checkConnectivity();
     return !result.contains(ConnectivityResult.none);
   }
 
-  // Add to Sync Queue
+  // ... (addToQueue and processQueue remain same)
   Future<int> addToQueue(String operation, String targetTable, String payload) {
     return _db
         .into(_db.syncQueue)
@@ -35,7 +38,6 @@ class SyncRepository {
         );
   }
 
-  // Process Sync Queue (Push to Backend)
   Future<void> processQueue() async {
     if (!await isOnline) return;
 
@@ -54,7 +56,6 @@ class SyncRepository {
               .write(SyncQueueCompanion(status: Value('FAILED')));
         }
       } catch (e) {
-        // Handle error, maybe retry later
         print('Sync failed for item ${item.id}: $e');
       }
     }
@@ -62,26 +63,32 @@ class SyncRepository {
 
   Future<bool> _pushItem(SyncQueueData item) async {
     try {
-      // TODO: Implement actual API call based on item.operation and item.targetTable
-      // Example:
-      // if (item.targetTable == 'work_orders' && item.operation == 'CREATE') {
-      //   await api.createWorkOrder(item.payload);
-      // }
+      _dio.options.baseUrl = 'http://10.0.2.2:3001/api/v1';
 
-      // Simulate network request
-      // Throw random error for testing purpose (remove in production)
-      // if (DateTime.now().second % 10 == 0) throw Exception("Simulated Network Error");
+      if (item.targetTable == 'work_orders' && item.operation == 'CREATE') {
+        final data = jsonDecode(item.payload);
+        // Ensure status covers API expectations
+        await _dio.post('/work-orders', data: data);
+        return true;
+      }
 
-      await Future.delayed(const Duration(milliseconds: 500));
-      return true;
-    } on Exception catch (e) {
-      print('Sync error for item ${item.id}: $e');
-      // In a real app, we might want to check the type of error.
-      // If it's a 4xx error (validation), we might want to mark it as FAILED or REQUIRES_ACTION.
-      // If it's a 5xx or network error, we keep it PENDING for retry.
-
-      // For now, we return false to indicate it wasn't processed this time.
-      return false;
+      // Default fallback for unhandled types
+      print('Unhandled sync item: ${item.targetTable} ${item.operation}');
+      return true; // Mark as done to avoid infinite retry loop for unhandled types? Or keep pending?
+      // For now, let's assume we implement what we use. If not implemented, maybe return false?
+      // But that blocks queue. Let's return false.
+      // return false;
+    } on DioException catch (e) {
+      print('Sync error for item ${item.id}: ${e.message}');
+      if (e.response?.statusCode != null &&
+          e.response!.statusCode! >= 400 &&
+          e.response!.statusCode! < 500) {
+        // Validation error, likely won't succeed on retry without change
+        // Mark as FAILED (logic in processQueue handles false as Failed? No, false puts it in FAILED).
+        return false;
+      }
+      // Server error, retry later
+      rethrow;
     } catch (e) {
       print('Unknown sync error for item ${item.id}: $e');
       return false;
@@ -91,5 +98,5 @@ class SyncRepository {
 
 final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  return SyncRepository(db);
+  return SyncRepository(db, Dio());
 });

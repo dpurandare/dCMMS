@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../work_order_repository.dart';
+import '../../sync/sync_repository.dart';
 
 class WorkOrderListScreen extends ConsumerWidget {
   const WorkOrderListScreen({super.key});
@@ -16,8 +17,10 @@ class WorkOrderListScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              // TODO: Trigger Sync
+            onPressed: () async {
+              await ref.read(syncRepositoryProvider).processQueue();
+              // Invalidate list to refresh from DB in case sync pulled new data (not implemented yet)
+              // ref.invalidate(workOrderListProvider);
             },
           ),
         ],

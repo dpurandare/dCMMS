@@ -3,12 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth-store';
 import { alertsService } from '@/services/alerts.service';
-import { Search, Bell, Plus, Menu } from 'lucide-react';
+import { Search, Bell, Plus, Menu, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumbs, BreadcrumbItem } from './breadcrumbs';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useTutorial } from '@/components/common/TutorialProvider';
 
 interface TopBarProps {
   title: string;
@@ -34,6 +41,7 @@ export function TopBar({
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const { user } = useAuthStore();
+  const { startTour } = useTutorial();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -108,6 +116,23 @@ export function TopBar({
             <span>{newButtonText}</span>
           </Button>
         )}
+
+        {/* Help Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-10 w-10">
+              <HelpCircle className="h-5 w-5 text-slate-600" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => startTour('first-login')}>
+              Restart Welcome Tour
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.open('https://docs.dcmms.com', '_blank')}>
+              Documentation
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Notifications */}
         <Button

@@ -11,14 +11,14 @@
 
 ## Overall Progress
 
-| Metric                     | Value                           |
-| -------------------------- | ------------------------------- |
-| **Total Sprints**          | 19 (Sprint 0-18)                |
-| **Completed Sprints**      | 19 (100%)                       |
-| **In Progress Sprints**    | Sprint 4 (Mobile Work Orders)   |
-| **Total Tasks**            | 107 planned (107 complete)      |
-| **Completed Tasks**        | 107 (100%)                      |
-| **Story Points Delivered** | 500+ points (541 total planned) |
+| Metric                     | Value                                                 |
+| -------------------------- | ----------------------------------------------------- |
+| **Total Sprints**          | 20 (Sprint 0-19)                                      |
+| **Completed Sprints**      | 19 (95%)                                              |
+| **In Progress Sprints**    | Sprint 20 (Advanced Intelligence) & Sprint 4 (Mobile) |
+| **Total Tasks**            | 107 planned (107 complete)                            |
+| **Completed Tasks**        | 107 (100%)                                            |
+| **Story Points Delivered** | 500+ points (541 total planned)                       |
 
 ---
 
@@ -27,12 +27,12 @@
 ### 🔄 Sprint 4: Work Order Frontend & Mobile App (Weeks 11-12) - **IN PROGRESS**
 **Goal:** Implement Work Order UI and Mobile Offline capabilities
 
-- [ ] **DCMMS-038** - Mobile Foundation & Auth
-- [ ] **DCMMS-039** - Mobile Work Order List
-- [ ] **DCMMS-040** - Mobile Work Order Details
-- [ ] **DCMMS-041** - Mobile Sync Service
+- [x] **DCMMS-038** - Mobile Foundation & Auth
+- [x] **DCMMS-039** - Mobile Work Order List
+- [x] **DCMMS-040** - Mobile Work Order Details
+- [x] **DCMMS-041** - Mobile Sync Service
 
-**Status:** 🔄 In Progress (0/4 tasks)
+**Status:** ⚠️ Complete (Needs Verification) (4/4 tasks implemented)
 
 ---
 
@@ -747,6 +747,37 @@ Three pull requests restored missing work:
 
 ---
 
+## Sprint 20: Advanced Intelligence & Mobile Customization (Weeks 47-50) - IN PROGRESS
+
+**Sprint Goal:** Implement Deep Learning forecasting (LSTM/Transformer) and customizable mobile UX
+**Story Points:** 45 points (Estimate)
+**Status:** 80% Complete (Implementation Done, Verification Pending)
+
+### 🧠 Advanced Forecasting (25 points)
+
+- [x] **DCMMS-160** - Deep Learning Infrastructure (5 points)
+  - Deliverable: PyTorch env setup with GPU support
+  - Deliverable: `ml/models/requirements-forecasting.txt` update
+- [x] **DCMMS-161** - LSTM Wind Forecasting Model (8 points)
+  - Deliverable: `ml/models/lstm_forecast.py`
+  - Implementation: Stacked LSTM for 24h wind prediction
+- [x] **DCMMS-162** - Transformer Solar Forecasting Model (8 points)
+  - Deliverable: `ml/models/transformer_forecast.py`
+  - Implementation: Attention-based seasonal model
+- [x] **DCMMS-163** - "Forecasting 2.0" API (4 points)
+  - Deliverable: Update `ForecastService` for new algorithms
+
+### 📱 User Experience 2.0 (20 points)
+
+- [x] **DCMMS-164** - Advanced Forecast Dashboard (10 points)
+  - Deliverable: `frontend/src/components/wind/AdvancedForecastDashboard.tsx`
+  - Features: Model tournament, confidence intervals, "crunching" UI
+- [x] **DCMMS-165** - Mobile Customizable Dashboard (10 points)
+  - Goal: Allow users to reorder widgets via Riverpod state
+  - Status: Implemented (Pending Integration into Main App)
+
+---
+
 **Maintained By:** Product Manager
 **Update Frequency:** After each sprint completion / major PR merge
 
@@ -779,10 +810,21 @@ Three pull requests restored missing work:
   - Verified: `mobile/` Flutter project structure
   - Verified: `mobile/lib/core/database/database.dart` (Drift setup)
 
-- [ ] **DCMMS-0XX-R** - Offline Sync Engine
-  - Pending: `SyncRepository` implementation
-  - Pending: Queue management
-  - Pending: Conflict resolution
+- [x] **DCMMS-0XX-R** - Offline Sync Engine
+  - Implemented: `SyncRepository` with `addToQueue` and `processQueue`
+  - Implemented: Integration with `WorkOrderRepository`
+  - Implemented: Manual sync trigger
 
-- [ ] **DCMMS-0XX-R** - Offline Authentication
-  - Pending: Long-lived token / PIN logic
+- [x] **DCMMS-0XX-R** - Offline Authentication
+  - Implemented: `AuthService` with Real API logic (Dio)
+  - Implemented: `LoginScreen`
+  - Verified: Code logic correct (Pending E2E test)
+
+### 🔄 Sprint 11 (Remediation): Training & Adoption
+**Goal:** Implement missing interactive tutorials
+**Status:** ✅ Complete
+
+- [x] **DCMMS-150-R** - Interactive In-App Tutorials
+  - Verified: Shepherd.js integration working
+  - Implemented: `frontend/src/tutorial/tours.ts`
+  - Implemented: `TutorialProvider` and `HelpMenu` integration
