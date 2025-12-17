@@ -28,15 +28,17 @@ The repository is organized as a monorepo:
 
 ## 3. Key Resources & Artifacts
 
-| Artifact                  | Path                                               | Description                                 |
-| :------------------------ | :------------------------------------------------- | :------------------------------------------ |
-| **Product Requirements**  | [PRD_FINAL.md](PRD_FINAL.md)                       | Detailed specs for all releases.            |
-| **Backend README**        | [backend/README.md](backend/README.md)             | Setup and architecture for the API.         |
-| **Frontend README**       | [frontend/README.md](frontend/README.md)           | Setup and architecture for the Web App.     |
-| **Telemetry Quickstart**  | [telemetry/QUICKSTART.md](telemetry/QUICKSTART.md) | Guide for the Flink-based telemetry system. |
-| **Technical Specs**       | [specs/](specs/)                                   | Technical specifications and design docs.   |
-| **Project Documentation** | [docs/](docs/)                                     | General project documentation.              |
-| **Implementation Plan**   | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)   | Current roadmap and status.                 |
+| Artifact                  | Path                                                                             | Description                                    |
+| :------------------------ | :------------------------------------------------------------------------------- | :--------------------------------------------- |
+| **Product Requirements**  | [PRD_FINAL.md](PRD_FINAL.md)                                                     | Detailed specs for all releases.               |
+| **Backend README**        | [backend/README.md](backend/README.md)                                           | Setup and architecture for the API.            |
+| **Frontend README**       | [frontend/README.md](frontend/README.md)                                         | Setup and architecture for the Web App.        |
+| **Telemetry Quickstart**  | [telemetry/QUICKSTART.md](telemetry/QUICKSTART.md)                               | Guide for the Flink-based telemetry system.    |
+| **Technical Specs**       | [specs/](specs/)                                                                 | Technical specifications and design docs.      |
+| **Project Documentation** | [docs/](docs/)                                                                   | General project documentation.                 |
+| **Tasks & Status (New)**  | [TasksTracking/](TasksTracking/)                                                 | **Primary Source of Truth** for tasks.         |
+| **Energy Types Guide**    | [docs/guides/ADDING_NEW_ENERGY_TYPES.md](docs/guides/ADDING_NEW_ENERGY_TYPES.md) | Guide for adding support for new energy types. |
+| **Implementation Plan**   | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)                                 | Strategic roadmap.                             |
 
 ## 4. Technology Stack (Implemented)
 

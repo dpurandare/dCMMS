@@ -679,6 +679,7 @@ dCMMS/
 │   ├── training/       # Training materials
 │   ├── demo/          # Demo scripts
 │   └── user-guide/    # User documentation
+   └── guides/        # Advanced guides (e.g., Adding Energy Types)
 │
 ├── specs/             # Technical specifications (24 specs)
 ├── media/             # Architecture diagrams

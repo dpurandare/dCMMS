@@ -38,25 +38,25 @@ dCMMS is a comprehensive computerized maintenance management system for non-conv
 
 ### 1.2 Key Objectives
 
-| Objective | Target | Measure |
-|-----------|--------|---------|
-| MVP Delivery | Month 3 | 13 P0 specifications implemented |
-| Release 1 Delivery | Month 6 | 8 P1 specifications implemented |
-| Release 2 Delivery | Month 9 | 3 P2 specifications implemented |
-| Test Coverage | Continuous | ≥75% unit test coverage |
-| API Performance | Release 0+ | p95 <200ms for CRUD operations |
-| Mobile Offline | Release 0 | 90% work orders closed offline |
-| Telemetry Ingestion | Release 1 | 72,000 events/sec sustained |
-| ML-Driven WOs | Release 2 | 10% of corrective actions |
+| Objective           | Target     | Measure                          |
+| ------------------- | ---------- | -------------------------------- |
+| MVP Delivery        | Month 3    | 13 P0 specifications implemented |
+| Release 1 Delivery  | Month 6    | 8 P1 specifications implemented  |
+| Release 2 Delivery  | Month 9    | 3 P2 specifications implemented  |
+| Test Coverage       | Continuous | ≥75% unit test coverage          |
+| API Performance     | Release 0+ | p95 <200ms for CRUD operations   |
+| Mobile Offline      | Release 0  | 90% work orders closed offline   |
+| Telemetry Ingestion | Release 1  | 72,000 events/sec sustained      |
+| ML-Driven WOs       | Release 2  | 10% of corrective actions        |
 
 ### 1.3 Specification Coverage
 
-| Priority | Specifications | Features | Status |
-|----------|---------------|----------|--------|
-| **P0 (MVP)** | 13 specs | Asset management, work orders, mobile offline, security, data models | Ready |
-| **P1 (Release 1)** | 8 specs | Telemetry ingestion, notifications, compliance, analytics, edge computing | Ready |
-| **P2 (Release 2)** | 3 specs | AI/ML implementation, cost management, internationalization | Ready |
-| **Total** | **24 specs** | **~23,900 lines** | **100% Complete** |
+| Priority           | Specifications | Features                                                                  | Status            |
+| ------------------ | -------------- | ------------------------------------------------------------------------- | ----------------- |
+| **P0 (MVP)**       | 13 specs       | Asset management, work orders, mobile offline, security, data models      | Ready             |
+| **P1 (Release 1)** | 8 specs        | Telemetry ingestion, notifications, compliance, analytics, edge computing | Ready             |
+| **P2 (Release 2)** | 3 specs        | AI/ML implementation, cost management, internationalization               | Ready             |
+| **Total**          | **24 specs**   | **~23,900 lines**                                                         | **100% Complete** |
 
 ---
 
@@ -64,15 +64,15 @@ dCMMS is a comprehensive computerized maintenance management system for non-conv
 
 ### 2.1 Team Composition
 
-| Role | Count | Responsibilities |
-|------|-------|------------------|
-| **Product Manager** | 1 | Requirements, prioritization, stakeholder communication |
-| **Frontend Developer** | 1+ | Next.js web app, shadcn/ui components, dashboards |
-| **Backend Developer** | 1+ | Fastify APIs, PostgreSQL, Kafka/Flink integration |
-| **Mobile Developer** | 1+ | Flutter app, offline sync, camera/barcode features |
-| **ML/AI Expert** | 1 | Metaflow pipelines, KServe deployment, feature engineering |
-| **QA Engineer** | 1 | Test automation, regression testing, UAT coordination |
-| **DevOps Engineer** | 0.5 (on-demand) | Local infrastructure setup, cloud migration planning |
+| Role                   | Count           | Responsibilities                                           |
+| ---------------------- | --------------- | ---------------------------------------------------------- |
+| **Product Manager**    | 1               | Requirements, prioritization, stakeholder communication    |
+| **Frontend Developer** | 1+              | Next.js web app, shadcn/ui components, dashboards          |
+| **Backend Developer**  | 1+              | Fastify APIs, PostgreSQL, Kafka/Flink integration          |
+| **Mobile Developer**   | 1+              | Flutter app, offline sync, camera/barcode features         |
+| **ML/AI Expert**       | 1               | Metaflow pipelines, KServe deployment, feature engineering |
+| **QA Engineer**        | 1               | Test automation, regression testing, UAT coordination      |
+| **DevOps Engineer**    | 0.5 (on-demand) | Local infrastructure setup, cloud migration planning       |
 
 **Total Team Size:** 6-7 people
 
@@ -275,23 +275,23 @@ services:
 ```
 
 **Cloud Provider Comparison (To be completed in Month 2):**
-| Service | AWS | Azure | GCP | Cloud-Agnostic |
-|---------|-----|-------|-----|----------------|
-| **Kubernetes** | EKS | AKS | GKE | ✅ All supported |
-| **PostgreSQL** | RDS | Azure Database | Cloud SQL | ✅ Or self-hosted |
-| **Object Storage** | S3 | Blob Storage | GCS | ✅ S3-compatible API |
-| **Kafka** | MSK | Event Hubs | Pub/Sub | ✅ Or self-hosted |
-| **Redis** | ElastiCache | Azure Cache | Memorystore | ✅ Or self-hosted |
-| **CDN** | CloudFront | Azure CDN | Cloud CDN | ✅ Cloudflare/Akamai |
+| Service            | AWS         | Azure          | GCP         | Cloud-Agnostic      |
+| ------------------ | ----------- | -------------- | ----------- | ------------------- |
+| **Kubernetes**     | EKS         | AKS            | GKE         | ✅ All supported     |
+| **PostgreSQL**     | RDS         | Azure Database | Cloud SQL   | ✅ Or self-hosted    |
+| **Object Storage** | S3          | Blob Storage   | GCS         | ✅ S3-compatible API |
+| **Kafka**          | MSK         | Event Hubs     | Pub/Sub     | ✅ Or self-hosted    |
+| **Redis**          | ElastiCache | Azure Cache    | Memorystore | ✅ Or self-hosted    |
+| **CDN**            | CloudFront  | Azure CDN      | Cloud CDN   | ✅ Cloudflare/Akamai |
 
 ### 4.3 Development Environments
 
-| Environment | Purpose | Infrastructure | Deployment |
-|-------------|---------|----------------|------------|
-| **Local** | Individual development | Docker Compose | Manual |
-| **Dev** | Integration testing | Local (shared) | Auto (on merge to develop) |
-| **Staging** | UAT, pre-production | Cloud (post-MVP) | Auto (on release branch) |
-| **Production** | Live users | Cloud (post-MVP) | Manual approval |
+| Environment    | Purpose                | Infrastructure   | Deployment                 |
+| -------------- | ---------------------- | ---------------- | -------------------------- |
+| **Local**      | Individual development | Docker Compose   | Manual                     |
+| **Dev**        | Integration testing    | Local (shared)   | Auto (on merge to develop) |
+| **Staging**    | UAT, pre-production    | Cloud (post-MVP) | Auto (on release branch)   |
+| **Production** | Live users             | Cloud (post-MVP) | Manual approval            |
 
 ---
 
@@ -542,17 +542,17 @@ services:
 - ✅ **Added:** Extended timeline for comprehensive ML documentation
 
 **Success Criteria:**
-- [ ] ML models generate 10% of corrective work orders
-- [ ] Model explainability (SHAP) integrated in UI for transparency
-- [ ] **ML model cards created** for anomaly detection and predictive maintenance models
-- [ ] Cost tracking implemented for all work orders
-- [ ] Budget management with commitment tracking operational
-- [ ] **Application available in Hindi** (in addition to English)
-- [ ] **No RTL support** (deferred with Arabic language support)
-- [ ] Drift detection alerts operational with retraining triggers
-- [ ] User Acceptance Testing (UAT) completed with sign-off (1-week advance notice)
-- [ ] Production readiness checklist completed
-- [ ] All critical and high-priority defects resolved
+- [x] ML models generate 10% of corrective work orders
+- [x] Model explainability (SHAP) integrated in UI for transparency
+- [x] **ML model cards created** for anomaly detection and predictive maintenance models
+- [x] Cost tracking implemented for all work orders
+- [x] Budget management with commitment tracking operational
+- [x] **Application available in Hindi** (in addition to English)
+- [x] **No RTL support** (deferred with Arabic language support)
+- [x] Drift detection alerts operational with retraining triggers
+- [x] User Acceptance Testing (UAT) completed with sign-off (1-week advance notice)
+- [x] Production readiness checklist completed
+- [x] All critical and high-priority defects resolved
 
 ---
 
@@ -616,14 +616,14 @@ services:
 
 ### 6.2 Technology Decision Rationale
 
-| Technology | Rationale | Spec Compliance |
-|------------|-----------|-----------------|
+| Technology      | Rationale                                                              | Spec Compliance |
+| --------------- | ---------------------------------------------------------------------- | --------------- |
 | **Next.js 14+** | 50% faster LCP (1.9s vs 3.8s), automatic code splitting, built-in i18n | Spec 17, 18, 24 |
-| **Flutter** | Superior offline reliability, better battery efficiency for field ops | Spec 04, 21 |
-| **Fastify** | 3x faster than Express, meets p95 <200ms requirement | Spec 01, 18 |
-| **QuestDB** | 10x faster writes than TimescaleDB, handles 72K events/sec | Spec 10, 18 |
-| **Metaflow** | Simpler MLOps vs Kubeflow, easier for data scientists | Spec 22 |
-| **KServe** | Better 2025 roadmap vs Seldon, improved autoscaling | Spec 22 |
+| **Flutter**     | Superior offline reliability, better battery efficiency for field ops  | Spec 04, 21     |
+| **Fastify**     | 3x faster than Express, meets p95 <200ms requirement                   | Spec 01, 18     |
+| **QuestDB**     | 10x faster writes than TimescaleDB, handles 72K events/sec             | Spec 10, 18     |
+| **Metaflow**    | Simpler MLOps vs Kubeflow, easier for data scientists                  | Spec 22         |
+| **KServe**      | Better 2025 roadmap vs Seldon, improved autoscaling                    | Spec 22         |
 
 ---
 
@@ -635,13 +635,13 @@ services:
 
 **Testing Levels:**
 
-| Level | Coverage | Tools | Responsibility |
-|-------|----------|-------|----------------|
-| **Unit Tests** | 60% of total | Jest, Flutter Test, pytest | Developers (same sprint) |
-| **Integration Tests** | 30% of total | Supertest, Cypress Component | Developers (same sprint) |
-| **E2E Tests** | 10% of total | Cypress, Maestro | QA (same sprint) |
-| **Performance Tests** | Critical paths | k6, JMeter | QA (per phase) |
-| **Security Tests** | All releases | OWASP ZAP, Snyk | QA + DevOps (per release) |
+| Level                 | Coverage       | Tools                        | Responsibility            |
+| --------------------- | -------------- | ---------------------------- | ------------------------- |
+| **Unit Tests**        | 60% of total   | Jest, Flutter Test, pytest   | Developers (same sprint)  |
+| **Integration Tests** | 30% of total   | Supertest, Cypress Component | Developers (same sprint)  |
+| **E2E Tests**         | 10% of total   | Cypress, Maestro             | QA (same sprint)          |
+| **Performance Tests** | Critical paths | k6, JMeter                   | QA (per phase)            |
+| **Security Tests**    | All releases   | OWASP ZAP, Snyk              | QA + DevOps (per release) |
 
 **Test Automation:**
 - Unit + Integration tests run on every PR
@@ -715,24 +715,24 @@ services:
 
 ### 8.1 Technical Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| **Telemetry volume underestimated** | Medium | High | QuestDB handles 1M+ events/sec; implement backpressure controls; scalable architecture |
-| **Offline sync conflicts** | Medium | Medium | Version tokens, conflict resolution UI, audit trail, comprehensive testing |
-| **ML model false positives** | High | Medium | Human oversight, threshold tuning, feedback loop, explainability |
-| **Flutter learning curve** | Low | Medium | Team training (1-2 weeks), start with simple screens, community support |
-| **Local infrastructure limitations** | Medium | Low | Docker Compose optimized; cloud migration plan ready post-MVP |
-| **Test coverage drops below 75%** | Medium | High | Automated coverage checks, block PR merge, regular reviews |
+| Risk                                 | Likelihood | Impact | Mitigation                                                                             |
+| ------------------------------------ | ---------- | ------ | -------------------------------------------------------------------------------------- |
+| **Telemetry volume underestimated**  | Medium     | High   | QuestDB handles 1M+ events/sec; implement backpressure controls; scalable architecture |
+| **Offline sync conflicts**           | Medium     | Medium | Version tokens, conflict resolution UI, audit trail, comprehensive testing             |
+| **ML model false positives**         | High       | Medium | Human oversight, threshold tuning, feedback loop, explainability                       |
+| **Flutter learning curve**           | Low        | Medium | Team training (1-2 weeks), start with simple screens, community support                |
+| **Local infrastructure limitations** | Medium     | Low    | Docker Compose optimized; cloud migration plan ready post-MVP                          |
+| **Test coverage drops below 75%**    | Medium     | High   | Automated coverage checks, block PR merge, regular reviews                             |
 
 ### 8.2 Project Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| **Scope creep** | High | High | Strict sprint planning, Product Manager controls backlog, no mid-sprint changes |
-| **Key team member unavailable** | Low | High | Cross-training, documentation, pair programming |
-| **Integration delays (ERP, IdP)** | Medium | Medium | Mock services for TDD, early vendor engagement, fallback options |
-| **Cloud migration complexity** | Medium | Medium | DevOps involvement early, Terraform IaC, staged migration |
-| **Performance targets not met** | Low | High | Early load testing, QuestDB proven at scale, horizontal scaling |
+| Risk                              | Likelihood | Impact | Mitigation                                                                      |
+| --------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------- |
+| **Scope creep**                   | High       | High   | Strict sprint planning, Product Manager controls backlog, no mid-sprint changes |
+| **Key team member unavailable**   | Low        | High   | Cross-training, documentation, pair programming                                 |
+| **Integration delays (ERP, IdP)** | Medium     | Medium | Mock services for TDD, early vendor engagement, fallback options                |
+| **Cloud migration complexity**    | Medium     | Medium | DevOps involvement early, Terraform IaC, staged migration                       |
+| **Performance targets not met**   | Low        | High   | Early load testing, QuestDB proven at scale, horizontal scaling                 |
 
 ### 8.3 Mitigation Strategies
 
@@ -755,13 +755,13 @@ services:
 
 ### 9.1 External Dependencies
 
-| Dependency | Needed By | Owner | Risk | Mitigation |
-|------------|-----------|-------|------|------------|
-| **IdP (Okta/Keycloak)** | Sprint 1 | IT/Security | Medium | Use mock auth in Sprint 0, real integration in Sprint 2 |
-| **ERP API Access** | Sprint 3 | Integration Team | Medium | Mock ERP service, define contract early |
-| **Weather API** | Release 3 (future) | Data Team | Low | Not critical for MVP/R1/R2 |
-| **SCADA/HMI Specs** | Release 1 | OT Team | Medium | Use simulated data, validate protocol early |
-| **Cloud Account** | Post-MVP | DevOps/Finance | Low | Begin provisioning in Month 2 |
+| Dependency              | Needed By          | Owner            | Risk   | Mitigation                                              |
+| ----------------------- | ------------------ | ---------------- | ------ | ------------------------------------------------------- |
+| **IdP (Okta/Keycloak)** | Sprint 1           | IT/Security      | Medium | Use mock auth in Sprint 0, real integration in Sprint 2 |
+| **ERP API Access**      | Sprint 3           | Integration Team | Medium | Mock ERP service, define contract early                 |
+| **Weather API**         | Release 3 (future) | Data Team        | Low    | Not critical for MVP/R1/R2                              |
+| **SCADA/HMI Specs**     | Release 1          | OT Team          | Medium | Use simulated data, validate protocol early             |
+| **Cloud Account**       | Post-MVP           | DevOps/Finance   | Low    | Begin provisioning in Month 2                           |
 
 ### 9.2 Internal Dependencies
 
@@ -903,19 +903,19 @@ Month 10:  █████      Sprint 18 (Weeks 39-40: Final Integration + Prod
 
 ### 11.2 Key Milestones **[UPDATED TIMELINE]**
 
-| Milestone | Target Date | Deliverable | Changes from Original |
-|-----------|-------------|-------------|----------------------|
-| **Sprint 0 Complete** | Week 4 | High-fidelity mockups, cloud-agnostic architecture, local dev environment, CI/CD, API skeleton, IdP adapter design | +2 weeks for mockups |
-| **Asset Management Live** | Week 8 | Asset CRUD, hierarchy, tagging | +2 weeks |
-| **Work Orders Live** | Week 12 | WO lifecycle, mobile offline sync | +2 weeks |
-| **MVP Demo** | Week 14 | ✅ Month 3.5 Target (or Month 3 with parallel work) | +2 weeks |
-| **Telemetry Pipeline** | Week 18 | 72K events/sec ingestion, multi-protocol SCADA | +2 weeks |
-| **Alerting System** | Week 22 | Multi-channel notifications (SendGrid, Twilio, FCM) | +2 weeks |
-| **Release 1 Demo** | Week 26 | CEA/MNRE compliance, interactive tutorials | +2 weeks |
-| **ML Models Training** | Week 30 | First predictive models, Metaflow pipelines | +2 weeks |
-| **ML in Production** | Week 34 | KServe serving models, ML model cards | +2 weeks |
-| **Release 2 Demo** | Week 40 | Hindi i18n, cost management | +4 weeks |
-| **Cloud Migration** | Week 41+ | Cloud provider selected, production deployment (post-R2) | +1 week |
+| Milestone                 | Target Date | Deliverable                                                                                                        | Changes from Original |
+| ------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| **Sprint 0 Complete**     | Week 4      | High-fidelity mockups, cloud-agnostic architecture, local dev environment, CI/CD, API skeleton, IdP adapter design | +2 weeks for mockups  |
+| **Asset Management Live** | Week 8      | Asset CRUD, hierarchy, tagging                                                                                     | +2 weeks              |
+| **Work Orders Live**      | Week 12     | WO lifecycle, mobile offline sync                                                                                  | +2 weeks              |
+| **MVP Demo**              | Week 14     | ✅ Month 3.5 Target (or Month 3 with parallel work)                                                                 | +2 weeks              |
+| **Telemetry Pipeline**    | Week 18     | 72K events/sec ingestion, multi-protocol SCADA                                                                     | +2 weeks              |
+| **Alerting System**       | Week 22     | Multi-channel notifications (SendGrid, Twilio, FCM)                                                                | +2 weeks              |
+| **Release 1 Demo**        | Week 26     | CEA/MNRE compliance, interactive tutorials                                                                         | +2 weeks              |
+| **ML Models Training**    | Week 30     | First predictive models, Metaflow pipelines                                                                        | +2 weeks              |
+| **ML in Production**      | Week 34     | KServe serving models, ML model cards                                                                              | +2 weeks              |
+| **Release 2 Demo**        | Week 40     | Hindi i18n, cost management                                                                                        | +4 weeks              |
+| **Cloud Migration**       | Week 41+    | Cloud provider selected, production deployment (post-R2)                                                           | +1 week               |
 
 ### 11.3 Buffer & Flexibility
 
@@ -971,7 +971,7 @@ Month 10:  █████      Sprint 18 (Weeks 39-40: Final Integration + Prod
 
 ### 12.1 Overview
 
-The project will produce **242 deliverables** across all phases. Critical deliverables are tracked as acceptance criteria in IMPLEMENTATION_TASK_LIST.md. For complete audit, see DELIVERABLES_MATRIX.md.
+The project will produce **242 deliverables** across all phases. Critical deliverables are tracked as acceptance criteria in IMPLEMENTATION_TASK_LIST.md. For complete audit, see [Deliverables Matrix](docs/archive/DELIVERABLES_MATRIX.md) - Legacy checklist of artifacts (Archived: Nov 2025).
 
 ### 12.2 Sprint 0 Deliverables (60+ artifacts) **[EXTENDED TO 4 WEEKS]**
 
@@ -1193,16 +1193,16 @@ The project will produce **242 deliverables** across all phases. Critical delive
 
 ### 13.1 Reference Documents
 
-| Document | Purpose | Location |
-|----------|---------|----------|
-| `PRD_FINAL.md` | Product requirements | `/PRD_FINAL.md` |
-| `TECHNOLOGY_STACK_EVALUATION.md` | Technology decisions | `/TECHNOLOGY_STACK_EVALUATION.md` |
-| `IMPLEMENTATION_PLAN.md` | This document - strategic plan | `/IMPLEMENTATION_PLAN.md` |
-| `IMPLEMENTATION_TASK_LIST.md` | Detailed sprint tasks | `/IMPLEMENTATION_TASK_LIST.md` |
-| `DELIVERABLES_MATRIX.md` | Complete deliverables audit (242 artifacts) | `/DELIVERABLES_MATRIX.md` |
-| `specs/*.md` | 24 technical specifications | `/specs/` |
-| `GAP_STATUS_REPORT.md` | Specification coverage | `/GAP_STATUS_REPORT.md` |
-| `README.md` | Quick reference guide | `/README.md` |
+| Document                         | Purpose                                                                          | Location                                      |
+| -------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------- |
+| `PRD_FINAL.md`                   | Product requirements                                                             | `/PRD_FINAL.md`                               |
+| `TECHNOLOGY_STACK_EVALUATION.md` | Technology decisions                                                             | `docs/archive/TECHNOLOGY_STACK_EVALUATION.md` |
+| `IMPLEMENTATION_PLAN.md`         | This document - strategic plan                                                   | `/IMPLEMENTATION_PLAN.md`                     |
+| `IMPLEMENTATION_TASK_LIST.md`    | For detailed task tracking, see the [TasksTracking](./TasksTracking/) directory. |                                               |
+| `DELIVERABLES_MATRIX.md`         | Complete deliverables audit (242 artifacts)                                      | `/DELIVERABLES_MATRIX.md`                     |
+| `specs/*.md`                     | 24 technical specifications                                                      | `/specs/`                                     |
+| `GAP_STATUS_REPORT.md`           | Specification coverage                                                           | `/GAP_STATUS_REPORT.md`                       |
+| `README.md`                      | Quick reference guide                                                            | `/README.md`                                  |
 
 ### 13.2 Tools & Links
 
