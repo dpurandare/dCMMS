@@ -1,6 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dcmms_mobile/core/database/database.dart';
+import 'package:dcmms_mobile/core/database/app_database.dart';
 
 void main() {
   late AppDatabase database;
@@ -40,8 +40,6 @@ void main() {
       operation: 'CREATE',
       targetTable: 'users',
       payload: '{}',
-      timestamp: DateTime.now(),
-      status: 'PENDING',
     );
 
     final id = await database.into(database.syncQueue).insert(syncItem);

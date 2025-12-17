@@ -22,6 +22,7 @@ This directory contains the master task list for the dCMMS project, broken down 
 | **10** | [Cost Management](10_Cost_Management.md)                   | Spec 23 (Advanced)                     | ✅ Complete    |
 | **11** | [Advanced Forecasting](11_Advanced_Forecasting.md)         | Spec 25                                | ✅ Complete    |
 | **12** | [Gap Remediation](12_Gap_Remediation.md)                   | Safety Gates, Permits (Sprint 3 Fixes) | ✅ Complete    |
+| **13** | [GenAI Implementation](13_GenAI_Implementation.md)         | Spec 26 (RAG Pipeline)                 | ⚠️ In Progress |
 | **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived    |
 
 ## Status Legend

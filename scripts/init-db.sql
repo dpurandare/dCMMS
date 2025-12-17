@@ -8,6 +8,8 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- For fuzzy text search
 CREATE EXTENSION IF NOT EXISTS "btree_gin"; -- For advanced indexing
+CREATE EXTENSION IF NOT EXISTS "ltree";     -- For hierarchical data
+CREATE EXTENSION IF NOT EXISTS "vector";    -- For GenAI embeddings
 
 -- ==========================================
 -- ENUMS
@@ -111,7 +113,7 @@ CREATE TABLE assets (
     UNIQUE(tenant_id, asset_id)
 );
 
-CREATE EXTENSION IF NOT EXISTS ltree;
+
 
 CREATE INDEX idx_assets_tenant_id ON assets(tenant_id);
 CREATE INDEX idx_assets_site_id ON assets(site_id);

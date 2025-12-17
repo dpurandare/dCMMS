@@ -9,6 +9,14 @@ class Assets extends Table {
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {assetTag}, // Asset tag should be unique if present
+  ];
+
+  @override
+  List<String> get customConstraints => [];
 }
 
 class WorkOrders extends Table {
@@ -20,6 +28,8 @@ class WorkOrders extends Table {
   TextColumn get assetId => text().nullable().references(Assets, #id)();
   TextColumn get assignedTo => text().nullable()();
   DateTimeColumn get scheduledDate => dateTime().nullable()();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -44,4 +54,6 @@ class SyncQueue extends Table {
     const Constant('PENDING'),
   )(); // PENDING, SYNCED, FAILED
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastAttempt => dateTime().nullable()();
 }

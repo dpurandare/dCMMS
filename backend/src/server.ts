@@ -34,6 +34,7 @@ import auditLogRoutes from "./routes/audit-logs";
 import mlFeatureRoutes from "./routes/ml-features";
 import forecastRoutes from "./routes/forecasts";
 import usersRoutes from "./routes/users";
+import { genaiRoutes } from "./routes/genai.routes";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -330,6 +331,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(forecastRoutes, { prefix: "/api/v1/forecasts" });
   await server.register(dashboardRoutes, { prefix: "/api/v1/dashboards" });
   await server.register(usersRoutes, { prefix: "/api/v1/users" });
+  await server.register(genaiRoutes, { prefix: "/api/v1/genai" });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

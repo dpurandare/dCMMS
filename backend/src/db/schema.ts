@@ -8,6 +8,8 @@ import {
   integer,
   decimal,
   pgEnum,
+  customType,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -1393,3 +1395,21 @@ export const reportsRelations = relations(reports, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ==========================================
+// SPRINT 26: GenAI Document Intelligence
+// ==========================================
+
+const vector = customType<{ data: number[] }>({
+  dataType() {
+    return "vector(768)";
+  },
+});
+
+export const documentEmbeddings = pgTable("document_embeddings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"), // store source_file, page_number, asset_id
+  embedding: vector("embedding"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

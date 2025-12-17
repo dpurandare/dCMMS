@@ -12,6 +12,7 @@ export interface ModelMetrics {
   precision?: number;
   recall?: number;
   timestamp?: Date;
+  evaluatedPredictions?: number;
 }
 
 export interface PerformanceHistory {
@@ -42,6 +43,7 @@ export interface PredictionStats {
 export interface OverdueEvaluation {
   evaluated: number;
   updated: number;
+  assumedNoFailure: number;
 }
 
 export class ModelPerformanceService {
@@ -83,6 +85,7 @@ export class ModelPerformanceService {
       recall: 0.93,
       f1Score: 0.935,
       timestamp: new Date(),
+      evaluatedPredictions: 100,
     };
   }
 
@@ -128,6 +131,6 @@ export class ModelPerformanceService {
 
   async evaluateOverduePredictions(): Promise<OverdueEvaluation> {
     console.log("[Mock Performance] Evaluating overdue predictions");
-    return { evaluated: 10, updated: 5 };
+    return { evaluated: 10, updated: 5, assumedNoFailure: 2 };
   }
 }

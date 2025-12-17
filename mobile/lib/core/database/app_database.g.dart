@@ -110,6 +110,10 @@ class $AssetsTable extends Assets with TableInfo<$AssetsTable, Asset> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {assetTag},
+  ];
+  @override
   Asset map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Asset(
@@ -445,6 +449,29 @@ class $WorkOrdersTable extends WorkOrders
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -455,6 +482,8 @@ class $WorkOrdersTable extends WorkOrders
     assetId,
     assignedTo,
     scheduledDate,
+    version,
+    lastSyncedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -529,6 +558,21 @@ class $WorkOrdersTable extends WorkOrders
         ),
       );
     }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -570,6 +614,14 @@ class $WorkOrdersTable extends WorkOrders
         DriftSqlType.dateTime,
         data['${effectivePrefix}scheduled_date'],
       ),
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      ),
     );
   }
 
@@ -588,6 +640,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
   final String? assetId;
   final String? assignedTo;
   final DateTime? scheduledDate;
+  final int version;
+  final DateTime? lastSyncedAt;
   const WorkOrder({
     required this.id,
     required this.title,
@@ -597,6 +651,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
     this.assetId,
     this.assignedTo,
     this.scheduledDate,
+    required this.version,
+    this.lastSyncedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -614,6 +670,10 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
     }
     if (!nullToAbsent || scheduledDate != null) {
       map['scheduled_date'] = Variable<DateTime>(scheduledDate);
+    }
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
     }
     return map;
   }
@@ -634,6 +694,10 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
       scheduledDate: scheduledDate == null && nullToAbsent
           ? const Value.absent()
           : Value(scheduledDate),
+      version: Value(version),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
     );
   }
 
@@ -651,6 +715,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
       assetId: serializer.fromJson<String?>(json['assetId']),
       assignedTo: serializer.fromJson<String?>(json['assignedTo']),
       scheduledDate: serializer.fromJson<DateTime?>(json['scheduledDate']),
+      version: serializer.fromJson<int>(json['version']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
     );
   }
   @override
@@ -665,6 +731,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
       'assetId': serializer.toJson<String?>(assetId),
       'assignedTo': serializer.toJson<String?>(assignedTo),
       'scheduledDate': serializer.toJson<DateTime?>(scheduledDate),
+      'version': serializer.toJson<int>(version),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
     };
   }
 
@@ -677,6 +745,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
     Value<String?> assetId = const Value.absent(),
     Value<String?> assignedTo = const Value.absent(),
     Value<DateTime?> scheduledDate = const Value.absent(),
+    int? version,
+    Value<DateTime?> lastSyncedAt = const Value.absent(),
   }) => WorkOrder(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -688,6 +758,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
     scheduledDate: scheduledDate.present
         ? scheduledDate.value
         : this.scheduledDate,
+    version: version ?? this.version,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
   );
   WorkOrder copyWithCompanion(WorkOrdersCompanion data) {
     return WorkOrder(
@@ -705,6 +777,10 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
       scheduledDate: data.scheduledDate.present
           ? data.scheduledDate.value
           : this.scheduledDate,
+      version: data.version.present ? data.version.value : this.version,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
     );
   }
 
@@ -718,7 +794,9 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
           ..write('priority: $priority, ')
           ..write('assetId: $assetId, ')
           ..write('assignedTo: $assignedTo, ')
-          ..write('scheduledDate: $scheduledDate')
+          ..write('scheduledDate: $scheduledDate, ')
+          ..write('version: $version, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
           ..write(')'))
         .toString();
   }
@@ -733,6 +811,8 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
     assetId,
     assignedTo,
     scheduledDate,
+    version,
+    lastSyncedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -745,7 +825,9 @@ class WorkOrder extends DataClass implements Insertable<WorkOrder> {
           other.priority == this.priority &&
           other.assetId == this.assetId &&
           other.assignedTo == this.assignedTo &&
-          other.scheduledDate == this.scheduledDate);
+          other.scheduledDate == this.scheduledDate &&
+          other.version == this.version &&
+          other.lastSyncedAt == this.lastSyncedAt);
 }
 
 class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
@@ -757,6 +839,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
   final Value<String?> assetId;
   final Value<String?> assignedTo;
   final Value<DateTime?> scheduledDate;
+  final Value<int> version;
+  final Value<DateTime?> lastSyncedAt;
   final Value<int> rowid;
   const WorkOrdersCompanion({
     this.id = const Value.absent(),
@@ -767,6 +851,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
     this.assetId = const Value.absent(),
     this.assignedTo = const Value.absent(),
     this.scheduledDate = const Value.absent(),
+    this.version = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   WorkOrdersCompanion.insert({
@@ -778,6 +864,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
     this.assetId = const Value.absent(),
     this.assignedTo = const Value.absent(),
     this.scheduledDate = const Value.absent(),
+    this.version = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -793,6 +881,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
     Expression<String>? assetId,
     Expression<String>? assignedTo,
     Expression<DateTime>? scheduledDate,
+    Expression<int>? version,
+    Expression<DateTime>? lastSyncedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -804,6 +894,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
       if (assetId != null) 'asset_id': assetId,
       if (assignedTo != null) 'assigned_to': assignedTo,
       if (scheduledDate != null) 'scheduled_date': scheduledDate,
+      if (version != null) 'version': version,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -817,6 +909,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
     Value<String?>? assetId,
     Value<String?>? assignedTo,
     Value<DateTime?>? scheduledDate,
+    Value<int>? version,
+    Value<DateTime?>? lastSyncedAt,
     Value<int>? rowid,
   }) {
     return WorkOrdersCompanion(
@@ -828,6 +922,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
       assetId: assetId ?? this.assetId,
       assignedTo: assignedTo ?? this.assignedTo,
       scheduledDate: scheduledDate ?? this.scheduledDate,
+      version: version ?? this.version,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -859,6 +955,12 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
     if (scheduledDate.present) {
       map['scheduled_date'] = Variable<DateTime>(scheduledDate.value);
     }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -876,6 +978,8 @@ class WorkOrdersCompanion extends UpdateCompanion<WorkOrder> {
           ..write('assetId: $assetId, ')
           ..write('assignedTo: $assignedTo, ')
           ..write('scheduledDate: $scheduledDate, ')
+          ..write('version: $version, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -956,6 +1060,29 @@ class $SyncQueueTable extends SyncQueue
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
+  );
+  @override
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastAttemptMeta = const VerificationMeta(
+    'lastAttempt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastAttempt = GeneratedColumn<DateTime>(
+    'last_attempt',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -964,6 +1091,8 @@ class $SyncQueueTable extends SyncQueue
     payload,
     status,
     createdAt,
+    retryCount,
+    lastAttempt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1019,6 +1148,21 @@ class $SyncQueueTable extends SyncQueue
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('retry_count')) {
+      context.handle(
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
+    if (data.containsKey('last_attempt')) {
+      context.handle(
+        _lastAttemptMeta,
+        lastAttempt.isAcceptableOrUnknown(
+          data['last_attempt']!,
+          _lastAttemptMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1052,6 +1196,14 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
+      lastAttempt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_attempt'],
+      ),
     );
   }
 
@@ -1068,6 +1220,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   final String payload;
   final String status;
   final DateTime createdAt;
+  final int retryCount;
+  final DateTime? lastAttempt;
   const SyncQueueData({
     required this.id,
     required this.operation,
@@ -1075,6 +1229,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     required this.payload,
     required this.status,
     required this.createdAt,
+    required this.retryCount,
+    this.lastAttempt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1085,6 +1241,10 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     map['payload'] = Variable<String>(payload);
     map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || lastAttempt != null) {
+      map['last_attempt'] = Variable<DateTime>(lastAttempt);
+    }
     return map;
   }
 
@@ -1096,6 +1256,10 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       payload: Value(payload),
       status: Value(status),
       createdAt: Value(createdAt),
+      retryCount: Value(retryCount),
+      lastAttempt: lastAttempt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAttempt),
     );
   }
 
@@ -1111,6 +1275,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       payload: serializer.fromJson<String>(json['payload']),
       status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
+      lastAttempt: serializer.fromJson<DateTime?>(json['lastAttempt']),
     );
   }
   @override
@@ -1123,6 +1289,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       'payload': serializer.toJson<String>(payload),
       'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'retryCount': serializer.toJson<int>(retryCount),
+      'lastAttempt': serializer.toJson<DateTime?>(lastAttempt),
     };
   }
 
@@ -1133,6 +1301,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     String? payload,
     String? status,
     DateTime? createdAt,
+    int? retryCount,
+    Value<DateTime?> lastAttempt = const Value.absent(),
   }) => SyncQueueData(
     id: id ?? this.id,
     operation: operation ?? this.operation,
@@ -1140,6 +1310,8 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     payload: payload ?? this.payload,
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
+    retryCount: retryCount ?? this.retryCount,
+    lastAttempt: lastAttempt.present ? lastAttempt.value : this.lastAttempt,
   );
   SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
     return SyncQueueData(
@@ -1151,6 +1323,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       payload: data.payload.present ? data.payload.value : this.payload,
       status: data.status.present ? data.status.value : this.status,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
+      lastAttempt: data.lastAttempt.present
+          ? data.lastAttempt.value
+          : this.lastAttempt,
     );
   }
 
@@ -1162,14 +1340,24 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           ..write('targetTable: $targetTable, ')
           ..write('payload: $payload, ')
           ..write('status: $status, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('lastAttempt: $lastAttempt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, operation, targetTable, payload, status, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    operation,
+    targetTable,
+    payload,
+    status,
+    createdAt,
+    retryCount,
+    lastAttempt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1179,7 +1367,9 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           other.targetTable == this.targetTable &&
           other.payload == this.payload &&
           other.status == this.status &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.retryCount == this.retryCount &&
+          other.lastAttempt == this.lastAttempt);
 }
 
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
@@ -1189,6 +1379,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<String> payload;
   final Value<String> status;
   final Value<DateTime> createdAt;
+  final Value<int> retryCount;
+  final Value<DateTime?> lastAttempt;
   const SyncQueueCompanion({
     this.id = const Value.absent(),
     this.operation = const Value.absent(),
@@ -1196,6 +1388,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     this.payload = const Value.absent(),
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.lastAttempt = const Value.absent(),
   });
   SyncQueueCompanion.insert({
     this.id = const Value.absent(),
@@ -1204,6 +1398,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     required String payload,
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.lastAttempt = const Value.absent(),
   }) : operation = Value(operation),
        targetTable = Value(targetTable),
        payload = Value(payload);
@@ -1214,6 +1410,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Expression<String>? payload,
     Expression<String>? status,
     Expression<DateTime>? createdAt,
+    Expression<int>? retryCount,
+    Expression<DateTime>? lastAttempt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1222,6 +1420,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       if (payload != null) 'payload': payload,
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (lastAttempt != null) 'last_attempt': lastAttempt,
     });
   }
 
@@ -1232,6 +1432,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Value<String>? payload,
     Value<String>? status,
     Value<DateTime>? createdAt,
+    Value<int>? retryCount,
+    Value<DateTime?>? lastAttempt,
   }) {
     return SyncQueueCompanion(
       id: id ?? this.id,
@@ -1240,6 +1442,8 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       payload: payload ?? this.payload,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      retryCount: retryCount ?? this.retryCount,
+      lastAttempt: lastAttempt ?? this.lastAttempt,
     );
   }
 
@@ -1264,6 +1468,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (lastAttempt.present) {
+      map['last_attempt'] = Variable<DateTime>(lastAttempt.value);
+    }
     return map;
   }
 
@@ -1275,7 +1485,9 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
           ..write('targetTable: $targetTable, ')
           ..write('payload: $payload, ')
           ..write('status: $status, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('lastAttempt: $lastAttempt')
           ..write(')'))
         .toString();
   }
@@ -1902,6 +2114,8 @@ typedef $$WorkOrdersTableCreateCompanionBuilder =
       Value<String?> assetId,
       Value<String?> assignedTo,
       Value<DateTime?> scheduledDate,
+      Value<int> version,
+      Value<DateTime?> lastSyncedAt,
       Value<int> rowid,
     });
 typedef $$WorkOrdersTableUpdateCompanionBuilder =
@@ -1914,6 +2128,8 @@ typedef $$WorkOrdersTableUpdateCompanionBuilder =
       Value<String?> assetId,
       Value<String?> assignedTo,
       Value<DateTime?> scheduledDate,
+      Value<int> version,
+      Value<DateTime?> lastSyncedAt,
       Value<int> rowid,
     });
 
@@ -1981,6 +2197,16 @@ class $$WorkOrdersTableFilterComposer
 
   ColumnFilters<DateTime> get scheduledDate => $composableBuilder(
     column: $table.scheduledDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2052,6 +2278,16 @@ class $$WorkOrdersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$AssetsTableOrderingComposer get assetId {
     final $$AssetsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2109,6 +2345,14 @@ class $$WorkOrdersTableAnnotationComposer
 
   GeneratedColumn<DateTime> get scheduledDate => $composableBuilder(
     column: $table.scheduledDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
     builder: (column) => column,
   );
 
@@ -2172,6 +2416,8 @@ class $$WorkOrdersTableTableManager
                 Value<String?> assetId = const Value.absent(),
                 Value<String?> assignedTo = const Value.absent(),
                 Value<DateTime?> scheduledDate = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorkOrdersCompanion(
                 id: id,
@@ -2182,6 +2428,8 @@ class $$WorkOrdersTableTableManager
                 assetId: assetId,
                 assignedTo: assignedTo,
                 scheduledDate: scheduledDate,
+                version: version,
+                lastSyncedAt: lastSyncedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2194,6 +2442,8 @@ class $$WorkOrdersTableTableManager
                 Value<String?> assetId = const Value.absent(),
                 Value<String?> assignedTo = const Value.absent(),
                 Value<DateTime?> scheduledDate = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<DateTime?> lastSyncedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => WorkOrdersCompanion.insert(
                 id: id,
@@ -2204,6 +2454,8 @@ class $$WorkOrdersTableTableManager
                 assetId: assetId,
                 assignedTo: assignedTo,
                 scheduledDate: scheduledDate,
+                version: version,
+                lastSyncedAt: lastSyncedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2281,6 +2533,8 @@ typedef $$SyncQueueTableCreateCompanionBuilder =
       required String payload,
       Value<String> status,
       Value<DateTime> createdAt,
+      Value<int> retryCount,
+      Value<DateTime?> lastAttempt,
     });
 typedef $$SyncQueueTableUpdateCompanionBuilder =
     SyncQueueCompanion Function({
@@ -2290,6 +2544,8 @@ typedef $$SyncQueueTableUpdateCompanionBuilder =
       Value<String> payload,
       Value<String> status,
       Value<DateTime> createdAt,
+      Value<int> retryCount,
+      Value<DateTime?> lastAttempt,
     });
 
 class $$SyncQueueTableFilterComposer
@@ -2328,6 +2584,16 @@ class $$SyncQueueTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastAttempt => $composableBuilder(
+    column: $table.lastAttempt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2370,6 +2636,16 @@ class $$SyncQueueTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastAttempt => $composableBuilder(
+    column: $table.lastAttempt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncQueueTableAnnotationComposer
@@ -2400,6 +2676,16 @@ class $$SyncQueueTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastAttempt => $composableBuilder(
+    column: $table.lastAttempt,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncQueueTableTableManager
@@ -2439,6 +2725,8 @@ class $$SyncQueueTableTableManager
                 Value<String> payload = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<DateTime?> lastAttempt = const Value.absent(),
               }) => SyncQueueCompanion(
                 id: id,
                 operation: operation,
@@ -2446,6 +2734,8 @@ class $$SyncQueueTableTableManager
                 payload: payload,
                 status: status,
                 createdAt: createdAt,
+                retryCount: retryCount,
+                lastAttempt: lastAttempt,
               ),
           createCompanionCallback:
               ({
@@ -2455,6 +2745,8 @@ class $$SyncQueueTableTableManager
                 required String payload,
                 Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<DateTime?> lastAttempt = const Value.absent(),
               }) => SyncQueueCompanion.insert(
                 id: id,
                 operation: operation,
@@ -2462,6 +2754,8 @@ class $$SyncQueueTableTableManager
                 payload: payload,
                 status: status,
                 createdAt: createdAt,
+                retryCount: retryCount,
+                lastAttempt: lastAttempt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

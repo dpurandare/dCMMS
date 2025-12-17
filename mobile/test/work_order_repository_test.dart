@@ -25,6 +25,9 @@ class MockSyncRepository implements SyncRepository {
   }
 
   @override
+  Stream<String> get syncStatus => const Stream.empty();
+
+  @override
   Future<void> processQueue() async {}
 }
 
@@ -52,6 +55,7 @@ void main() {
       status: 'OPEN',
       priority: 'HIGH',
       assetId: 'asset-1',
+      version: 1,
     );
 
     // This calls syncRepo.addToQueue, which is mocked

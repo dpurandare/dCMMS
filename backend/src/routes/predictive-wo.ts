@@ -62,7 +62,7 @@ const predictiveWORoutes: FastifyPluginAsync = async (server) => {
         };
 
         // Check for admin role (assuming user is attached to request)
-        const user = request.user;
+        const user = request.user as any; // Cast to any to access role on union type. Or better: (request.user as UserPayload)
         if (user.role !== "admin") {
           return reply.status(403).send({ error: "Forbidden" });
         }
@@ -190,7 +190,7 @@ const predictiveWORoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       try {
         // Check for admin role
-        const user = request.user;
+        const user = request.user as any;
         if (user.role !== "admin") {
           return reply.status(403).send({ error: "Forbidden" });
         }

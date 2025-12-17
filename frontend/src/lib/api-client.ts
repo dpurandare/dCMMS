@@ -32,7 +32,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean 
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }; 
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -189,6 +189,8 @@ export const api = {
 
   // Users endpoints
   users: {
+    update: async (id: string, data: any) => { const response = await apiClient.put("/users/" + id, data); return response.data; },
+    getById: async (id: string) => { const response = await apiClient.get("/users/" + id); return response.data; },
     list: async (params?: Record<string, any>) => {
       const response = await apiClient.get('/users', { params });
       return response.data;

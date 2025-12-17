@@ -16,6 +16,11 @@ class WorkOrderListScreen extends ConsumerWidget {
         title: const Text('Work Orders'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.smart_toy),
+            tooltip: 'AI Assistant',
+            onPressed: () => context.push('/genai'),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () async {
               await ref.read(syncRepositoryProvider).processQueue();
