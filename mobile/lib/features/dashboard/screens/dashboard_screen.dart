@@ -114,7 +114,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Column(
         children: [
           Container(
-            color: color.withOpacity(0.1),
+            color: Color.fromRGBO(0, 0, 0, 0.05),
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [

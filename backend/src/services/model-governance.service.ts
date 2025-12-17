@@ -121,6 +121,8 @@ export class ModelGovernanceService {
       approvedBy,
       status: "approved",
       approvedAt: new Date(),
+      requestedBy: "mock-user",
+      approvers: ["admin"],
     };
   }
 
@@ -136,6 +138,8 @@ export class ModelGovernanceService {
       reason,
       status: "rejected",
       rejectedAt: new Date(),
+      requestedBy: "mock-user",
+      approvers: ["admin"],
     };
   }
 
@@ -225,8 +229,8 @@ export class ModelGovernanceService {
 
   async getModelsByStage(stage: ModelStage): Promise<Partial<Model>[]> {
     return [
-      { id: "mock-model-1", name: "Model 1", stage },
-      { id: "mock-model-2", name: "Model 2", stage },
+      { id: "mock-model-1", modelName: "Model 1", stage },
+      { id: "mock-model-2", modelName: "Model 2", stage },
     ];
   }
 }

@@ -53,8 +53,8 @@ export const modelPerformanceJob = new CronJob(
           console.log(
             `[CRON]   - Evaluated predictions: ${metrics.evaluatedPredictions}`,
           );
-          console.log(`[CRON]   - Precision: ${metrics.precision.toFixed(3)}`);
-          console.log(`[CRON]   - Recall: ${metrics.recall.toFixed(3)}`);
+          console.log(`[CRON]   - Precision: ${(metrics.precision || 0).toFixed(3)}`);
+          console.log(`[CRON]   - Recall: ${(metrics.recall || 0).toFixed(3)}`);
           console.log(`[CRON]   - F1 Score: ${metrics.f1Score.toFixed(3)}`);
           console.log(`[CRON]   - Accuracy: ${metrics.accuracy.toFixed(3)}`);
 
@@ -65,7 +65,7 @@ export const modelPerformanceJob = new CronJob(
             console.log(
               `[CRON] ⚠️  ${alerts.length} active performance alert(s) for ${modelName}`,
             );
-            for (const alert of alerts) {
+            for (const alert of alerts as any[]) {
               console.log(
                 `[CRON]     - [${alert.severity.toUpperCase()}] ${alert.message}`,
               );

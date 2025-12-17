@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/work_orders/screens/work_order_list_screen.dart';
 import '../features/work_orders/screens/work_order_detail_screen.dart';
+import '../features/genai/ui/chat_screen.dart';
 import 'auth/auth_service.dart';
+import 'go_router_refresh_stream.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: GoRouterRefreshStream(authService.authStateChanges),
     redirect: (context, state) async {
       final isLoggedIn = await authService.isAuthenticated();
       final isLoginRoute = state.uri.toString() == '/login';
@@ -20,6 +23,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/genai', builder: (context, state) => const ChatScreen()),
       GoRoute(
         path: '/work-orders',
         builder: (context, state) => const WorkOrderListScreen(),

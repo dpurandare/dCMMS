@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 
 import 'package:dio/dio.dart';
 import 'dart:convert';
+import 'dart:async';
 
 class SyncRepository {
   final AppDatabase _db;
@@ -38,65 +39,116 @@ class SyncRepository {
         );
   }
 
+  // Sync Status Stream
+  final _syncStatusController = StreamController<String>.broadcast();
+  Stream<String> get syncStatus => _syncStatusController.stream;
+
   Future<void> processQueue() async {
     if (!await isOnline) return;
+
+    _syncStatusController.add('SYNCING');
 
     final pendingItems = await (_db.select(
       _db.syncQueue,
     )..where((t) => t.status.equals('PENDING'))).get();
 
     for (final item in pendingItems) {
+      if (item.retryCount >= 5) {
+        // Mark as failed after max retries
+        await (_db.update(_db.syncQueue)..where((t) => t.id.equals(item.id)))
+            .write(SyncQueueCompanion(status: Value('FAILED')));
+        continue;
+      }
+
       try {
         bool success = await _pushItem(item);
         if (success) {
           await (_db.update(_db.syncQueue)..where((t) => t.id.equals(item.id)))
               .write(SyncQueueCompanion(status: Value('COMPLETED')));
-        } else {
-          await (_db.update(_db.syncQueue)..where((t) => t.id.equals(item.id)))
-              .write(SyncQueueCompanion(status: Value('FAILED')));
         }
       } catch (e) {
         print('Sync failed for item ${item.id}: $e');
+        // Increment retry count
+        await (_db.update(
+          _db.syncQueue,
+        )..where((t) => t.id.equals(item.id))).write(
+          SyncQueueCompanion(
+            retryCount: Value(item.retryCount + 1),
+            lastAttempt: Value(DateTime.now()),
+          ),
+        );
       }
     }
+
+    _syncStatusController.add('IDLE');
   }
 
   Future<bool> _pushItem(SyncQueueData item) async {
     try {
-      _dio.options.baseUrl = 'http://10.0.2.2:3001/api/v1';
+      final data = jsonDecode(item.payload);
+      final id = data['id'] ?? data['workOrderId'];
 
-      if (item.targetTable == 'work_orders' && item.operation == 'CREATE') {
-        final data = jsonDecode(item.payload);
-        // Ensure status covers API expectations
-        await _dio.post('/work-orders', data: data);
-        return true;
+      if (item.targetTable == 'work_orders') {
+        if (item.operation == 'CREATE') {
+          await _dio.post('/work-orders', data: data);
+          return true;
+        } else if (item.operation == 'UPDATE') {
+          await _dio.patch('/work-orders/$id', data: data);
+          return true;
+        } else if (item.operation == 'DELETE') {
+          await _dio.delete('/work-orders/$id');
+          return true;
+        }
       }
 
-      // Default fallback for unhandled types
       print('Unhandled sync item: ${item.targetTable} ${item.operation}');
-      return true; // Mark as done to avoid infinite retry loop for unhandled types? Or keep pending?
-      // For now, let's assume we implement what we use. If not implemented, maybe return false?
-      // But that blocks queue. Let's return false.
-      // return false;
+      return true;
     } on DioException catch (e) {
-      print('Sync error for item ${item.id}: ${e.message}');
+      if (e.response?.statusCode == 409) {
+        // CONFLICT DETECTED - Server Wins Strategy
+        try {
+          print(
+            'Conflict detected for item ${item.id}. Fetching latest from server...',
+          );
+          final data = jsonDecode(item.payload);
+          final id = data['id'] ?? data['workOrderId'];
+
+          if (id != null && item.targetTable == 'work_orders') {
+            final response = await _dio.get('/work-orders/$id');
+            final serverData = response.data;
+
+            // Update local database with server data
+            await _db
+                .into(_db.workOrders)
+                .insertOnConflictUpdate(
+                  WorkOrdersCompanion(
+                    id: Value(serverData['id']),
+                    title: Value(serverData['title']),
+                    status: Value(serverData['status']),
+                    // Add other fields as necessary, this is a simplified update
+                    version: Value(serverData['version'] ?? 1),
+                  ),
+                );
+          }
+          return true; // Resolved
+        } catch (fetchError) {
+          print('Failed to resolve conflict: $fetchError');
+          rethrow; // Retry later
+        }
+      }
+
       if (e.response?.statusCode != null &&
           e.response!.statusCode! >= 400 &&
           e.response!.statusCode! < 500) {
-        // Validation error, likely won't succeed on retry without change
-        // Mark as FAILED (logic in processQueue handles false as Failed? No, false puts it in FAILED).
-        return false;
+        return false; // Validation error, do not retry
       }
-      // Server error, retry later
-      rethrow;
-    } catch (e) {
-      print('Unknown sync error for item ${item.id}: $e');
-      return false;
+      rethrow; // Transient error, needs retry
     }
   }
 }
 
 final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  return SyncRepository(db, Dio());
+  final dio = ref.watch(dioProvider);
+  return SyncRepository(db, dio);
 });

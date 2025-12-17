@@ -57,6 +57,7 @@ const mlNavItems: NavItem[] = [
   { label: 'Model Registry', href: '/ml/models', icon: Brain },
   { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp },
   { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle },
+  { label: 'AI Assistant', href: '/genai', icon: Brain },
 ];
 
 const secondaryNavItems: NavItem[] = [

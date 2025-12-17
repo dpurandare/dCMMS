@@ -4,6 +4,9 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'tables.dart';
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 part 'app_database.g.dart';
 
@@ -12,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   // CRUD Operations - Users
   Future<int> insertUser(User user) =>
@@ -49,6 +52,22 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'db.sqlite'));
-    return NativeDatabase(file);
+
+    // Retrieve or Generate Encryption Key
+    const storage = FlutterSecureStorage();
+    String? encryptionKey = await storage.read(key: 'db_key');
+    if (encryptionKey == null) {
+      final key = List<int>.generate(32, (i) => Random.secure().nextInt(256));
+      encryptionKey = base64UrlEncode(key);
+      await storage.write(key: 'db_key', value: encryptionKey);
+    }
+
+    return NativeDatabase(
+      file,
+      setup: (rawDb) {
+        // Enable SQLCipher encryption
+        rawDb.execute("PRAGMA key = '$encryptionKey';");
+      },
+    );
   });
 }

@@ -46,6 +46,9 @@ dependencies:
   google_fonts: ^6.3.3
   flutter_animate: ^4.5.2
   flutter_secure_storage: ^10.0.0
+  flutter_markdown: ^0.7.1
+  file_picker: ^8.0.0
+  workmanager: ^0.5.2
 
 dev_dependencies:
   flutter_test:

@@ -173,6 +173,57 @@ export class NotificationBatchService {
   // ...
 
   /**
+   * Process all scheduled digests due for sending
+   */
+  async processScheduledDigests(): Promise<number> {
+    const result = await this.db.query(
+      `
+      SELECT
+        c.id,
+        c.user_id AS "userId",
+        c.enabled,
+        c.frequency,
+        c.send_time AS "sendTime",
+        c.send_day_of_week AS "sendDayOfWeek",
+        c.timezone,
+        c.batch_priorities AS "batchPriorities",
+        c.channels,
+        c.event_types AS "eventTypes",
+        c.last_sent_at AS "lastSentAt",
+        c.next_send_at AS "nextSendAt",
+        u.email,
+        u.first_name AS "firstName",
+        u.last_name AS "lastName"
+      FROM notification_batch_config c
+      JOIN users u ON c.user_id = u.id
+      WHERE
+        c.enabled = true
+        AND c.next_send_at <= NOW()
+    `
+    );
+
+    const configs: DigestConfig[] = result.rows;
+    console.log(`Found ${configs.length} scheduled digests to process`);
+
+    let sentCount = 0;
+    for (const config of configs) {
+      try {
+        await this.sendDigest(config);
+        sentCount++;
+      } catch (error) {
+        console.error(
+          `Failed to process digest for user ${config.userId}:`,
+          error
+        );
+      }
+    }
+
+    return sentCount;
+  }
+
+  // ...
+
+  /**
    * Send digest to user
    */
   private async sendDigest(config: DigestConfig): Promise<void> {
