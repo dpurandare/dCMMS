@@ -41,7 +41,7 @@
     "@fastify/jwt": "^8.0.0",
     "@fastify/multipart": "^8.3.0",
     "@fastify/rate-limit": "^9.1.0",
-    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger": "^9.6.1",
     "@fastify/swagger-ui": "^3.0.0",
     "@google/generative-ai": "^0.24.1",
     "@langchain/textsplitters": "^1.0.1",
