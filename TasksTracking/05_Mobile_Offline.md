@@ -17,10 +17,10 @@
 
 ## Remediation & Enhancements (Sprint 4 Remediation)
 
-- [ ] **DCMMS-MO-01** - Offline Sync Robustness
-  - *Gap Remediation Phase*
-- [ ] **DCMMS-MO-02** - Local DB Optimization
-- [ ] **DCMMS-MO-03** - Technician Auth Hardening
+- [x] **DCMMS-MO-01** - Offline Sync Robustness
+  - [x] Gap Remediation Phase (Sprint 18)
+- [x] **DCMMS-MO-02** - Local DB Optimization
+- [x] **DCMMS-MO-03** - Technician Auth Hardening
 - [x] **DCMMS-165** - Mobile Customizable Dashboard
   - [x] Riverpod state management for widgets (Sprint 20)
 

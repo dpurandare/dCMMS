@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:file_picker/file_picker.dart';
 import '../data/genai_repository.dart';
+import 'document_list_screen.dart';
 
 class ChatMessage {
   final String id;
@@ -115,6 +116,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Future<void> _pollJobStatus(String jobId) async {
+    final repo = ref.read(genAIRepositoryProvider);
+    bool isComplete = false;
+    int attempts = 0;
+
+    while (!isComplete && attempts < 20) {
+      // Timeout ~40s
+      await Future.delayed(const Duration(seconds: 2));
+      attempts++;
+
+      try {
+        final status = await repo.getJobStatus(jobId);
+        if (status != null) {
+          final state = status['state'];
+          if (state == 'completed') {
+            isComplete = true;
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Document processed successfully!'),
+                ),
+              );
+            }
+          } else if (state == 'failed') {
+            isComplete = true;
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Processing failed: ${status['result']}'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+          // else: active/delayed/waiting
+        }
+      } catch (e) {
+        print("Polling error: $e");
+      }
+    }
+  }
+
   Future<void> _uploadDocument() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -132,12 +175,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ).showSnackBar(const SnackBar(content: Text('Uploading document...')));
 
         final repo = ref.read(genAIRepositoryProvider);
-        await repo.uploadDocument(file);
+        final response = await repo.uploadDocument(file);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Document uploaded successfully!')),
-          );
+        // Handle Background Job
+        if (response.containsKey('jobId')) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Upload queued. Processing...')),
+            );
+          }
+          _pollJobStatus(response['jobId']);
+        } else {
+          // Legacy sync behavior
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Document uploaded successfully!')),
+            );
+          }
         }
       } catch (e) {
         if (mounted) {
@@ -158,6 +212,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       appBar: AppBar(
         title: const Text('AI Assistant'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DocumentListScreen(),
+                ),
+              );
+            },
+            tooltip: 'Manage Documents',
+          ),
           IconButton(
             icon: const Icon(Icons.upload_file),
             onPressed: _uploadDocument,

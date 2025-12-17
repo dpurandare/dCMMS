@@ -26,7 +26,10 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
     name: z.string(),
     description: z.string().nullable().optional(),
     type: z.string().optional(),
-    energyType: z.enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"]).nullable().optional(),
+    energyType: z
+      .enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"])
+      .nullable()
+      .optional(),
     location: z.string().nullable().optional(),
     address: z.string().nullable().optional(),
     city: z.string().nullable().optional(),
@@ -47,7 +50,9 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
     name: z.string().min(1).max(255),
     description: z.string().optional(),
     type: z.string().optional(),
-    energyType: z.enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"]).optional(),
+    energyType: z
+      .enum(["solar", "wind", "hydro", "biomass", "geothermal", "hybrid"])
+      .optional(),
     address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
@@ -65,15 +70,19 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
   const SiteStatisticsSchema = z.object({
     site: SiteSchema,
     statistics: z.object({
-      assetsByStatus: z.array(z.object({
-        status: z.string(),
-        count: z.number()
-      })),
-      assetsByCriticality: z.array(z.object({
-        criticality: z.string(),
-        count: z.number()
-      })),
-    })
+      assetsByStatus: z.array(
+        z.object({
+          status: z.string(),
+          count: z.number(),
+        }),
+      ),
+      assetsByCriticality: z.array(
+        z.object({
+          criticality: z.string(),
+          count: z.number(),
+        }),
+      ),
+    }),
   });
 
   // GET /api/v1/sites
@@ -186,7 +195,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
             error: z.string(),
             message: z.string(),
           }),
-        }
+        },
       },
       preHandler: authenticate,
     },

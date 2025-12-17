@@ -355,7 +355,7 @@ export class ForecastService {
     if (mape > 999.99) mape = 999.99;
     const rmse = Math.sqrt(
       actual.reduce((sum, a, i) => sum + Math.pow(a - predicted[i], 2), 0) /
-      actual.length,
+        actual.length,
     );
 
     // R²
@@ -548,7 +548,7 @@ export class ForecastService {
     // Last resort: Throw error instead of defaulting to solar
     throw new Error(
       `Unable to determine energy type for site ${siteId}${assetId ? ` and asset ${assetId}` : ""}. ` +
-      `Please specify energyType parameter in the request, or update site/asset configuration with energyType.`,
+        `Please specify energyType parameter in the request, or update site/asset configuration with energyType.`,
     );
   }
 

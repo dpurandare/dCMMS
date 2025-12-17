@@ -1,19 +1,11 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers.dart';
 
 final genAIRepositoryProvider = Provider<GenAIRepository>((ref) {
-  // Assuming Dio is provided elsewhere or creating a new instance
-  // In a real app, you'd get the authenticated Dio client from another provider
-  return GenAIRepository(
-    Dio(
-      BaseOptions(
-        baseUrl:
-            'http://localhost:3001/api/v1', // Update with actual API URL for emulator (10.0.2.2 usually)
-        // headers: {'Authorization': 'Bearer ...'}
-      ),
-    ),
-  );
+  final dio = ref.watch(dioProvider);
+  return GenAIRepository(dio);
 });
 
 class GenAIRepository {
@@ -44,10 +36,41 @@ class GenAIRepository {
         if (assetId != null) 'assetId': assetId,
       });
 
+      // Expecting 202 Accepted with jobId, or 201 Created for sync (legacy)
       final response = await _dio.post('/genai/upload', data: formData);
       return response.data;
     } catch (e) {
       throw Exception('Failed to upload document: $e');
+    }
+  }
+
+  Future<List<dynamic>> getDocuments() async {
+    try {
+      final response = await _dio.get('/genai/documents');
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to get documents: $e');
+    }
+  }
+
+  Future<void> deleteDocument(String filename) async {
+    try {
+      await _dio.delete('/genai/documents/$filename');
+    } catch (e) {
+      throw Exception('Failed to delete document: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> getJobStatus(String jobId) async {
+    try {
+      final response = await _dio.get('/genai/jobs/$jobId');
+      return response.data;
+    } catch (e) {
+      // logic to handle 404 if needed, or rethrow
+      if (e is DioException && e.response?.statusCode == 404) {
+        return null;
+      }
+      throw Exception('Failed to check job status: $e');
     }
   }
 }

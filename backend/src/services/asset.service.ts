@@ -306,7 +306,9 @@ export class AssetService {
     const children = (await db
       .select()
       .from(assets)
-      .where(and(eq(assets.parentAssetId, id), eq(assets.tenantId, tenantId)))) as any[];
+      .where(
+        and(eq(assets.parentAssetId, id), eq(assets.tenantId, tenantId)),
+      )) as any[];
 
     // Recursively get hierarchy for children
     const childrenWithHierarchy = await Promise.all(

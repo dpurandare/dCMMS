@@ -23,6 +23,12 @@ export interface UploadResponse {
     status: "success" | "partial_success" | "failed";
 }
 
+export interface GenAIDocument {
+    filename: string;
+    uploadedAt: string;
+    chunkCount: number;
+}
+
 export const GenAIService = {
     /**
      * Upload a document for ingestion
@@ -53,6 +59,22 @@ export const GenAIService = {
      */
     async chat(query: string): Promise<ChatResponse> {
         const response = await axios.post(`${API_URL}/genai/chat`, { query });
+        return response.data;
+    },
+
+    /**
+     * Get list of uploaded documents
+     */
+    async getDocuments(): Promise<GenAIDocument[]> {
+        const response = await axios.get(`${API_URL}/genai/documents`);
+        return response.data;
+    },
+
+    /**
+     * Delete a document
+     */
+    async deleteDocument(filename: string): Promise<{ message: string }> {
+        const response = await axios.delete(`${API_URL}/genai/documents/${filename}`);
         return response.data;
     },
 };
