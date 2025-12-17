@@ -478,6 +478,8 @@ A: Click "Forgot Password?" on the login page and follow the instructions. (Feat
 
 A: dCMMS supports Solar, Wind, Hydro, Biomass, Geothermal, and Hybrid energy types. Each type uses specialized forecasting models (e.g., solar irradiance for solar, wind speed/density for wind) to ensure accurate generation predictions.
 
+**Want to add a new energy type?** Check out our [Adding New Energy Types Guide](../guides/ADDING_NEW_ENERGY_TYPES.md).
+
 **Q: Can I import assets from a spreadsheet?**
 
 A: Bulk import is planned for a future release. Currently, assets must be created individually.
@@ -670,13 +672,13 @@ If you can't resolve an issue:
 
 ## Keyboard Shortcuts
 
-| Action | Windows/Linux | Mac |
-|--------|---------------|-----|
-| Search | Ctrl + K | Cmd + K |
-| New Work Order | Ctrl + N | Cmd + N |
-| Save | Ctrl + S | Cmd + S |
-| Cancel/Close Dialog | Esc | Esc |
-| Refresh Page | F5 | Cmd + R |
+| Action              | Windows/Linux | Mac     |
+| ------------------- | ------------- | ------- |
+| Search              | Ctrl + K      | Cmd + K |
+| New Work Order      | Ctrl + N      | Cmd + N |
+| Save                | Ctrl + S      | Cmd + S |
+| Cancel/Close Dialog | Esc           | Esc     |
+| Refresh Page        | F5            | Cmd + R |
 
 ---
 

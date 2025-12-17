@@ -54,12 +54,12 @@ Refer to `GAP_STATUS_REPORT.md` for complete specification coverage status and `
 
 This PRD is supported by comprehensive technical specifications:
 
-| Document | Purpose | Status |
-|----------|---------|--------|
-| `GAP_ANALYSIS.md` | Identifies 20+ requirement gaps with prioritization | Complete |
-| `GAP_STATUS_REPORT.md` | Tracks specification coverage (100% complete) | Complete |
-| `specs/` directory | 24 detailed technical specifications (~23,900 lines) | 100% Complete |
-| `README.md` | Quick reference and navigation guide | Complete |
+| Document               | Purpose                                              | Status        |
+| ---------------------- | ---------------------------------------------------- | ------------- |
+| `GAP_ANALYSIS.md`      | Identifies 20+ requirement gaps with prioritization  | Complete      |
+| `GAP_STATUS_REPORT.md` | Tracks specification coverage (100% complete)        | Complete      |
+| `specs/` directory     | 24 detailed technical specifications (~23,900 lines) | 100% Complete |
+| `README.md`            | Quick reference and navigation guide                 | Complete      |
 
 **For Implementation Teams:**
 - **Architects**: Start with `specs/01_API_SPECIFICATIONS.md` and `specs/10_DATA_INGESTION_ARCHITECTURE.md`
@@ -100,25 +100,36 @@ This PRD is supported by comprehensive technical specifications:
 23. `23_COST_MANAGEMENT.md` - Work order costing, budget management
 24. `24_INTERNATIONALIZATION.md` - Multi-language support, locale formatting
 
+**P2/Strategic - Additional Specs:**
+25. `25_ADVANCED_FORECASTING.md` - Neural forecasting (LSTM/Transformer)
+26. `26_GENAI_DOCUMENT_INTELLIGENCE.md` - RAG pipeline for document query
+
+**UI/UX Specifications:**
+27. `ALARMS_DASHBOARD_SPEC.md`
+28. `MOBILE_PUSH_NOTIFICATION_SPEC.md`
+29. `NOTIFICATION_PREFERENCES_UI_SPEC.md`
+30. `TELEMETRY_DASHBOARD_SPEC.md`
+31. `WEBHOOK_CONFIGURATION_UI_SPEC.md`
+
 ## 2. Vision & Goals
 
-| Goal | Measure of Success |
-| --- | --- |
-| Reduce unplanned downtime | ≥15% reduction within year one (CMMS downtime stats) |
-| Enable field technicians to work offline | ≥90% of work orders closed successfully on mobile PWA without network dependency |
-| Embed AI/ML for predictive maintenance | Model-assisted work orders generate ≥10% of corrective actions by end of Release 2 |
-| Maintain regulatory readiness | 100% compliance with mandatory reporting rules in target markets |
+| Goal                                     | Measure of Success                                                                 |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| Reduce unplanned downtime                | ≥15% reduction within year one (CMMS downtime stats)                               |
+| Enable field technicians to work offline | ≥90% of work orders closed successfully on mobile PWA without network dependency   |
+| Embed AI/ML for predictive maintenance   | Model-assisted work orders generate ≥10% of corrective actions by end of Release 2 |
+| Maintain regulatory readiness            | 100% compliance with mandatory reporting rules in target markets                   |
 
 ## 3. Personas & Key Workflows
 
-| Persona | Core Needs | KPIs / Signals | Supporting Releases |
-| --- | --- | --- | --- |
-| Field Technician | Offline work order execution, safety checklists, part scanning | WO turnaround time, safety compliance, offline sync success | MVP, Release 1 |
-| Maintenance Supervisor | Scheduling, SLA compliance, crew balancing | SLA breach %, backlog, labor utilization | MVP, Release 1 |
-| Operations Manager | KPI dashboards, anomaly detection | MTTR, MTBF, energy yield variance | Release 1, Release 2 |
-| Reliability/Analytics Engineer | Telemetry access, model lifecycle, explainability | Model precision, alert-to-WO conversion, drift rate | Release 2 |
-| Compliance Officer | Audit trails, regulatory reporting | Audit closure times, report submission accuracy | Release 2, Release 3 |
-| IT/Admin | Security, integrations, rollout controls | Access review completion, uptime, IdP integration | All releases |
+| Persona                        | Core Needs                                                     | KPIs / Signals                                              | Supporting Releases  |
+| ------------------------------ | -------------------------------------------------------------- | ----------------------------------------------------------- | -------------------- |
+| Field Technician               | Offline work order execution, safety checklists, part scanning | WO turnaround time, safety compliance, offline sync success | MVP, Release 1       |
+| Maintenance Supervisor         | Scheduling, SLA compliance, crew balancing                     | SLA breach %, backlog, labor utilization                    | MVP, Release 1       |
+| Operations Manager             | KPI dashboards, anomaly detection                              | MTTR, MTBF, energy yield variance                           | Release 1, Release 2 |
+| Reliability/Analytics Engineer | Telemetry access, model lifecycle, explainability              | Model precision, alert-to-WO conversion, drift rate         | Release 2            |
+| Compliance Officer             | Audit trails, regulatory reporting                             | Audit closure times, report submission accuracy             | Release 2, Release 3 |
+| IT/Admin                       | Security, integrations, rollout controls                       | Access review completion, uptime, IdP integration           | All releases         |
 
 Each persona will have user stories and KPIs recorded in the backlog. Representative workflows include:
 
@@ -156,46 +167,46 @@ Each release produces a deployable increment with automated regression coverage.
 
 ### 5.1 Release 0 – MVP (Target: Month 3)
 
-| ID | Feature | Description | Persona | Priority | Dependencies | TDD Hooks |
-| --- | --- | --- | --- | --- | --- | --- |
-| R0-F1 | Asset Hierarchy | CRUD for site → asset → component with tagging and geo metadata | Supervisor | P0 | PostgreSQL, REST API | Unit/contract tests for CRUD |
-| R0-F2 | Work Order Lifecycle | Create, schedule, assign, complete, close; checklists; attachments | Technician | P0 | Asset registry, mobile app | BDD tests on state transitions |
-| R0-F3 | Mobile PWA (Offline) | Offline queue, conflict resolution, attachment sync | Technician | P0 | Local DB, sync APIs | Integration tests against mocked server |
-| R0-F4 | Inventory Tie-In | Parts reservation and decrement on completion | Supervisor | P1 | Inventory service | API contract tests |
-| R0-F5 | Core Dashboard | Open/overdue WOs, asset availability, backlog | Manager | P1 | Reporting service | Snapshot tests |
+| ID    | Feature              | Description                                                        | Persona    | Priority | Dependencies               | TDD Hooks                               |
+| ----- | -------------------- | ------------------------------------------------------------------ | ---------- | -------- | -------------------------- | --------------------------------------- |
+| R0-F1 | Asset Hierarchy      | CRUD for site → asset → component with tagging and geo metadata    | Supervisor | P0       | PostgreSQL, REST API       | Unit/contract tests for CRUD            |
+| R0-F2 | Work Order Lifecycle | Create, schedule, assign, complete, close; checklists; attachments | Technician | P0       | Asset registry, mobile app | BDD tests on state transitions          |
+| R0-F3 | Mobile PWA (Offline) | Offline queue, conflict resolution, attachment sync                | Technician | P0       | Local DB, sync APIs        | Integration tests against mocked server |
+| R0-F4 | Inventory Tie-In     | Parts reservation and decrement on completion                      | Supervisor | P1       | Inventory service          | API contract tests                      |
+| R0-F5 | Core Dashboard       | Open/overdue WOs, asset availability, backlog                      | Manager    | P1       | Reporting service          | Snapshot tests                          |
 
 ### 5.2 Release 1 – Core Operations (Target: Month 6, Weeks 15-26)
 
-| ID | Feature | Description | Persona | Priority | Dependencies | TDD Hooks |
-| --- | --- | --- | --- | --- | --- | --- |
-| R1-F1 | Scheduler & Dispatch | Skills-based assignment, calendar views, crew utilization | Supervisor | P0 | Personnel data, work orders | Scheduler service unit tests |
-| R1-F2 | Telemetry Ingestion | MQTT → Kafka → QuestDB pipelines | Ops Manager | P0 | Kafka, Flink, QuestDB | Replay-based integration tests |
-| R1-F3 | Alerting & Notifications | Threshold, anomaly alerts, multi-channel escalation | Ops Manager | P0 | Telemetry, notification service | Load/fan-out tests |
-| R1-F4 | Compliance Reporting | CEA/MNRE automated reporting (India focus initially) | Compliance | P1 | Data warehouse | Report validation scripts |
-| R1-F5 | Role-Based Security | RBAC, MFA, audit logs, IdP adapter pattern | IT Admin | P0 | IdP (Auth0/Okta/Keycloak) | Security regression scripts |
+| ID    | Feature                  | Description                                               | Persona     | Priority | Dependencies                    | TDD Hooks                      |
+| ----- | ------------------------ | --------------------------------------------------------- | ----------- | -------- | ------------------------------- | ------------------------------ |
+| R1-F1 | Scheduler & Dispatch     | Skills-based assignment, calendar views, crew utilization | Supervisor  | P0       | Personnel data, work orders     | Scheduler service unit tests   |
+| R1-F2 | Telemetry Ingestion      | MQTT → Kafka → QuestDB pipelines                          | Ops Manager | P0       | Kafka, Flink, QuestDB           | Replay-based integration tests |
+| R1-F3 | Alerting & Notifications | Threshold, anomaly alerts, multi-channel escalation       | Ops Manager | P0       | Telemetry, notification service | Load/fan-out tests             |
+| R1-F4 | Compliance Reporting     | CEA/MNRE automated reporting (India focus initially)      | Compliance  | P1       | Data warehouse                  | Report validation scripts      |
+| R1-F5 | Role-Based Security      | RBAC, MFA, audit logs, IdP adapter pattern                | IT Admin    | P0       | IdP (Auth0/Okta/Keycloak)       | Security regression scripts    |
 
 ### 5.3 Release 2 – Predictive & AI-First (Target: Month 9, Weeks 27-40)
 
-| ID | Feature | Description | Persona | Priority | Dependencies | TDD Hooks |
-| --- | --- | --- | --- | --- | --- | --- |
-| R2-F1 | AI Data Platform | Feature store, model registry, drift/bias monitoring | Analytics Engineer | P0 | Kafka, object store | Data quality and drift tests |
-| R2-F2 | Predictive WO Creation | ML-driven alerts auto-create WOs with human oversight | Supervisor | P0 | AI platform, work orders | Simulation tests on historical data |
-| R2-F3 | Model Explainability UI | SHAP/LIME explanations embedded in dashboards | Ops Manager | P1 | AI platform | UI regression tests |
-| R2-F4 | Internationalization | Hindi as second language (15+ languages in future) | All Users | P1 | i18n library (react-i18next) | Locale switching tests |
-| R2-F5 | Production Readiness | DR plan, incident response, security operations | DevOps/IT Admin | P0 | Cloud infrastructure | DR drill tests |
+| ID    | Feature                 | Description                                           | Persona            | Priority | Dependencies                 | TDD Hooks                           |
+| ----- | ----------------------- | ----------------------------------------------------- | ------------------ | -------- | ---------------------------- | ----------------------------------- |
+| R2-F1 | AI Data Platform        | Feature store, model registry, drift/bias monitoring  | Analytics Engineer | P0       | Kafka, object store          | Data quality and drift tests        |
+| R2-F2 | Predictive WO Creation  | ML-driven alerts auto-create WOs with human oversight | Supervisor         | P0       | AI platform, work orders     | Simulation tests on historical data |
+| R2-F3 | Model Explainability UI | SHAP/LIME explanations embedded in dashboards         | Ops Manager        | P1       | AI platform                  | UI regression tests                 |
+| R2-F4 | Internationalization    | Hindi as second language (15+ languages in future)    | All Users          | P1       | i18n library (react-i18next) | Locale switching tests              |
+| R2-F5 | Production Readiness    | DR plan, incident response, security operations       | DevOps/IT Admin    | P0       | Cloud infrastructure         | DR drill tests                      |
 
 ### 5.4 Release 3 – Enhancements & ESG (Target: Month 12+)
 
-| ID | Feature | Description | Persona | Priority | Dependencies | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| R3-F1 | Global Compliance | NERC, AEMO, NESO reporting (USA, Australia, Europe) | Compliance | P1 | Data warehouse | Deferred from Release 1 per stakeholder decision |
-| R3-F2 | Multi-Language i18n | 15+ languages beyond Hindi (Spanish, French, German, etc.) | All Users | P1 | i18n framework | Deferred from Release 2 per stakeholder decision |
-| R3-F3 | ERP Integration | SAP, Oracle, MS Dynamics integration for procurement | IT Admin | P1 | ERP APIs, integration platform | Deferred per stakeholder decision |
-| R3-F4 | ESG Dashboards | Carbon footprint, REC tracking, stakeholder reporting | ESG Officer | P2 | Data warehouse | Defer unless regulatory need |
-| R3-F5 | Weather-Informed Scheduling | Maintenance windows based on forecasts | Supervisor | P1 | Weather API, scheduler | Dependent on vendor contract |
-| R3-F6 | Multi-Tenant Architecture | Tenant isolation, billing, chargeback | IT Admin | P1 | IAM, billing | Align with go-to-market |
-| R3-F7 | Advanced Mobile Workflows | AR-guided inspections, voice commands, wearables | Technician | P2 | Mobile hardware | Prototype after field feedback |
-| R3-F8 | GenAI Document Intelligence | Knowledge search across manuals/PPAs/tickets; contextual Q&A | Ops/Techs | P2 | Vector store, doc ingestion | Add if field demand proves strong |
+| ID    | Feature                     | Description                                                  | Persona     | Priority | Dependencies                   | Notes                                            |
+| ----- | --------------------------- | ------------------------------------------------------------ | ----------- | -------- | ------------------------------ | ------------------------------------------------ |
+| R3-F1 | Global Compliance           | NERC, AEMO, NESO reporting (USA, Australia, Europe)          | Compliance  | P1       | Data warehouse                 | Deferred from Release 1 per stakeholder decision |
+| R3-F2 | Multi-Language i18n         | 15+ languages beyond Hindi (Spanish, French, German, etc.)   | All Users   | P1       | i18n framework                 | Deferred from Release 2 per stakeholder decision |
+| R3-F3 | ERP Integration             | SAP, Oracle, MS Dynamics integration for procurement         | IT Admin    | P1       | ERP APIs, integration platform | Deferred per stakeholder decision                |
+| R3-F4 | ESG Dashboards              | Carbon footprint, REC tracking, stakeholder reporting        | ESG Officer | P2       | Data warehouse                 | Defer unless regulatory need                     |
+| R3-F5 | Weather-Informed Scheduling | Maintenance windows based on forecasts                       | Supervisor  | P1       | Weather API, scheduler         | Dependent on vendor contract                     |
+| R3-F6 | Multi-Tenant Architecture   | Tenant isolation, billing, chargeback                        | IT Admin    | P1       | IAM, billing                   | Align with go-to-market                          |
+| R3-F7 | Advanced Mobile Workflows   | AR-guided inspections, voice commands, wearables             | Technician  | P2       | Mobile hardware                | Prototype after field feedback                   |
+| R3-F8 | GenAI Document Intelligence | Knowledge search across manuals/PPAs/tickets; contextual Q&A | Ops/Techs   | P2       | Vector store, doc ingestion    | Add if field demand proves strong                |
 
 ## 6. Detailed Functional Requirements
 
@@ -609,26 +620,26 @@ Example instance:
 
 ## 18. Dependency Matrix
 
-| Area | Dependency | Needed By | Owner | Risk Mitigation |
-| --- | --- | --- | --- | --- |
-| Hardware | Secure edge gateways with TPM | Release 0 | Infra | Pre-provision inventory, vendor SLAs |
-| Software | Kafka + Schema Registry | Release 1 | Platform | HA cluster, failover tests |
-| Software | Trino/BI stack | Release 1 | Data | PoC during Sprint 0 |
-| Mobile | React Native/Flutter baseline | Release 0 | Mobile | Device lab, MDM integration |
-| Integrations | ERP/Procurement APIs | Release 0 | Integration Team | Provide mock services for TDD |
-| Integrations | Weather API contract | Release 3 | Data | Negotiate and sandbox vendor |
-| Security | IdP (Okta/Entra) | Release 0 | SecOps | Identity readiness checklist |
-| Compliance | NERC reporting specs | Release 2 | Compliance | Legal liaison, documentation |
+| Area         | Dependency                    | Needed By | Owner            | Risk Mitigation                      |
+| ------------ | ----------------------------- | --------- | ---------------- | ------------------------------------ |
+| Hardware     | Secure edge gateways with TPM | Release 0 | Infra            | Pre-provision inventory, vendor SLAs |
+| Software     | Kafka + Schema Registry       | Release 1 | Platform         | HA cluster, failover tests           |
+| Software     | Trino/BI stack                | Release 1 | Data             | PoC during Sprint 0                  |
+| Mobile       | React Native/Flutter baseline | Release 0 | Mobile           | Device lab, MDM integration          |
+| Integrations | ERP/Procurement APIs          | Release 0 | Integration Team | Provide mock services for TDD        |
+| Integrations | Weather API contract          | Release 3 | Data             | Negotiate and sandbox vendor         |
+| Security     | IdP (Okta/Entra)              | Release 0 | SecOps           | Identity readiness checklist         |
+| Compliance   | NERC reporting specs          | Release 2 | Compliance       | Legal liaison, documentation         |
 
 ## 19. Implementation Roadmap (TDD Friendly)
 
-| Phase | Timeframe | Focus | TDD Enablement |
-| --- | --- | --- | --- |
-| Sprint 0 | Weeks 1–2 | Environment setup, CI/CD, baseline tests | Test harnesses, smoke tests, contract mocks |
-| Phase 1 | Weeks 3–12 | MVP delivery (Release 0) | BDD for WOs, mobile automation suite |
-| Phase 2 | Weeks 13–24 | Release 1 capabilities | Telemetry load tests, API contracts, security regression |
-| Phase 3 | Weeks 25–36 | Release 2 AI & compliance | Model unit/integration tests, explainability validation |
-| Phase 4 | Week 37+ | Release 3 enhancements | Extend coverage based on production telemetry |
+| Phase    | Timeframe   | Focus                                    | TDD Enablement                                           |
+| -------- | ----------- | ---------------------------------------- | -------------------------------------------------------- |
+| Sprint 0 | Weeks 1–2   | Environment setup, CI/CD, baseline tests | Test harnesses, smoke tests, contract mocks              |
+| Phase 1  | Weeks 3–12  | MVP delivery (Release 0)                 | BDD for WOs, mobile automation suite                     |
+| Phase 2  | Weeks 13–24 | Release 1 capabilities                   | Telemetry load tests, API contracts, security regression |
+| Phase 3  | Weeks 25–36 | Release 2 AI & compliance                | Model unit/integration tests, explainability validation  |
+| Phase 4  | Week 37+    | Release 3 enhancements                   | Extend coverage based on production telemetry            |
 
 Continuous delivery: nightly builds, automated regression, staging deploy before production.
 
@@ -644,13 +655,13 @@ Continuous delivery: nightly builds, automated regression, staging deploy before
 
 ## 21. Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| Telemetry volume underestimated | Data loss, pipeline lag | Back-pressure controls, scalable architecture |
-| Offline sync conflicts | Data consistency issues | Version tokens, conflict resolution UI, audit trail |
-| Model false positives | Technician fatigue, mistrust | Human oversight, threshold tuning, feedback loop |
-| Compliance change mid-cycle | Rework, release delays | Continuous regulatory monitoring, buffer in Release 2 |
-| Weather vendor dependency | Scheduling accuracy | Maintain alternative provider, cached forecasts |
+| Risk                            | Impact                       | Mitigation                                            |
+| ------------------------------- | ---------------------------- | ----------------------------------------------------- |
+| Telemetry volume underestimated | Data loss, pipeline lag      | Back-pressure controls, scalable architecture         |
+| Offline sync conflicts          | Data consistency issues      | Version tokens, conflict resolution UI, audit trail   |
+| Model false positives           | Technician fatigue, mistrust | Human oversight, threshold tuning, feedback loop      |
+| Compliance change mid-cycle     | Rework, release delays       | Continuous regulatory monitoring, buffer in Release 2 |
+| Weather vendor dependency       | Scheduling accuracy          | Maintain alternative provider, cached forecasts       |
 
 ## 22. Open Issues
 
