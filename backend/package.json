@@ -50,7 +50,7 @@
     "bcrypt": "^5.1.1",
     "bullmq": "^5.66.1",
     "cron": "^4.3.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.2.3",
     "drizzle-orm": "^0.30.0",
     "fastify": "^4.26.0",
     "fastify-type-provider-zod": "^1.1.9",
