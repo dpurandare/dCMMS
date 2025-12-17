@@ -122,13 +122,19 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
         const summaryTrends = {
           mttr: calculateTrend(currentKpis.mttr, prevKpis.mttr),
           mtbf: calculateTrend(currentKpis.mtbf, prevKpis.mtbf),
-          completionRate: calculateTrend(currentKpis.completionRate, prevKpis.completionRate),
-          availability: calculateTrend(currentKpis.availability, prevKpis.availability),
+          completionRate: calculateTrend(
+            currentKpis.completionRate,
+            prevKpis.completionRate,
+          ),
+          availability: calculateTrend(
+            currentKpis.availability,
+            prevKpis.availability,
+          ),
         };
 
         return reply.send({
           ...currentKpis,
-          summaryTrends
+          summaryTrends,
         });
       } catch (error) {
         fastify.log.error({ error }, "Failed to get KPIs");
@@ -144,11 +150,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     Querystring: {
       site_id?: string;
       metric:
-      | "mttr"
-      | "mtbf"
-      | "completion_rate"
-      | "availability"
-      | "pm_compliance";
+        | "mttr"
+        | "mtbf"
+        | "completion_rate"
+        | "availability"
+        | "pm_compliance";
       days?: number;
     };
   }>(
@@ -207,11 +213,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
             date: start.toISOString().split("T")[0],
             value:
               kpis[
-              metric === "completion_rate"
-                ? "completionRate"
-                : metric === "pm_compliance"
-                  ? "pmCompliance"
-                  : metric
+                metric === "completion_rate"
+                  ? "completionRate"
+                  : metric === "pm_compliance"
+                    ? "pmCompliance"
+                    : metric
               ],
           });
         }

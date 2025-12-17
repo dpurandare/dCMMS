@@ -1,20 +1,37 @@
 import React from "react";
 import { ChatInterface } from "@/components/genai/ChatInterface";
 import { FileUploader } from "@/components/genai/FileUploader";
+import { DocumentList } from "@/components/genai/DocumentList";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function GenAIPage() {
     return (
         <div className="container mx-auto py-8">
+            <h1 className="text-2xl font-bold mb-6">AI Knowledge Assistant</h1>
+
             <div className="flex flex-col md:flex-row gap-6 h-full items-start">
-                {/* Main Chat Area */}
+                {/* Main Content Area */}
                 <div className="w-full md:w-2/3 lg:w-3/4">
-                    <ChatInterface />
+                    <Tabs defaultValue="chat" className="w-full">
+                        <TabsList className="mb-4">
+                            <TabsTrigger value="chat">Chat Assistant</TabsTrigger>
+                            <TabsTrigger value="documents">Manage Documents</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="chat" className="mt-0">
+                            <ChatInterface />
+                        </TabsContent>
+
+                        <TabsContent value="documents" className="mt-0">
+                            <DocumentList />
+                        </TabsContent>
+                    </Tabs>
                 </div>
 
                 {/* Sidebar / Upload Area */}
                 <div className="w-full md:w-1/3 lg:w-1/4 space-y-6">
                     <div>
-                        <h3 className="text-lg font-semibold mb-4">Knowledge Base</h3>
+                        <h3 className="text-lg font-semibold mb-4">Add Knowledge</h3>
                         <FileUploader />
                     </div>
 

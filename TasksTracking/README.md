@@ -14,7 +14,7 @@ This directory contains the master task list for the dCMMS project, broken down 
 | **02** | [Identity & Access](02_Identity_Access.md)                 | Specs 03, 08, 09                       | ✅ Complete    |
 | **03** | [Asset Management](03_Asset_Management.md)                 | Spec 11 (Assets)                       | ✅ Complete    |
 | **04** | [Work Order Management](04_Work_Order_Management.md)       | Spec 02 (WO), Spec 23 (Basic)          | ✅ Complete    |
-| **05** | [Mobile & Offline](05_Mobile_Offline.md)                   | Spec 04 (Offline), Spec 21 (Mobile)    | ⚠️ In Progress |
+| **05** | [Mobile & Offline](05_Mobile_Offline.md)                   | Spec 04 (Offline), Spec 21 (Mobile)    | ✅ Complete    |
 | **06** | [Telemetry Ingestion](06_Telemetry_Ingestion.md)           | Spec 10, Spec 18, Spec 21              | ✅ Complete    |
 | **07** | [Notifications & Alerts](07_Notifications_Alerts.md)       | Spec 14                                | ✅ Complete    |
 | **08** | [Analytics & Compliance](08_Analytics_Compliance.md)       | Spec 15, Spec 16                       | ✅ Complete    |

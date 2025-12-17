@@ -199,7 +199,7 @@ export class NotificationBatchService {
       WHERE
         c.enabled = true
         AND c.next_send_at <= NOW()
-    `
+    `,
     );
 
     const configs: DigestConfig[] = result.rows;
@@ -213,7 +213,7 @@ export class NotificationBatchService {
       } catch (error) {
         console.error(
           `Failed to process digest for user ${config.userId}:`,
-          error
+          error,
         );
       }
     }

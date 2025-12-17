@@ -44,16 +44,29 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
     assetTag: z.string().optional(), // Optional, auto-generated
     name: z.string().min(1).max(255),
     description: z.string().optional(),
-    type: z.enum([
-      "inverter", "transformer", "panel", "disconnector", "meter",
-      "turbine", "access_point", "gateway", "weather_station", "sensor", "other"
-    ]).default("other"),
+    type: z
+      .enum([
+        "inverter",
+        "transformer",
+        "panel",
+        "disconnector",
+        "meter",
+        "turbine",
+        "access_point",
+        "gateway",
+        "weather_station",
+        "sensor",
+        "other",
+      ])
+      .default("other"),
     manufacturer: z.string().optional(),
     model: z.string().optional(),
     serialNumber: z.string().optional(),
     location: z.string().optional(),
     parentAssetId: z.string().uuid().optional(),
-    status: z.enum(["operational", "down", "maintenance", "retired"]).default("operational"),
+    status: z
+      .enum(["operational", "down", "maintenance", "retired"])
+      .default("operational"),
     criticality: z.enum(["critical", "high", "medium", "low"]).optional(),
     installationDate: z.string().optional(),
     warrantyExpiryDate: z.string().optional(),
@@ -232,8 +245,12 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         tenantId: user.tenantId,
         assetTag,
         ...body,
-        installationDate: body.installationDate ? new Date(body.installationDate) : undefined,
-        warrantyExpiryDate: body.warrantyExpiryDate ? new Date(body.warrantyExpiryDate) : undefined,
+        installationDate: body.installationDate
+          ? new Date(body.installationDate)
+          : undefined,
+        warrantyExpiryDate: body.warrantyExpiryDate
+          ? new Date(body.warrantyExpiryDate)
+          : undefined,
       });
 
       return reply.status(201).send(asset);
@@ -269,8 +286,10 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
       const body = request.body;
 
       const updates: any = { ...body };
-      if (body.installationDate) updates.installationDate = new Date(body.installationDate);
-      if (body.warrantyExpiryDate) updates.warrantyExpiryDate = new Date(body.warrantyExpiryDate);
+      if (body.installationDate)
+        updates.installationDate = new Date(body.installationDate);
+      if (body.warrantyExpiryDate)
+        updates.warrantyExpiryDate = new Date(body.warrantyExpiryDate);
 
       const asset = await AssetService.update(id, user.tenantId, updates);
 

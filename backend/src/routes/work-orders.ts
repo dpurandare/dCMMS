@@ -1,5 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { ZodTypeProvider, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import {
+  ZodTypeProvider,
+  serializerCompiler,
+  validatorCompiler,
+} from "fastify-type-provider-zod";
 import { z } from "zod";
 import { WorkOrderService } from "../services/work-order.service";
 import { workOrderStatusEnum } from "../db/schema";
@@ -23,12 +27,7 @@ const WorkOrderTypeSchema = z.enum([
   "emergency",
 ]);
 
-const WorkOrderPrioritySchema = z.enum([
-  "critical",
-  "high",
-  "medium",
-  "low",
-]);
+const WorkOrderPrioritySchema = z.enum(["critical", "high", "medium", "low"]);
 
 const CreateWorkOrderSchema = z.object({
   title: z.string().min(1).max(255),
@@ -59,32 +58,32 @@ const UpdateWorkOrderSchema = z.object({
 });
 
 const TransitionSchema = z.object({
-  status: WorkOrderStatusSchema
+  status: WorkOrderStatusSchema,
 });
 
 const CreateTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
-  taskOrder: z.number().int()
+  taskOrder: z.number().int(),
 });
 
 const UpdateTaskSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   isCompleted: z.boolean().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
 });
 
 const AddPartSchema = z.object({
   partId: z.string().uuid(),
   quantityRequired: z.number().int().positive(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
 });
 
 const AddLaborSchema = z.object({
   userId: z.string().uuid(),
   hours: z.number().positive(),
-  description: z.string().optional()
+  description: z.string().optional(),
 });
 
 export const workOrderRoutes = async (app: FastifyInstance) => {
@@ -116,13 +115,17 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         ...request.body,
         tenantId: user.tenantId,
         createdBy: user.id,
-        scheduledStart: request.body.scheduledStart ? new Date(request.body.scheduledStart) : undefined,
-        scheduledEnd: request.body.scheduledEnd ? new Date(request.body.scheduledEnd) : undefined,
+        scheduledStart: request.body.scheduledStart
+          ? new Date(request.body.scheduledStart)
+          : undefined,
+        scheduledEnd: request.body.scheduledEnd
+          ? new Date(request.body.scheduledEnd)
+          : undefined,
       };
 
       const workOrder = await WorkOrderService.create(data);
       return reply.status(201).send(workOrder);
-    }
+    },
   );
 
   server.get(
@@ -151,12 +154,13 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       const user = request.user as any;
       const { page, limit, sortBy, sortOrder, ...filters } = request.query;
 
-      return WorkOrderService.list(
-        user.tenantId,
-        filters,
-        { page, limit, sortBy, sortOrder }
-      );
-    }
+      return WorkOrderService.list(user.tenantId, filters, {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+      });
+    },
   );
 
   server.get(
@@ -175,7 +179,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       const user = request.user as any;
       const { id } = request.params;
       return WorkOrderService.getById(id, user.tenantId);
-    }
+    },
   );
 
   server.patch(
@@ -196,11 +200,15 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       const { id } = request.params;
       const data = {
         ...request.body,
-        scheduledStart: request.body.scheduledStart ? new Date(request.body.scheduledStart) : undefined,
-        scheduledEnd: request.body.scheduledEnd ? new Date(request.body.scheduledEnd) : undefined,
-      }
+        scheduledStart: request.body.scheduledStart
+          ? new Date(request.body.scheduledStart)
+          : undefined,
+        scheduledEnd: request.body.scheduledEnd
+          ? new Date(request.body.scheduledEnd)
+          : undefined,
+      };
       return WorkOrderService.update(id, user.tenantId, data);
-    }
+    },
   );
 
   server.post(
@@ -210,16 +218,16 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid() }),
         body: TransitionSchema,
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
       const { status } = request.body;
       return WorkOrderService.transitionStatus(id, user.tenantId, status);
-    }
+    },
   );
 
   // Tasks
@@ -230,15 +238,15 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid() }),
         body: CreateTaskSchema,
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
       return WorkOrderService.addTask(id, user.tenantId, request.body);
-    }
+    },
   );
 
   server.patch(
@@ -248,16 +256,16 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid(), taskId: z.string().uuid() }),
         body: UpdateTaskSchema,
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { taskId } = request.params;
       // Note: updateTask checks tenant via WO association
       return WorkOrderService.updateTask(taskId, user.tenantId, request.body);
-    }
+    },
   );
 
   server.delete(
@@ -266,16 +274,16 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       schema: {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid(), taskId: z.string().uuid() }),
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { taskId } = request.params;
       await WorkOrderService.deleteTask(taskId, user.tenantId);
       return { success: true };
-    }
+    },
   );
 
   // Parts
@@ -286,15 +294,15 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid() }),
         body: AddPartSchema,
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
       return WorkOrderService.addPart(id, user.tenantId, request.body);
-    }
+    },
   );
 
   server.delete(
@@ -303,16 +311,16 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       schema: {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid(), partId: z.string().uuid() }),
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { partId } = request.params;
       await WorkOrderService.removePart(partId, user.tenantId);
       return { success: true };
-    }
+    },
   );
 
   // Labor
@@ -323,15 +331,15 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         tags: ["work-orders"],
         params: z.object({ id: z.string().uuid() }),
         body: AddLaborSchema,
-        security: [{ bearerAuth: [] }]
+        security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate
+      preHandler: authenticate,
     },
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
       return WorkOrderService.addLabor(id, user.tenantId, request.body);
-    }
+    },
   );
 
   server.delete(
@@ -344,8 +352,8 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         }),
         security: [{ bearerAuth: [] }],
         response: {
-          200: z.object({ success: z.boolean() })
-        }
+          200: z.object({ success: z.boolean() }),
+        },
       },
       preHandler: authenticate,
     },
@@ -354,7 +362,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       const { id } = request.params;
       await WorkOrderService.delete(id, user.tenantId);
       return { success: true };
-    }
+    },
   );
 };
 export default workOrderRoutes;

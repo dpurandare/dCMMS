@@ -148,8 +148,9 @@ export class EmailProviderService {
     to: string,
     subject: string,
     html: string,
-    text?: string
-  ): Promise<EmailDeliveryStatus> { // Removed trailing comma here
+    text?: string,
+  ): Promise<EmailDeliveryStatus> {
+    // Removed trailing comma here
     try {
       // Implement SMTP integration using Nodemailer
       const nodemailer = await import("nodemailer");
@@ -173,7 +174,7 @@ export class EmailProviderService {
 
       this.fastify.log.info(
         { to, subject, messageId: info.messageId },
-        "[SMTP] Email sent via Nodemailer"
+        "[SMTP] Email sent via Nodemailer",
       );
 
       return {
