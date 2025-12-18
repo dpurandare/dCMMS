@@ -75,7 +75,7 @@ export class GenAIService {
       .select({
         id: documentEmbeddings.id,
         content: documentEmbeddings.content,
-        metadata: documentEmbeddings.metadata,
+        metadata: documentEmbeddings.metadata as any,
         distance: sql<number>`${documentEmbeddings.embedding} <=> ${formattedVector}::vector`,
       })
       .from(documentEmbeddings)
@@ -93,21 +93,36 @@ export class GenAIService {
       };
     }
 
-    const contextText = results.map((r) => r.content).join("\n\n---\n\n");
-    const prompt = `
-You are an intelligent maintenance assistant for the dCMMS system. 
-Answer the user's question strictly based on the provided context below. 
-If the answer is not in the context, say "I don't have enough information to answer that based on the provided documents."
+    // Build context with numbered citations
+    const contextWithCitations = results
+      .map(
+        (r, idx) =>
+          `[${idx + 1}] Source: ${r.metadata?.filename || "Unknown"}\n${r.content}`,
+      )
+      .join("\n\n---\n\n");
 
-Context:
-${contextText}
+    const prompt = `You are an expert maintenance assistant for the dCMMS (Distributed Computerized Maintenance Management System), specializing in non-conventional energy assets including Solar, Wind, BESS (Battery Energy Storage Systems), and Microgrids.
 
-Result:
-`;
+Your role is to help maintenance technicians and engineers by providing accurate, safety-conscious, and actionable guidance based on equipment manuals, SOPs, and technical documentation.
 
-    const chatResult = await GenAIService.chatModel.generateContent(
-      prompt + "\nQuestion: " + query,
-    );
+## Instructions:
+1. Answer ONLY based on the provided context below
+2. If the answer is not in the context, say "I don't have enough information in the available documents to answer that question."
+3. Structure your response clearly with sections (if applicable): Answer, Steps, Warnings/Cautions
+4. Reference sources using citation numbers [1], [2], etc.
+5. Always prioritize safety - highlight any warnings, cautions, or safety procedures
+6. Be specific with technical details (voltages, torque specs, part numbers) when available
+7. If procedures involve multiple steps, use numbered lists
+
+## Context Documents:
+${contextWithCitations}
+
+## User Question:
+${query}
+
+## Your Response:`;
+
+    const chatResult = await GenAIService.chatModel.generateContent(prompt);
     const answer = chatResult.response.text();
 
     return {
