@@ -16,17 +16,27 @@ export interface ChatResponse {
 }
 
 export interface UploadResponse {
-    id: string;
-    filename: string;
-    chunksTotal: number;
-    chunksIngested: number;
-    status: "success" | "partial_success" | "failed";
+    id?: string;
+    jobId?: string;
+    message?: string;
+    filename?: string;
+    chunksTotal?: number;
+    chunksIngested?: number;
+    status?: "success" | "partial_success" | "failed" | "queued";
 }
+
 
 export interface GenAIDocument {
     filename: string;
     uploadedAt: string;
     chunkCount: number;
+}
+
+export interface JobStatus {
+    id: string;
+    state: string;
+    progress?: number;
+    result?: any;
 }
 
 export const GenAIService = {
@@ -55,6 +65,14 @@ export const GenAIService = {
     },
 
     /**
+     * Get job status by ID
+     */
+    async getJobStatus(jobId: string): Promise<JobStatus> {
+        const response = await axios.get(`${API_URL}/genai/jobs/${jobId}`);
+        return response.data;
+    },
+
+    /**
      * Send a query to the chat endpoint
      */
     async chat(query: string): Promise<ChatResponse> {
@@ -78,3 +96,4 @@ export const GenAIService = {
         return response.data;
     },
 };
+

@@ -24,18 +24,24 @@
 - [x] **DCMMS-GENAI-05** - Query API Service
   - [x] `POST /api/v1/genai/chat` endpoint
   - [x] Context retrieval logic
-  - [ ] LLM Prompt Engineering (Gemini 2.5 Flash)
+  - [x] LLM Prompt Engineering (Gemini 2.5 Flash)
+    - [x] Maintenance-specific domain expertise
+    - [x] Structured response format
+    - [x] Citation system with numbered references
 - [x] **DCMMS-GENAI-06** - Frontend Chat Interface
   - [x] Chat Component (Input, History)
   - [x] Citation Display UI
 - [x] **DCMMS-GENAI-06b** - Document Management UI
   - [x] Drag & Drop Upload Page
-  - [ ] Document List & Status View
+  - [x] Job Status Tracking with Progress Bar
+  - [x] Document List & Status View
 
 ## Phase 3: Production Hardening
 
-- [ ] **DCMMS-GENAI-07** - Background Queue
-  - [ ] Move ingestion to BullMQ (async processing)
+- [x] **DCMMS-GENAI-07** - Background Queue
+  - [x] Move ingestion to BullMQ (async processing)
+  - [x] Job status tracking endpoint
+  - [x] Progress polling implementation
 - [ ] **DCMMS-GENAI-08** - Security & RBAC
   - [ ] Filter embeddings by Tenant/Site access
 - [ ] **DCMMS-GENAI-09** - Feedback Loop

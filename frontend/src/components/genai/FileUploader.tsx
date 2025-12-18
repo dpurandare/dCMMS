@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { Upload, X, FileText, CheckCircle, AlertCircle } from "lucide-react";
-import { GenAIService, UploadResponse } from "@/services/genai.service";
+import React, { useState, useRef, useEffect } from "react";
+import { Upload, X, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { GenAIService, UploadResponse, JobStatus } from "@/services/genai.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 // import { useToast } from "@/components/ui/use-toast"; // Adjust path if needed
 
 export function FileUploader() {
@@ -14,13 +15,61 @@ export function FileUploader() {
     const [isUploading, setIsUploading] = useState(false);
     const [result, setResult] = useState<UploadResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [jobId, setJobId] = useState<string | null>(null);
+    const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+    const [progress, setProgress] = useState(0);
 
     // Metadata fields
     const [assetId, setAssetId] = useState("");
     const [category, setCategory] = useState("manual");
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const pollingInterval = useRef<NodeJS.Timeout | null>(null);
     // const { toast } = useToast();
+
+    // Poll for job status
+    useEffect(() => {
+        if (!jobId) return;
+
+        const pollJobStatus = async () => {
+            try {
+                const status = await GenAIService.getJobStatus(jobId);
+                setJobStatus(status);
+                setProgress(status.progress || 0);
+
+                // If job is complete or failed, stop polling
+                if (status.state === "completed" || status.state === "failed") {
+                    if (pollingInterval.current) {
+                        clearInterval(pollingInterval.current);
+                        pollingInterval.current = null;
+                    }
+                    setIsUploading(false);
+
+                    if (status.state === "completed") {
+                        setResult(status.result);
+                        setFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                        setJobId(null);
+                    } else {
+                        setError("Ingestion failed. Please try again.");
+                        setJobId(null);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch job status", err);
+            }
+        };
+
+        // Start polling
+        pollJobStatus(); // Initial call
+        pollingInterval.current = setInterval(pollJobStatus, 2000); // Poll every 2 seconds
+
+        return () => {
+            if (pollingInterval.current) {
+                clearInterval(pollingInterval.current);
+            }
+        };
+    }, [jobId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -45,6 +94,7 @@ export function FileUploader() {
         setIsUploading(true);
         setError(null);
         setResult(null);
+        setProgress(0);
 
         try {
             const resp = await GenAIService.uploadDocument(file, {
@@ -52,15 +102,20 @@ export function FileUploader() {
                 category,
                 type: file.type,
             });
-            setResult(resp);
-            // toast({ title: "Success", description: "Document ingested successfully" });
-            setFile(null); // Clear file after success
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            // Response now contains jobId instead of immediate result
+            if (resp.jobId) {
+                setJobId(resp.jobId);
+                // Polling will handle the rest via useEffect
+            } else {
+                // Fallback for backwards compatibility
+                setResult(resp);
+                setFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                setIsUploading(false);
+            }
         } catch (err: any) {
             console.error(err);
             setError(err.response?.data?.message || err.message || "Upload failed");
-            // toast({ title: "Error", description: "Upload failed", variant: "destructive" });
-        } finally {
             setIsUploading(false);
         }
     };
@@ -143,8 +198,25 @@ export function FileUploader() {
                     onClick={handleUpload}
                     disabled={!file || isUploading}
                 >
-                    {isUploading ? "Ingesting..." : "Upload & Ingest"}
+                    {isUploading && jobId && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    {isUploading ? "Processing..." : "Upload & Ingest"}
                 </Button>
+
+                {/* Progress Bar */}
+                {isUploading && jobId && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Processing document...</span>
+                            <span>{progress}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2" />
+                        <p className="text-xs text-center text-muted-foreground">
+                            {progress < 30 ? "Extracting text..." : progress < 100 ? "Generating embeddings..." : "Finalizing..."}
+                        </p>
+                    </div>
+                )}
 
                 {/* Status Messages */}
                 {result && (
