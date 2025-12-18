@@ -36,7 +36,9 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           400: z.object({ message: z.string() }),
           500: z.object({ message: z.string() }),
         },
+        security: [{ bearerAuth: [] }],
       },
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const parts = request.parts();
@@ -67,10 +69,16 @@ export const genaiRoutes = async (app: FastifyInstance) => {
       }
 
       try {
-        const result = await GenAIService.ingestDocument(fileBuffer, filename, {
-          ...metadata,
-          mimetype,
-        });
+        const user = request.user as any;
+        const result = await GenAIService.ingestDocument(
+          fileBuffer,
+          filename,
+          {
+            ...metadata,
+            mimetype,
+          },
+          user.tenantId
+        );
         return reply.status(202).send(result as any);
       } catch (e: any) {
         request.log.error(e);
@@ -132,13 +140,14 @@ export const genaiRoutes = async (app: FastifyInstance) => {
             ),
           }),
         },
-        // security: [{ bearerAuth: [] }],
+        security: [{ bearerAuth: [] }],
       },
-      // preHandler: authenticate, // TODO: Enable auth
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { query } = request.body;
-      const result = await GenAIService.query(query);
+      const user = request.user as any;
+      const result = await GenAIService.query(query, user.tenantId);
       return reply.status(200).send(result as any);
     },
   );
@@ -157,10 +166,13 @@ export const genaiRoutes = async (app: FastifyInstance) => {
             }),
           ),
         },
+        security: [{ bearerAuth: [] }],
       },
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const docs = await GenAIService.listDocuments();
+      const user = request.user as any;
+      const docs = await GenAIService.listDocuments(user.tenantId);
       return reply.send(docs);
     },
   );
@@ -180,11 +192,55 @@ export const genaiRoutes = async (app: FastifyInstance) => {
             filename: z.string(),
           }),
         },
+        security: [{ bearerAuth: [] }],
       },
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { filename } = request.params;
-      const result = await GenAIService.deleteDocument(filename);
+      const user = request.user as any;
+      const result = await GenAIService.deleteDocument(filename, user.tenantId);
+      return reply.send(result);
+    },
+  );
+
+  server.post(
+    "/feedback",
+    {
+      schema: {
+        tags: ["genai"],
+        summary: "Submit feedback for a chat response",
+        body: z.object({
+          query: z.string(),
+          answer: z.string(),
+          rating: z.number().int().min(-1).max(1),
+          contextIds: z.array(z.string()),
+          feedback: z.string().optional(),
+        }),
+        response: {
+          200: z.object({
+            success: z.boolean(),
+            message: z.string(),
+          }),
+        },
+        security: [{ bearerAuth: [] }],
+      },
+      preHandler: server.authenticate,
+    },
+    async (request, reply) => {
+      const { query, answer, rating, contextIds, feedback } = request.body;
+      const user = request.user as any;
+
+      const result = await GenAIService.submitFeedback(
+        user.id,
+        user.tenantId,
+        query,
+        answer,
+        rating,
+        contextIds,
+        feedback
+      );
+
       return reply.send(result);
     },
   );

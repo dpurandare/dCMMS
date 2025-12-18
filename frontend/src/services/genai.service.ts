@@ -95,5 +95,25 @@ export const GenAIService = {
         const response = await axios.delete(`${API_URL}/genai/documents/${filename}`);
         return response.data;
     },
+
+    /**
+     * Submit feedback for a chat response
+     */
+    async submitFeedback(
+        query: string,
+        answer: string,
+        rating: number,
+        contextIds: string[],
+        feedback?: string
+    ): Promise<{ success: boolean; message: string }> {
+        const response = await axios.post(`${API_URL}/genai/feedback`, {
+            query,
+            answer,
+            rating,
+            contextIds,
+            feedback,
+        });
+        return response.data;
+    },
 };
 

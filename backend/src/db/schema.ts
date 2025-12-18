@@ -1408,8 +1408,28 @@ const vector = customType<{ data: number[] }>({
 
 export const documentEmbeddings = pgTable("document_embeddings", {
   id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   metadata: jsonb("metadata"), // store source_file, page_number, asset_id
   embedding: vector("embedding"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const chatFeedback = pgTable("chat_feedback", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  query: text("query").notNull(),
+  answer: text("answer").notNull(),
+  rating: integer("rating").notNull(), // 1 for thumbs up, -1 for thumbs down
+  contextIds: text("context_ids"), // JSON array of document embedding IDs
+  feedback: text("feedback"), // Optional text feedback
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+

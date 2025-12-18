@@ -81,6 +81,7 @@ const worker = new Worker(
                 const [doc] = await db
                     .insert(documentEmbeddings)
                     .values({
+                        tenantId: metadata.tenantId, // Add tenantId for RBAC
                         content: chunk.pageContent,
                         metadata: {
                             ...metadata,

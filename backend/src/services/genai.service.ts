@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { documentEmbeddings } from "../db/schema";
+import { documentEmbeddings, chatFeedback } from "../db/schema";
 import { sql } from "drizzle-orm";
 import { ingestionQueue } from "./queue.service";
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
@@ -19,6 +19,7 @@ export class GenAIService {
     buffer: Buffer,
     filename: string,
     metadata: Record<string, any> = {},
+    tenantId: string,
   ) {
     // Add to Queue
     // Limitation: Buffer is passed directly. 
@@ -26,7 +27,10 @@ export class GenAIService {
     const job = await ingestionQueue.add("ingest_document", {
       buffer, // BullMQ serializes this
       filename,
-      metadata
+      metadata: {
+        ...metadata,
+        tenantId, // Pass tenantId in metadata for worker
+      }
     });
 
     return {
@@ -55,7 +59,7 @@ export class GenAIService {
     };
   }
 
-  static async query(query: string) {
+  static async query(query: string, tenantId: string) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is not set");
     }
@@ -69,8 +73,8 @@ export class GenAIService {
     const queryEmbedding = result.embedding.values;
     const formattedVector = `[${queryEmbedding.join(",")}]`;
 
-    // 2. Search (Vector Similarity)
-    // Select top 5 most relevant chunks
+    // 2. Search (Vector Similarity) with tenant filtering
+    // Select top 5 most relevant chunks from user's tenant only
     const results = await db
       .select({
         id: documentEmbeddings.id,
@@ -79,6 +83,7 @@ export class GenAIService {
         distance: sql<number>`${documentEmbeddings.embedding} <=> ${formattedVector}::vector`,
       })
       .from(documentEmbeddings)
+      .where(sql`${documentEmbeddings.tenantId} = ${tenantId}`)
       .orderBy(
         sql`${documentEmbeddings.embedding} <=> ${formattedVector}::vector`,
       )
@@ -136,14 +141,14 @@ ${query}
     };
   }
 
-  static async listDocuments() {
-    // Query distinct source files from metadata
-    // Note: Drizzle doesn't support 'distinct on' or raw complex jsonb queries easily via query builder, using sql``
+  static async listDocuments(tenantId: string) {
+    // Query distinct source files from metadata, filtered by tenant
     const result = await db.execute(sql`
             SELECT DISTINCT metadata->>'source' as filename, 
                    MIN(created_at) as uploaded_at,
                    COUNT(*) as chunk_count
             FROM document_embeddings
+            WHERE tenant_id = ${tenantId}
             GROUP BY metadata->>'source'
             ORDER BY uploaded_at DESC
         `);
@@ -155,13 +160,36 @@ ${query}
     }));
   }
 
-  static async deleteDocument(filename: string) {
-    // Delete all chunks where metadata->>'source' == filename
+  static async deleteDocument(filename: string, tenantId: string) {
+    // Delete all chunks where metadata->>'source' == filename AND tenant_id matches
     await db.execute(sql`
             DELETE FROM document_embeddings
             WHERE metadata->>'source' = ${filename}
+              AND tenant_id = ${tenantId}
         `);
 
     return { message: "Document deleted", filename };
+  }
+
+  static async submitFeedback(
+    userId: string,
+    tenantId: string,
+    query: string,
+    answer: string,
+    rating: number,
+    contextIds: string[],
+    feedbackText?: string
+  ) {
+    await db.insert(chatFeedback).values({
+      userId,
+      tenantId,
+      query,
+      answer,
+      rating,
+      contextIds: JSON.stringify(contextIds),
+      feedback: feedbackText,
+    });
+
+    return { success: true, message: "Feedback submitted successfully" };
   }
 }
