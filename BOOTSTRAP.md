@@ -112,14 +112,52 @@ The project is actively using the following stack:
 
 ## 6. Build & Deployment
 
-### 6.1 Local Development
-**Option A: Docker (Recommended for Full Stack)**
-Use the helper script to build and run everything:
+### 6.1 Fully Automated Deployment (Recommended)
+
+The project now supports **complete full-stack deployment** with a single command:
+
 ```bash
-./scripts/start-local.sh
+./scripts/deploy.sh
 ```
 
-**Option B: Manual (Service by Service)**
+This script automatically deploys the **entire application stack**:
+
+**Infrastructure (15 services):**
+- Databases: PostgreSQL, QuestDB, TimescaleDB, ClickHouse
+- Cache & Queue: Redis, Kafka, EMQX MQTT
+- Storage: MinIO (S3-compatible)
+- Secrets: HashiCorp Vault
+- Monitoring: Prometheus, Grafana, Loki
+
+**Application:**
+- Backend API (with auto-migrations and seeding)
+- Frontend Web App
+- ML Inference Service
+
+**Automation includes:**
+1. ✅ Starts complete infrastructure stack
+2. ✅ Waits for critical services to be healthy
+3. ✅ Builds all application Docker images
+4. ✅ Runs database migrations automatically
+5. ✅ Auto-seeds database with default data (if empty)
+6. ✅ Starts all application services
+
+**No manual steps required!**
+
+### 6.2 Manual Development Setup
+
+**Option A: Docker Compose (Full Stack)**
+```bash
+docker compose up -d --build
+```
+
+The backend container will automatically:
+- Wait for PostgreSQL to be ready
+- Run migrations
+- Auto-seed if `AUTO_SEED=true` and database is empty
+- Start the server
+
+**Option B: Local Development (Service by Service)**
 1. **Start Infrastructure**:
    ```bash
    docker compose up -d postgres redis kafka clickhouse timescaledb minio
@@ -127,21 +165,41 @@ Use the helper script to build and run everything:
 2. **Start Backend**:
    ```bash
    cd backend
+   npm install
+   npm run db:migrate  # Migrations (automatic in Docker)
    npm run dev
    ```
 3. **Start Frontend**:
    ```bash
    cd frontend
+   npm install
    npm run dev
    ```
 
-### 6.2 Infrastructure
--   **IaC**: Terraform is used for provisioning cloud infrastructure (AWS/GCP).
+### 6.3 Clean Slate Deployment
+
+To start from a completely clean state:
+```bash
+# Remove all containers and volumes
+docker compose down -v
+
+# Deploy complete application stack fresh
+./scripts/deploy.sh
+```
+
+**Result:** Complete dCMMS stack with all 15 infrastructure services, application services, migrations applied, and database seeded.
+
+**Deployment time:** ~3-5 minutes for full stack
+
+### 6.4 Infrastructure Details
+-   **IaC**: Terraform is used for provisioning cloud infrastructure (AWS/GCP)
 -   **Path**: `infrastructure/terraform/`
 
-### 6.3 CI/CD
--   **Platform**: GitHub Actions.
--   **Workflows**: Automated testing, linting, and docker builds on pull requests.
+### 6.5 CI/CD
+-   **Platform**: GitHub Actions
+-   **Workflows**: Automated testing, linting, and docker builds on pull requests
+
+**See [docs/deployment/DEPLOYMENT_AUTOMATION.md](docs/deployment/DEPLOYMENT_AUTOMATION.md) for detailed deployment documentation.**
 
 ## 7. Database Seeding (Dev/Test)
 
