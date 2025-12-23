@@ -101,6 +101,54 @@ The project is actively using the following stack:
 -   **Infrastructure**:
     -   Containerization: Docker
 
+## 4.1 Mobile Application
+
+-   **Framework**: Flutter 3.10.3+
+-   **Language**: Dart (SDK ^3.10.3)
+-   **State Management**: Riverpod
+-   **Routing**: GoRouter
+-   **Database**: Drift (SQLite) with offline support
+-   **HTTP Client**: Dio
+-   **Background Tasks**: Workmanager
+
+### Mobile Documentation
+
+📱 **Complete Guides:**
+- **[Developer Guide](docs/mobile/DEVELOPER_GUIDE.md)** - Setup, development, testing, troubleshooting
+- **[Features Guide](docs/mobile/FEATURES.md)** - All features, architecture patterns,  best practices
+- **[Build & Deployment](docs/mobile/BUILD_DEPLOYMENT.md)** - Android, iOS, Desktop, Web deployment
+- **[Architecture](docs/mobile/architecture.md)** - System architecture and design decisions
+
+### Mobile Quick Start
+
+```bash
+cd mobile
+flutter pub get                                      # Install dependencies
+flutter pub run build_runner build                   # Generate code
+flutter run                                          # Run on device/emulator
+```
+
+**Default Credentials:** admin@example.com / Password123!
+
+### Mobile Features Status
+
+✅ **Implemented:**
+- JWT Authentication & Token Management
+- Work Order Management (list, details, update)
+- Offline-First Architecture with SQLite
+- Automatic Background Sync
+- Customizable Dashboard with Drag-and-Drop
+- GenAI Chat Integration
+- Conflict Resolution
+
+📋 **Planned (see FEATURES.md):**
+- QR/Barcode Scanning
+- Photo/File Attachments
+- Voice Notes
+- Push Notifications
+- Biometric Auth
+- Geolocation & Geotagging
+
 ## 5. Development Guidelines
 
 ### 5.1 Principles

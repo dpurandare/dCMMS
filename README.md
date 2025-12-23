@@ -469,7 +469,9 @@ python serving/model_server.py
 # ML API running on http://localhost:8000
 ```
 
-### Mobile App Setup (Optional)
+### Mobile App Setup
+
+**Platform:** Flutter 3.10.3+ (Android, iOS, Desktop, Web)
 
 ```bash
 cd mobile
@@ -477,12 +479,35 @@ cd mobile
 # Install dependencies
 flutter pub get
 
-# Run on iOS simulator
-flutter run -d ios
+# Generate database code
+flutter pub run build_runner build --delete-conflicting-outputs
 
-# Run on Android emulator
-flutter run -d android
+# Run on device/emulator
+flutter run
+
+# Or run on specific platform
+flutter run -d android      # Android
+flutter run -d ios          # iOS
+flutter run -d chrome       # Web
+flutter run -d macos        # macOS Desktop
 ```
+
+**📱 Mobile Documentation:**
+- **[Developer Guide](./docs/mobile/DEVELOPER_GUIDE.md)** - Complete setup, development workflow, testing
+- **[Features Guide](./docs/mobile/FEATURES.md)** - All features, architecture, API integration
+- **[Build & Deployment](./docs/mobile/BUILD_DEPLOYMENT.md)** - Android, iOS, Web, Desktop builds
+
+**Features Implemented:**
+- ✅ JWT Authentication with secure storage
+- ✅ Work order management (offline-capable)
+- ✅ Customizable dashboard with drag-and-drop
+- ✅ Automatic background sync with conflict resolution
+- ✅ GenAI chat integration
+- ✅ Offline-first architecture (Drift/SQLite)
+
+**Default Credentials:** same as backend (admin@example.com / Password123!)
+
+**Backend Requirement:** Mobile app requires backend running at `http://localhost:3001`
 
 ### Running Tests
 
