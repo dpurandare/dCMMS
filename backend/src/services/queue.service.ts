@@ -26,7 +26,7 @@ const worker = new Worker(
 
         // Limitation Note: We are passing buffer via job data for MVP.
         // In production, job data should contain a URL/Path to fileStorage, not the file itself.
-        const { buffer: bufferData, filename, metadata } = job.data;
+        const { buffer: bufferData, filename, tenantId, siteId, metadata } = job.data;
 
         // Reconstruct Buffer from JSON-serialized data
         const buffer = Buffer.from(bufferData.data);
@@ -81,6 +81,8 @@ const worker = new Worker(
                 const [doc] = await db
                     .insert(documentEmbeddings)
                     .values({
+                        tenantId,
+                        siteId: siteId || null,
                         content: chunk.pageContent,
                         metadata: {
                             ...metadata,

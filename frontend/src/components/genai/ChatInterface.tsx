@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ChatFeedback } from "./ChatFeedback";
 
 interface Message {
     id: string;
@@ -17,6 +18,7 @@ interface Message {
     content: string;
     context?: ChatResponse['context'];
     timestamp: Date;
+    query?: string; // Store the user query that led to this bot response
 }
 
 export function ChatInterface() {
@@ -65,6 +67,7 @@ export function ChatInterface() {
                 role: "bot",
                 content: response.answer,
                 context: response.context,
+                query: userMessage.content, // Store the original query
                 timestamp: new Date(),
             };
 
@@ -80,6 +83,28 @@ export function ChatInterface() {
             setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleSubmitFeedback = async (
+        message: Message,
+        rating: "positive" | "negative",
+        comment?: string
+    ) => {
+        if (!message.query || message.id === "welcome") return;
+
+        try {
+            const contextIds = (message.context || []).map((ctx) => ctx.id);
+            await GenAIService.submitFeedback(
+                message.query,
+                message.content,
+                rating,
+                contextIds,
+                comment
+            );
+        } catch (error) {
+            console.error("Failed to submit feedback:", error);
+            throw error;
         }
     };
 
@@ -126,8 +151,8 @@ export function ChatInterface() {
                                 >
                                     <div
                                         className={`p-3 rounded-lg text-sm ${msg.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : "bg-muted"
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted"
                                             }`}
                                     >
                                         {/* Use simple whitespace-pre-wrap for now instead of full markdown if not installed */}
@@ -164,6 +189,20 @@ export function ChatInterface() {
                                                     </AccordionContent>
                                                 </AccordionItem>
                                             </Accordion>
+                                        </div>
+                                    )}
+
+                                    {/* Feedback for bot messages (excluding welcome message) */}
+                                    {msg.role === "bot" && msg.id !== "welcome" && msg.query && (
+                                        <div className="mt-2">
+                                            <ChatFeedback
+                                                query={msg.query}
+                                                answer={msg.content}
+                                                contextIds={(msg.context || []).map((ctx) => ctx.id)}
+                                                onSubmitFeedback={(rating, comment) =>
+                                                    handleSubmitFeedback(msg, rating, comment)
+                                                }
+                                            />
                                         </div>
                                     )}
 

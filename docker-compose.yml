@@ -24,7 +24,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dcmms_user -d dcmms"]
+      test: [ "CMD-SHELL", "pg_isready -U dcmms_user -d dcmms" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,13 +44,13 @@ services:
       QDB_HTTP_MIN_ENABLED: "true"
       QDB_TELEMETRY_ENABLED: "false"
     ports:
-      - "9000:9000"  # HTTP/REST API
-      - "8812:8812"  # PostgreSQL wire protocol
-      - "9009:9009"  # InfluxDB line protocol
+      - "9000:9000" # HTTP/REST API
+      - "8812:8812" # PostgreSQL wire protocol
+      - "9009:9009" # InfluxDB line protocol
     volumes:
       - questdb_data:/var/lib/questdb
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -74,7 +74,7 @@ services:
       - timescaledb_data:/var/lib/postgresql/data
       - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U timescale_user -d timescaledb"]
+      test: [ "CMD-SHELL", "pg_isready -U timescale_user -d timescaledb" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -94,8 +94,8 @@ services:
       CLICKHOUSE_PASSWORD: clickhouse_password_dev
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - "8123:8123"  # HTTP interface
-      - "9004:9000"  # Native client (port 9000 used by QuestDB)
+      - "8123:8123" # HTTP interface
+      - "9004:9000" # Native client (port 9000 used by QuestDB)
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./scripts/init-clickhouse.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -104,7 +104,7 @@ services:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      test: [ "CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:8123/ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -124,7 +124,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -153,17 +153,17 @@ services:
 
       # Broker settings
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_CFG_LOG_RETENTION_HOURS: 168  # 7 days
-      KAFKA_CFG_LOG_SEGMENT_BYTES: 1073741824  # 1GB
+      KAFKA_CFG_LOG_RETENTION_HOURS: 168 # 7 days
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 1073741824 # 1GB
       KAFKA_CFG_NUM_PARTITIONS: 12
       KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
     ports:
-      - "9093:9092"  # Internal mapped to 9093 on host
-      - "9094:9094"  # External
+      - "9093:9092" # Internal mapped to 9093 on host
+      - "9094:9094" # External
     volumes:
       - kafka_data:/bitnami/kafka
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      test: [ "CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -184,15 +184,15 @@ services:
       EMQX_DASHBOARD__DEFAULT_USERNAME: admin
       EMQX_DASHBOARD__DEFAULT_PASSWORD: public
     ports:
-      - "1883:1883"    # MQTT
-      - "8883:8883"    # MQTT/SSL
-      - "8083:8083"    # MQTT/WebSocket
-      - "18083:18083"  # Dashboard
+      - "1883:1883" # MQTT
+      - "8883:8883" # MQTT/SSL
+      - "8083:8083" # MQTT/WebSocket
+      - "18083:18083" # Dashboard
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
     healthcheck:
-      test: ["CMD", "emqx", "ping"]
+      test: [ "CMD", "emqx", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -211,12 +211,12 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9002:9000"  # API (port 9000 used by QuestDB)
-      - "9001:9001"  # Console
+      - "9002:9000" # API (port 9000 used by QuestDB)
+      - "9001:9001" # Console
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -240,7 +240,7 @@ services:
     cap_add:
       - IPC_LOCK
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: [ "CMD", "vault", "status" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -265,7 +265,7 @@ services:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      test: [ "CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -289,7 +289,7 @@ services:
       - grafana_data:/var/lib/grafana
       - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
     healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: [ "CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3000/api/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -311,7 +311,7 @@ services:
     volumes:
       - loki_data:/loki
     healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      test: [ "CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:3100/ready" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -367,7 +367,8 @@ services:
     container_name: dcmms-backend
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
+      AUTO_SEED: "true"
       PORT: 3001
       DATABASE_URL: postgresql://dcmms_user:dcmms_password_dev@postgres:5432/dcmms
       REDIS_URL: redis://:redis_password_dev@redis:6379

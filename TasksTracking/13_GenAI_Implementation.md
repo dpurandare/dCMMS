@@ -42,7 +42,7 @@
   - [x] Move ingestion to BullMQ (async processing)
   - [x] Job status tracking endpoint
   - [x] Progress polling implementation
-- [ ] **DCMMS-GENAI-08** - Security & RBAC
-  - [ ] Filter embeddings by Tenant/Site access
-- [ ] **DCMMS-GENAI-09** - Feedback Loop
-  - [ ] Implement Thumbs Up/Down logging
+- [x] **DCMMS-GENAI-08** - Security & RBAC
+  - [x] Filter embeddings by Tenant/Site access
+- [x] **DCMMS-GENAI-09** - Feedback Loop
+  - [x] Implement Thumbs Up/Down logging

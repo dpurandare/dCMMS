@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { buildServer } from "./server";
+import { autoSeedIfNeeded } from "./db/auto-seed";
 
 // Load environment variables
 config();
@@ -9,6 +10,9 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 async function start() {
   const server = await buildServer();
+
+  // Auto-seed database if needed (dev/test only)
+  await autoSeedIfNeeded();
 
   try {
     await server.listen({ port: PORT, host: HOST });

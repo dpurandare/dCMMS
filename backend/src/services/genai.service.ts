@@ -1,6 +1,6 @@
 import { db } from "../db";
-import { documentEmbeddings } from "../db/schema";
-import { sql } from "drizzle-orm";
+import { documentEmbeddings, genAiFeedback } from "../db/schema";
+import { sql, eq, and } from "drizzle-orm";
 import { ingestionQueue } from "./queue.service";
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 
@@ -18,6 +18,8 @@ export class GenAIService {
   static async ingestDocument(
     buffer: Buffer,
     filename: string,
+    tenantId: string,
+    siteId: string | null = null,
     metadata: Record<string, any> = {},
   ) {
     // Add to Queue
@@ -26,6 +28,8 @@ export class GenAIService {
     const job = await ingestionQueue.add("ingest_document", {
       buffer, // BullMQ serializes this
       filename,
+      tenantId,
+      siteId,
       metadata
     });
 
@@ -55,7 +59,11 @@ export class GenAIService {
     };
   }
 
-  static async query(query: string) {
+  static async query(
+    query: string,
+    tenantId: string,
+    userSiteIds?: string[],
+  ) {
     if (!process.env.GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is not set");
     }
@@ -69,7 +77,18 @@ export class GenAIService {
     const queryEmbedding = result.embedding.values;
     const formattedVector = `[${queryEmbedding.join(",")}]`;
 
-    // 2. Search (Vector Similarity)
+    // 2. Search (Vector Similarity) with tenant/site filtering
+    // Build WHERE clause for RBAC
+    const whereConditions = [eq(documentEmbeddings.tenantId, tenantId)];
+
+    // If user has specific site access, filter by those sites
+    // Otherwise, show all sites for the tenant
+    if (userSiteIds && userSiteIds.length > 0) {
+      whereConditions.push(
+        sql`(${documentEmbeddings.siteId} IS NULL OR ${documentEmbeddings.siteId} IN (${sql.join(userSiteIds.map(id => sql`${id}`), sql`, `)}))`
+      );
+    }
+
     // Select top 5 most relevant chunks
     const results = await db
       .select({
@@ -79,6 +98,7 @@ export class GenAIService {
         distance: sql<number>`${documentEmbeddings.embedding} <=> ${formattedVector}::vector`,
       })
       .from(documentEmbeddings)
+      .where(and(...whereConditions))
       .orderBy(
         sql`${documentEmbeddings.embedding} <=> ${formattedVector}::vector`,
       )
@@ -136,32 +156,90 @@ ${query}
     };
   }
 
-  static async listDocuments() {
-    // Query distinct source files from metadata
-    // Note: Drizzle doesn't support 'distinct on' or raw complex jsonb queries easily via query builder, using sql``
+  static async listDocuments(tenantId: string) {
+    // Query distinct source files from metadata with tenant filtering
     const result = await db.execute(sql`
-            SELECT DISTINCT metadata->>'source' as filename, 
+            SELECT DISTINCT metadata->>'source' as filename,
+                   site_id,
                    MIN(created_at) as uploaded_at,
                    COUNT(*) as chunk_count
             FROM document_embeddings
-            GROUP BY metadata->>'source'
+            WHERE tenant_id = ${tenantId}
+            GROUP BY metadata->>'source', site_id
             ORDER BY uploaded_at DESC
         `);
 
     return result.rows.map((row: any) => ({
       filename: row.filename || "Unknown",
+      siteId: row.site_id,
       uploadedAt: row.uploaded_at,
       chunkCount: Number(row.chunk_count),
     }));
   }
 
-  static async deleteDocument(filename: string) {
-    // Delete all chunks where metadata->>'source' == filename
+  static async deleteDocument(filename: string, tenantId: string) {
+    // Delete all chunks where metadata->>'source' == filename AND tenant matches
     await db.execute(sql`
             DELETE FROM document_embeddings
             WHERE metadata->>'source' = ${filename}
+              AND tenant_id = ${tenantId}
         `);
 
     return { message: "Document deleted", filename };
+  }
+
+  static async submitFeedback(
+    userId: string,
+    tenantId: string,
+    query: string,
+    answer: string,
+    rating: "positive" | "negative",
+    contextIds: string[],
+    comment?: string,
+  ) {
+    const feedback = await db
+      .insert(genAiFeedback)
+      .values({
+        userId,
+        tenantId,
+        query,
+        answer,
+        rating,
+        contextIds: JSON.stringify(contextIds),
+        comment: comment || null,
+      })
+      .returning();
+
+    return feedback[0];
+  }
+
+  static async getFeedbackStats(
+    tenantId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ) {
+    const whereConditions = [eq(genAiFeedback.tenantId, tenantId)];
+
+    if (startDate) {
+      whereConditions.push(sql`${genAiFeedback.createdAt} >= ${startDate}`);
+    }
+    if (endDate) {
+      whereConditions.push(sql`${genAiFeedback.createdAt} <= ${endDate}`);
+    }
+
+    const stats = await db.execute(sql`
+      SELECT 
+        rating,
+        COUNT(*) as count,
+        COUNT(CASE WHEN comment IS NOT NULL THEN 1 END) as comments_count
+      FROM genai_feedback
+      WHERE ${sql.join(whereConditions, sql` AND `)}
+      GROUP BY rating
+    `);
+
+    return {
+      stats: stats.rows,
+      total: stats.rows.reduce((sum: number, row: any) => sum + Number(row.count), 0),
+    };
   }
 }
