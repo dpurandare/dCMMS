@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, User, Bot, BookOpen, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Send, User, Bot, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown"; // You might need to install this: npm i react-markdown
 import { GenAIService, ChatResponse } from "@/services/genai.service";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ChatFeedback } from "./ChatFeedback";
 
 interface Message {
     id: string;
@@ -17,6 +18,7 @@ interface Message {
     content: string;
     context?: ChatResponse['context'];
     timestamp: Date;
+    query?: string; // Store the user query that led to this bot response
 }
 
 export function ChatInterface() {
@@ -30,8 +32,6 @@ export function ChatInterface() {
         },
     ]);
     const [isLoading, setIsLoading] = useState(false);
-    const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
-    const [userQuery, setUserQuery] = useState<Map<string, string>>(new Map()); // Track query for each bot message
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom
@@ -67,11 +67,10 @@ export function ChatInterface() {
                 role: "bot",
                 content: response.answer,
                 context: response.context,
+                query: userMessage.content, // Store the original query
                 timestamp: new Date(),
             };
 
-            // Store the query for this bot message
-            setUserQuery(prev => new Map(prev).set(botMessage.id, userMessage.content));
             setMessages((prev) => [...prev, botMessage]);
         } catch (error) {
             console.error(error);
@@ -87,21 +86,25 @@ export function ChatInterface() {
         }
     };
 
-    const handleFeedback = async (messageId: string, rating: number, message: Message) => {
-        if (feedbackSubmitted.has(messageId)) return;
+    const handleSubmitFeedback = async (
+        message: Message,
+        rating: "positive" | "negative",
+        comment?: string
+    ) => {
+        if (!message.query || message.id === "welcome") return;
 
         try {
-            const query = userQuery.get(messageId) || "";
+            const contextIds = (message.context || []).map((ctx) => ctx.id);
             await GenAIService.submitFeedback(
-                query,
+                message.query,
                 message.content,
                 rating,
-                message.context?.map(c => c.id) || [],
+                contextIds,
+                comment
             );
-
-            setFeedbackSubmitted(prev => new Set(prev).add(messageId));
         } catch (error) {
             console.error("Failed to submit feedback:", error);
+            throw error;
         }
     };
 
@@ -189,32 +192,17 @@ export function ChatInterface() {
                                         </div>
                                     )}
 
-                                    {/* Feedback buttons for bot messages */}
-                                    {msg.role === "bot" && msg.id !== "welcome" && (
-                                        <div className="flex gap-2 mt-2 items-center">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleFeedback(msg.id, 1, msg)}
-                                                disabled={feedbackSubmitted.has(msg.id)}
-                                                className="h-7 px-2 hover:bg-green-50"
-                                            >
-                                                <ThumbsUp className={`h-3 w-3 ${feedbackSubmitted.has(msg.id) ? 'fill-green-500 text-green-500' : ''}`} />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleFeedback(msg.id, -1, msg)}
-                                                disabled={feedbackSubmitted.has(msg.id)}
-                                                className="h-7 px-2 hover:bg-red-50"
-                                            >
-                                                <ThumbsDown className={`h-3 w-3 ${feedbackSubmitted.has(msg.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                                            </Button>
-                                            {feedbackSubmitted.has(msg.id) && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    Thanks for your feedback!
-                                                </span>
-                                            )}
+                                    {/* Feedback for bot messages (excluding welcome message) */}
+                                    {msg.role === "bot" && msg.id !== "welcome" && msg.query && (
+                                        <div className="mt-2">
+                                            <ChatFeedback
+                                                query={msg.query}
+                                                answer={msg.content}
+                                                contextIds={(msg.context || []).map((ctx) => ctx.id)}
+                                                onSubmitFeedback={(rating, comment) =>
+                                                    handleSubmitFeedback(msg, rating, comment)
+                                                }
+                                            />
                                         </div>
                                     )}
 

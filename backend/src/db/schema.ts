@@ -1411,13 +1411,14 @@ export const documentEmbeddings = pgTable("document_embeddings", {
   tenantId: uuid("tenant_id")
     .notNull()
     .references(() => tenants.id, { onDelete: "cascade" }),
+  siteId: uuid("site_id").references(() => sites.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   metadata: jsonb("metadata"), // store source_file, page_number, asset_id
   embedding: vector("embedding"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const chatFeedback = pgTable("chat_feedback", {
+export const genAiFeedback = pgTable("genai_feedback", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
     .notNull()
@@ -1427,9 +1428,8 @@ export const chatFeedback = pgTable("chat_feedback", {
     .references(() => users.id, { onDelete: "cascade" }),
   query: text("query").notNull(),
   answer: text("answer").notNull(),
-  rating: integer("rating").notNull(), // 1 for thumbs up, -1 for thumbs down
-  contextIds: text("context_ids"), // JSON array of document embedding IDs
-  feedback: text("feedback"), // Optional text feedback
+  rating: varchar("rating", { length: 10 }).notNull(), // 'positive' or 'negative'
+  contextIds: text("context_ids").notNull(), // JSON array of document IDs used
+  comment: text("comment"), // Optional user comment
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
-

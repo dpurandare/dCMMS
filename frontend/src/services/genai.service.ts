@@ -102,16 +102,16 @@ export const GenAIService = {
     async submitFeedback(
         query: string,
         answer: string,
-        rating: number,
+        rating: "positive" | "negative",
         contextIds: string[],
-        feedback?: string
-    ): Promise<{ success: boolean; message: string }> {
+        comment?: string
+    ): Promise<{ id: string; message: string }> {
         const response = await axios.post(`${API_URL}/genai/feedback`, {
             query,
             answer,
             rating,
             contextIds,
-            feedback,
+            comment,
         });
         return response.data;
     },

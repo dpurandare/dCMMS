@@ -12,6 +12,19 @@ import { AuthService } from "../services/auth.service";
 async function seed() {
   console.log("🌱 Starting database seed...");
 
+  // Safety check: Only allow seeding in dev/test environments
+  const environment = process.env.NODE_ENV || "development";
+  const allowedEnvironments = ["development", "test", "local"];
+
+  if (!allowedEnvironments.includes(environment)) {
+    console.error("❌ ERROR: Database seeding is only allowed in development/test environments.");
+    console.error(`   Current environment: ${environment}`);
+    console.error("   To seed the database, set NODE_ENV to 'development' or 'test'");
+    process.exit(1);
+  }
+
+  console.log(`   Environment: ${environment} ✓`);
+
   try {
     // Clear existing data (in reverse order of dependencies)
     console.log("Clearing existing data...");
@@ -394,13 +407,18 @@ async function seed() {
   }
 }
 
-// Run seed
-seed()
-  .then(() => {
-    console.log("\n👋 Seed complete. Exiting...");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("Seed failed:", error);
-    process.exit(1);
-  });
+// Export for use in auto-seed
+export { seed };
+
+// Run seed if executed directly
+if (require.main === module) {
+  seed()
+    .then(() => {
+      console.log("\n👋 Seed complete. Exiting...");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("Seed failed:", error);
+      process.exit(1);
+    });
+}

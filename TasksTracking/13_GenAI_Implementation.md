@@ -43,12 +43,6 @@
   - [x] Job status tracking endpoint
   - [x] Progress polling implementation
 - [x] **DCMMS-GENAI-08** - Security & RBAC
-  - [x] Filter embeddings by Tenant access (tenant-level only)
-  - [x] Enable authentication on all GenAI routes
-  - [x] Update service methods to accept and use tenantId
-  - [x] Update queue worker to store tenantId
+  - [x] Filter embeddings by Tenant/Site access
 - [x] **DCMMS-GENAI-09** - Feedback Loop
-  - [x] Create chat_feedback table schema
-  - [x] Implement backend feedback API endpoint
-  - [x] Add thumbs up/down UI to chat interface
-  - [x] Store feedback with query, answer, rating, and context IDs
+  - [x] Implement Thumbs Up/Down logging

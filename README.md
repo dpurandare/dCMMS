@@ -280,19 +280,81 @@ For detailed sprint tracking, see [SPRINT_STATUS_TRACKER.md](./SPRINT_STATUS_TRA
 
 ## Getting Started
 
-### Quick Start
+### 🚀 Quick Start - Full Stack Deployment
 
-To build and start the entire application stack locally using Docker:
+The easiest way to get the **complete dCMMS stack** running locally with **zero manual configuration**:
 
 ```bash
-./scripts/start-local.sh
+# Clone the repository
+git clone https://github.com/yourusername/dCMMS.git
+cd dCMMS
+
+# One-command full-stack deployment
+./scripts/deploy.sh
 ```
 
-This script will:
-1. Stop any running containers.
-2. Build the Docker images for backend, frontend, and ML services.
-3. Start all services defined in `docker-compose.yml`.
-4. Stream the logs for the backend and frontend.
+**This deploys the COMPLETE application stack:**
+
+**Infrastructure (15 services):**
+- 📊 Databases: PostgreSQL, QuestDB, TimescaleDB, ClickHouse
+- ⚡ Cache & Queue: Redis, Kafka, EMQX MQTT
+- 💾 Storage: MinIO (S3-compatible)
+- 🔐 Secrets: HashiCorp Vault  
+- 📈 Monitoring: Prometheus, Grafana, Loki
+
+**Application:**
+- 🌐 Frontend Web App
+- ⚙️ Backend API (auto-migration + seeding)
+- 🤖 ML Inference Service
+
+**What happens automatically:**
+1. ✅ Starts all 15 infrastructure services
+2. ✅ Waits for critical services to be healthy
+3. ✅ Builds all application Docker images
+4. ✅ Runs database migrations
+5. ✅ Seeds database with default data
+6. ✅ Starts all application services
+
+**Access the application:**
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3001
+- **API Documentation**: http://localhost:3001/docs
+
+**Default login credentials:**
+- **Admin**: admin@example.com / Password123!
+- **Manager**: manager@example.com / Password123!
+- **Technician**: technician@example.com / Password123!
+
+**Clean slate deployment:**
+```bash
+# Remove everything and start fresh
+docker compose down -v
+./scripts/deploy.sh
+```
+
+**Deployment time:** ~3-5 minutes for complete stack  
+**Services deployed:** 18 total (15 infrastructure + 3 application)
+
+That's it! The complete dCMMS platform is now running and ready to use.
+
+---
+
+### Alternative: Docker Compose Direct
+
+If you prefer to use Docker Compose directly:
+
+```bash
+# Start everything (migrations and seeding happen automatically)
+docker compose up -d --build
+```
+
+The backend container now automatically:
+- Waits for PostgreSQL to be ready
+- Runs database migrations
+- Auto-seeds if `AUTO_SEED=true` (default in docker-compose.yml)
+- Starts the server
+
+---
 
 ## Prerequisites
 
@@ -307,9 +369,11 @@ This script will:
 - Flutter 3.16+ (mobile)
 - Python 3.10+ (ML services)
 
-### Quick Start (Infrastructure Only)
+### Infrastructure Services (Manual Setup)
 
-1. **Clone the repository**
+If you want to run only the infrastructure services and run backend/frontend locally for development:
+
+1. **Clone the repository** (if not already done)
    ```bash
    git clone https://github.com/yourusername/dCMMS.git
    cd dCMMS
@@ -323,16 +387,10 @@ This script will:
 
 3. **Start infrastructure stack**
    ```bash
-   docker compose up -d
+   docker compose up -d postgres redis kafka clickhouse timescaledb minio
    ```
 
-   This starts **15 services**:
-   - **Databases**: PostgreSQL, QuestDB, TimescaleDB, Redis
-   - **Message Brokers**: Kafka (KRaft mode), EMQX MQTT
-   - **Object Storage**: MinIO (S3-compatible)
-   - **Secrets**: HashiCorp Vault (dev mode)
-   - **Monitoring**: Prometheus, Grafana, Loki
-   - **Dev Tools**: Kafka UI, pgAdmin
+   This starts the core infrastructure services.
 
 4. **Verify services are healthy**
    ```bash
@@ -341,17 +399,15 @@ This script will:
    ```
 
 5. **Access services**
-   - **PostgreSQL**: `postgresql://dcmms_user:dcmms_password_dev@localhost:5432/dcmms`
+   - **PostgreSQL**: `postgresql://dcmms_user:dcmms_password_dev@localhost:5434/dcmms`
    - **QuestDB UI**: http://localhost:9000
    - **Redis**: `redis://localhost:6379` (password: redis_password_dev)
    - **Kafka**: `localhost:9094` (external) or `kafka:9092` (internal)
    - **EMQX Dashboard**: http://localhost:18083 (admin/public)
    - **MinIO Console**: http://localhost:9001 (minioadmin/minioadmin)
-   - **Grafana**: http://localhost:3000 (admin/admin)
-   - **Kafka UI**: http://localhost:8080
-   - **pgAdmin**: http://localhost:5050 (admin@dcmms.local/admin)
+   - **Grafana**: http://localhost:3002 (admin/admin)
 
-### Backend Setup
+### Backend Setup (Local Development)
 
 ```bash
 cd backend
@@ -359,11 +415,11 @@ cd backend
 # Install dependencies
 npm install
 
-# Run database migrations
-npm run migrate:up
+# Run database migrations (automatic in Docker deployment)
+npm run db:migrate
 
-# Seed demo data (3 sites, 150 assets, 500 work orders)
-npm run seed:demo
+# Seed demo data (automatic in Docker if AUTO_SEED=true)
+npm run db:seed
 
 # Start development server
 npm run dev
@@ -413,7 +469,9 @@ python serving/model_server.py
 # ML API running on http://localhost:8000
 ```
 
-### Mobile App Setup (Optional)
+### Mobile App Setup
+
+**Platform:** Flutter 3.10.3+ (Android, iOS, Desktop, Web)
 
 ```bash
 cd mobile
@@ -421,12 +479,35 @@ cd mobile
 # Install dependencies
 flutter pub get
 
-# Run on iOS simulator
-flutter run -d ios
+# Generate database code
+flutter pub run build_runner build --delete-conflicting-outputs
 
-# Run on Android emulator
-flutter run -d android
+# Run on device/emulator
+flutter run
+
+# Or run on specific platform
+flutter run -d android      # Android
+flutter run -d ios          # iOS
+flutter run -d chrome       # Web
+flutter run -d macos        # macOS Desktop
 ```
+
+**📱 Mobile Documentation:**
+- **[Developer Guide](./docs/mobile/DEVELOPER_GUIDE.md)** - Complete setup, development workflow, testing
+- **[Features Guide](./docs/mobile/FEATURES.md)** - All features, architecture, API integration
+- **[Build & Deployment](./docs/mobile/BUILD_DEPLOYMENT.md)** - Android, iOS, Web, Desktop builds
+
+**Features Implemented:**
+- ✅ JWT Authentication with secure storage
+- ✅ Work order management (offline-capable)
+- ✅ Customizable dashboard with drag-and-drop
+- ✅ Automatic background sync with conflict resolution
+- ✅ GenAI chat integration
+- ✅ Offline-first architecture (Drift/SQLite)
+
+**Default Credentials:** same as backend (admin@example.com / Password123!)
+
+**Backend Requirement:** Mobile app requires backend running at `http://localhost:3001`
 
 ### Running Tests
 
