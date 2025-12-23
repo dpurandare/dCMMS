@@ -33,9 +33,12 @@ async function main() {
 
     // 2. Ingest
     console.log("📥 Ingesting document...");
+    const testTenantId = "00000000-0000-0000-0000-000000000001"; // Test tenant ID
     const ingestResult = await GenAIService.ingestDocument(
       buffer,
       "sample-inverter-manual.txt",
+      testTenantId,
+      null, // siteId
       { type: "manual", asset: "solar-inv-x1", mimetype: "text/plain" },
     );
     console.log("✅ Ingestion Result:", ingestResult);
@@ -43,7 +46,7 @@ async function main() {
     // 3. Query
     const query = "How do I fix error E002?";
     console.log(`\n🔍 Querying: "${query}"`);
-    const queryResult = await GenAIService.query(query);
+    const queryResult = await GenAIService.query(query, testTenantId);
 
     console.log("\n🤖 Answer:", queryResult.answer);
     console.log("\n📚 Context Citations:");

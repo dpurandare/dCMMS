@@ -27,8 +27,10 @@ async function main() {
     const formattedVector = `[${mockVector.join(",")}]`;
 
     // We cast to any to bypass strict type checking if customType isn't perfectly inferred
+    // Use a test tenant ID for spike script
     await db.insert(documentEmbeddings).values({
       content: "Spike Test Document: Solar Inverter Manual",
+      tenantId: "00000000-0000-0000-0000-000000000001", // Test tenant ID
       metadata: { source: "spike_script", type: "manual" },
       embedding: formattedVector as any,
     });
