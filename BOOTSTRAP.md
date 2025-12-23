@@ -31,6 +31,16 @@
 > 
 > **This is NOT optional. This is MANDATORY.**
 
+## AI Agent Workflow Preferences
+
+> [!NOTE]
+> **Summary Documents & Walkthroughs**
+> 
+> - **Do NOT automatically create** walkthrough.md or summary documents after completing tasks
+> - **ASK FIRST** if you feel a summary/walkthrough would be beneficial
+> - Only create these documents when explicitly requested or when the user approves
+> - Focus on updating existing documentation (BOOTSTRAP.md, README.md, relevant docs) instead
+
 ## 1. Project Overview
 
 **dCMMS** (Distributed Computerized Maintenance Management System) is a comprehensive platform tailored for non-conventional energy assets (Solar, Wind, BESS, Microgrids).
