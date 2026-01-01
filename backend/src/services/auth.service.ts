@@ -84,12 +84,22 @@ export class AuthService {
       .where(eq(users.id, user.id));
 
     // Return user payload (without sensitive data)
+    let requirePasswordChange = false;
+    if (user.role === "tenant_admin" && user.metadata) {
+      try {
+        const metadata = JSON.parse(user.metadata);
+        requirePasswordChange = !!metadata.requirePasswordChange;
+      } catch (e) {
+        requirePasswordChange = false;
+      }
+    }
     return {
       id: user.id,
       tenantId: user.tenantId,
       email: user.email,
       username: user.username,
       role: user.role,
+      requirePasswordChange,
     };
   }
 

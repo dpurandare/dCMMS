@@ -12,63 +12,68 @@ import { AuthService } from "../services/auth.service";
 async function seed() {
   console.log("🌱 Starting database seed...");
 
-  // Safety check: Only allow seeding in dev/test environments
+
+  // Seeding logic for all environments
   const environment = process.env.NODE_ENV || "development";
-  const allowedEnvironments = ["development", "test", "local"];
-
-  if (!allowedEnvironments.includes(environment)) {
-    console.error("❌ ERROR: Database seeding is only allowed in development/test environments.");
-    console.error(`   Current environment: ${environment}`);
-    console.error("   To seed the database, set NODE_ENV to 'development' or 'test'");
-    process.exit(1);
-  }
-
+  const isProduction = environment === "production";
   console.log(`   Environment: ${environment} ✓`);
 
+  // Check if any users exist
+  const existingUsers = await db.select().from(users).limit(1);
+  if (isProduction && existingUsers.length > 0) {
+    console.log("Users already exist in production. Skipping admin seeding.");
+    return;
+  }
+
+  // In production, only seed admin if no users exist
+  // In dev/test, continue with full seed
+
   try {
-    // Clear existing data (in reverse order of dependencies)
-    console.log("Clearing existing data...");
-    await db.delete(workOrderTasks);
-    await db.delete(workOrders);
-    await db.delete(assets);
-    await db.delete(sites);
-    await db.delete(users);
-    await db.delete(tenants);
 
-    // Create tenant
-    console.log("Creating tenant...");
-    const [tenant] = await db
-      .insert(tenants)
-      .values({
-        tenantId: "demo-tenant",
-        name: "Demo Corporation",
-        domain: "demo.dcmms.local",
-        config: JSON.stringify({
-          timezone: "America/New_York",
-          dateFormat: "MM/DD/YYYY",
-          currency: "USD",
-        }),
-      })
-      .returning();
+    let tenant;
+    if (isProduction) {
+      // In production, create a default tenant if none exists
+      const existingTenants = await db.select().from(tenants).limit(1);
+      if (existingTenants.length === 0) {
+        [tenant] = await db
+          .insert(tenants)
+          .values({
+            tenantId: "default-tenant",
+            name: "Default Tenant",
+            domain: "production.dcmms.com",
+            config: JSON.stringify({
+              timezone: "UTC",
+              dateFormat: "YYYY-MM-DD",
+              currency: "USD",
+            }),
+          })
+          .returning();
+        console.log(`  ✓ Created tenant: ${tenant.name}`);
+      } else {
+        tenant = existingTenants[0];
+        console.log(`  ✓ Using existing tenant: ${tenant.name}`);
+      }
 
-    console.log(`  ✓ Created tenant: ${tenant.name}`);
-
-    // Create users
-    console.log("Creating users...");
-    const passwordHash = await AuthService.hashPassword("Password123!");
-
-    await db
-      .insert(users)
-      .values({
-        tenantId: tenant.id,
-        email: "admin@example.com",
-        username: "admin",
-        firstName: "Admin",
-        lastName: "User",
-        role: "tenant_admin",
-        passwordHash,
-      })
-      .returning();
+      // Seed only the admin user with a strong default password
+      const strongDefaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || "ChangeMeNow!2024";
+      const passwordHash = await AuthService.hashPassword(strongDefaultPassword);
+      await db
+        .insert(users)
+        .values({
+          tenantId: tenant.id,
+          email: "admin@production.com",
+          username: "admin",
+          firstName: "Admin",
+          lastName: "User",
+          role: "tenant_admin",
+          passwordHash,
+          metadata: JSON.stringify({ requirePasswordChange: true }),
+        });
+      console.log("  ✓ Seeded admin user for production: admin@production.com / " + strongDefaultPassword);
+      return;
+    }
+    // Non-production: continue with full seed
+    // ...existing code for dev/test seeding...
 
     const [managerUser] = await db
       .insert(users)

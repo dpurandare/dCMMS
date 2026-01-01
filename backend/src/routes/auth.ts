@@ -69,6 +69,12 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         // Generate tokens
         const tokens = await TokenService.generateTokens(server, user);
 
+        // If admin and requirePasswordChange, add reminder to response
+        let passwordChangeReminder = undefined;
+        if (user.role === "tenant_admin" && user.requirePasswordChange) {
+          passwordChangeReminder = "Please change your password immediately. This is your first login with the default password.";
+        }
+
         return {
           ...tokens,
           user: {
@@ -77,7 +83,9 @@ const authRoutes: FastifyPluginAsync = async (server) => {
             email: user.email,
             username: user.username,
             role: user.role,
+            requirePasswordChange: user.requirePasswordChange,
           },
+          ...(passwordChangeReminder ? { passwordChangeReminder } : {}),
         };
       } catch (error) {
         request.log.error({ err: error }, "Login error");
