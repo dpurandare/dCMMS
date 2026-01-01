@@ -5,6 +5,7 @@ import {
   serializerCompiler,
 } from "fastify-type-provider-zod";
 import { createComplianceTemplateService } from "../services/compliance-template.service";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const autoPopulateSchema = z.object({
@@ -26,6 +27,11 @@ export default async function complianceTemplateRoutes(
 ) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and RBAC for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ permissions: ["read:compliance"] }));
+
   const complianceService = createComplianceTemplateService(fastify);
 
   // ==========================================

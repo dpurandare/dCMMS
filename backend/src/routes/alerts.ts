@@ -8,6 +8,7 @@ import { db } from "../db";
 import { alerts } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { createAlertNotificationHandler } from "../services/alert-notification-handler.service";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const acknowledgeAlertSchema = z.object({
@@ -58,7 +59,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       limit?: string;
       offset?: string;
     };
-  }>("/alerts", async (request, reply) => {
+  }>(
+    "/alerts",
+    {
+      preHandler: [authorize({ permissions: ["read:alerts"] })],
+    },
+    async (request, reply) => {
     try {
       const { tenantId, siteId, assetId, severity, status } = request.query;
       const limit = parseInt(request.query.limit || "50");
@@ -137,7 +143,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
   // Get alert by ID
   fastify.get<{
     Params: { alertId: string };
-  }>("/alerts/:alertId", async (request, reply) => {
+  }>(
+    "/alerts/:alertId",
+    {
+      preHandler: [authorize({ permissions: ["read:alerts"] })],
+    },
+    async (request, reply) => {
     try {
       const { alertId } = request.params;
 
@@ -191,6 +202,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       schema: {
         body: createAlertSchema,
       },
+      preHandler: [authorize({ permissions: ["create:alerts"] })],
     },
     async (request, reply) => {
       try {
@@ -273,6 +285,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       schema: {
         body: acknowledgeAlertSchema,
       },
+      preHandler: [authorize({ permissions: ["update:alerts"] })],
     },
     async (request, reply) => {
       try {
@@ -371,6 +384,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       schema: {
         body: resolveAlertSchema,
       },
+      preHandler: [authorize({ permissions: ["update:alerts"] })],
     },
     async (request, reply) => {
       try {
@@ -458,6 +472,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       schema: {
         body: suppressAlertSchema,
       },
+      preHandler: [authorize({ permissions: ["update:alerts"] })],
     },
     async (request, reply) => {
       try {
@@ -524,7 +539,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       startDate?: string;
       endDate?: string;
     };
-  }>("/alerts/stats", async (request, reply) => {
+  }>(
+    "/alerts/stats",
+    {
+      preHandler: [authorize({ permissions: ["read:alerts"] })],
+    },
+    async (request, reply) => {
     try {
       const {
         tenantId,

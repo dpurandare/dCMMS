@@ -20,6 +20,8 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { PageHeader } from '@/components/ui/page-header';
 import { format } from 'date-fns';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { ProtectedButton } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface User {
     id: string;
@@ -35,6 +37,7 @@ interface User {
 export default function UsersPage() {
     const router = useRouter();
     const { isAuthenticated, user: currentUser } = useAuthStore();
+    const { can } = usePermissions();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -94,10 +97,13 @@ export default function UsersPage() {
                 title="Users"
                 description="Manage system users, roles, and permissions."
                 actions={
-                    <Button onClick={() => router.push('/users/new')}>
+                    <ProtectedButton
+                        permissions={['create:users']}
+                        onClick={() => router.push('/users/new')}
+                    >
                         <Plus className="mr-2 h-4 w-4" />
                         Add User
-                    </Button>
+                    </ProtectedButton>
                 }
             />
 
@@ -155,7 +161,7 @@ export default function UsersPage() {
                                             {format(new Date(user.createdAt), 'MMM d, yyyy')}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {currentUser?.id !== user.id && (
+                                            {currentUser?.id !== user.id && can('delete:users') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"

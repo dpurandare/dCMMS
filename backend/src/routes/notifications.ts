@@ -7,6 +7,7 @@ import {
 import { db } from "../db";
 import { notificationPreferences, notificationHistory } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const notificationPreferenceSchema = z.object({
@@ -49,10 +50,18 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
 
+  // Require authentication for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+
   // Get user notification preferences
   fastify.get<{
     Params: { userId: string };
-  }>("/users/:userId/notification-preferences", async (request, reply) => {
+  }>(
+    "/users/:userId/notification-preferences",
+    {
+      preHandler: [authorize({ permissions: ["read:notifications"] })],
+    },
+    async (request, reply) => {
     try {
       const { userId } = request.params;
 
@@ -92,6 +101,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       schema: {
         body: updatePreferencesSchema,
       },
+      preHandler: [authorize({ permissions: ["update:notifications"] })],
     },
     async (request, reply) => {
       try {
@@ -156,7 +166,12 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       startDate?: string;
       endDate?: string;
     };
-  }>("/users/:userId/notification-history", async (request, reply) => {
+  }>(
+    "/users/:userId/notification-history",
+    {
+      preHandler: [authorize({ permissions: ["read:notifications"] })],
+    },
+    async (request, reply) => {
     try {
       const { userId } = request.params;
       const limit = parseInt(request.query.limit || "50");
@@ -219,13 +234,15 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       channel?: string;
       eventType?: string;
     };
-  }>("/notifications/metrics", async (request, reply) => {
+  }>(
+    "/notifications/metrics",
+    {
+      preHandler: [authorize({ permissions: ["read:analytics"] })],
+    },
+    async (request, reply) => {
     try {
       const { tenantId, startDate, endDate, channel, eventType } =
         request.query;
-
-      // TODO: Add RBAC check - only admin users should access this endpoint
-      // For now, we'll allow all authenticated users
 
       // Build where clause
       const whereConditions = [eq(notificationHistory.tenantId, tenantId)];
@@ -326,13 +343,16 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       limit?: string;
       offset?: string;
     };
-  }>("/notifications/history", async (request, reply) => {
+  }>(
+    "/notifications/history",
+    {
+      preHandler: [authorize({ permissions: ["read:notifications"], adminOnly: true })],
+    },
+    async (request, reply) => {
     try {
       const { tenantId, userId, status, channel, eventType } = request.query;
       const limit = parseInt(request.query.limit || "100");
       const offset = parseInt(request.query.offset || "0");
-
-      // TODO: Add RBAC check - only admin users should access this endpoint
 
       // Build where clause
       const whereConditions = [eq(notificationHistory.tenantId, tenantId)];
@@ -471,7 +491,12 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       eventType: string;
       data: Record<string, any>;
     };
-  }>("/notifications/test", async (request, reply) => {
+  }>(
+    "/notifications/test",
+    {
+      preHandler: [authorize({ adminOnly: true })],
+    },
+    async (request, reply) => {
     try {
       const { userId, eventType, data } = request.body;
 

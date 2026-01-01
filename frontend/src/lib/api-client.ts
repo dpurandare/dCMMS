@@ -1,4 +1,21 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { showToast } from './toast';
+import type {
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenResponse,
+  User,
+  WorkOrder,
+  CreateWorkOrderRequest,
+  UpdateWorkOrderRequest,
+  PaginatedResponse,
+  PaginationParams,
+  Asset,
+  CreateAssetRequest,
+  Site,
+  AuditLog,
+  AuditLogFilters,
+} from '@/types/api';
 
 // API client configuration
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
@@ -71,11 +88,27 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('refreshToken');
 
         if (typeof window !== 'undefined') {
+          showToast.info('Your session has expired. Please log in again.');
           window.location.href = '/auth/login';
         }
 
         return Promise.reject(refreshError);
       }
+    }
+
+    // Handle other error status codes with user-friendly messages
+    if (error.response?.status === 403) {
+      showToast.error(error.response.data?.message || "You don't have permission to perform this action.");
+    } else if (error.response?.status === 404) {
+      // Don't show toast for 404s by default (component can handle it)
+      console.warn('404 Not Found:', error.config?.url);
+    } else if (error.response?.status === 422) {
+      // Validation errors - component should handle these
+      console.warn('Validation Error:', error.response.data);
+    } else if (error.response?.status && error.response.status >= 500) {
+      showToast.error('Server error. Please try again later.');
+    } else if (error.message?.includes('Network Error')) {
+      showToast.error('Network error. Please check your internet connection.');
     }
 
     return Promise.reject(error);
@@ -86,139 +119,143 @@ apiClient.interceptors.response.use(
 export const api = {
   // Auth endpoints
   auth: {
-    login: async (email: string, password: string) => {
-      const response = await apiClient.post('/auth/login', { email, password });
+    login: async (email: string, password: string): Promise<LoginResponse> => {
+      const response = await apiClient.post<LoginResponse>('/auth/login', { email, password });
       return response.data;
     },
-    logout: async () => {
-      const response = await apiClient.post('/auth/logout');
+    logout: async (): Promise<{ message: string }> => {
+      const response = await apiClient.post<{ message: string }>('/auth/logout');
       return response.data;
     },
-    getMe: async () => {
-      const response = await apiClient.get('/auth/me');
+    getMe: async (): Promise<User> => {
+      const response = await apiClient.get<User>('/auth/me');
       return response.data;
     },
-    refresh: async (refreshToken: string) => {
-      const response = await apiClient.post('/auth/refresh', { refreshToken });
+    refresh: async (refreshToken: string): Promise<RefreshTokenResponse> => {
+      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', { refreshToken });
       return response.data;
     },
   },
 
   // Work orders endpoints
   workOrders: {
-    list: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/work-orders', { params });
+    list: async (params?: PaginationParams & Partial<WorkOrder>): Promise<PaginatedResponse<WorkOrder>> => {
+      const response = await apiClient.get<PaginatedResponse<WorkOrder>>('/work-orders', { params });
       return response.data;
     },
-    getById: async (id: string) => {
-      const response = await apiClient.get(`/work-orders/${id}`);
+    getById: async (id: string): Promise<WorkOrder> => {
+      const response = await apiClient.get<WorkOrder>(`/work-orders/${id}`);
       return response.data;
     },
-    create: async (data: any) => {
-      const response = await apiClient.post('/work-orders', data);
+    create: async (data: CreateWorkOrderRequest): Promise<WorkOrder> => {
+      const response = await apiClient.post<WorkOrder>('/work-orders', data);
       return response.data;
     },
-    update: async (id: string, data: any) => {
-      const response = await apiClient.patch(`/work-orders/${id}`, data);
+    update: async (id: string, data: UpdateWorkOrderRequest): Promise<WorkOrder> => {
+      const response = await apiClient.patch<WorkOrder>(`/work-orders/${id}`, data);
       return response.data;
     },
-    delete: async (id: string) => {
-      const response = await apiClient.delete(`/work-orders/${id}`);
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/work-orders/${id}`);
       return response.data;
     },
-    transition: async (id: string, action: string, data?: any) => {
-      const response = await apiClient.post(`/work-orders/${id}/transition`, {
-        action,
-        ...data,
-      });
+    transition: async (id: string, status: string): Promise<WorkOrder> => {
+      const response = await apiClient.post<WorkOrder>(`/work-orders/${id}/transition`, { status });
       return response.data;
     },
   },
 
   // Assets endpoints
   assets: {
-    list: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/assets', { params });
+    list: async (params?: PaginationParams & Partial<Asset>): Promise<PaginatedResponse<Asset>> => {
+      const response = await apiClient.get<PaginatedResponse<Asset>>('/assets', { params });
       return response.data;
     },
-    getById: async (id: string) => {
-      const response = await apiClient.get(`/assets/${id}`);
+    getById: async (id: string): Promise<Asset> => {
+      const response = await apiClient.get<Asset>(`/assets/${id}`);
       return response.data;
     },
-    create: async (data: any) => {
-      const response = await apiClient.post('/assets', data);
+    create: async (data: CreateAssetRequest): Promise<Asset> => {
+      const response = await apiClient.post<Asset>('/assets', data);
       return response.data;
     },
-    update: async (id: string, data: any) => {
-      const response = await apiClient.patch(`/assets/${id}`, data);
+    update: async (id: string, data: Partial<CreateAssetRequest>): Promise<Asset> => {
+      const response = await apiClient.patch<Asset>(`/assets/${id}`, data);
       return response.data;
     },
-    delete: async (id: string) => {
-      const response = await apiClient.delete(`/assets/${id}`);
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/assets/${id}`);
       return response.data;
     },
-    getHierarchy: async (id: string) => {
-      const response = await apiClient.get(`/assets/${id}/hierarchy`);
+    getHierarchy: async (id: string): Promise<Asset> => {
+      const response = await apiClient.get<Asset>(`/assets/${id}/hierarchy`);
       return response.data;
     },
   },
 
   // Sites endpoints
   sites: {
-    list: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/sites', { params });
+    list: async (params?: PaginationParams): Promise<PaginatedResponse<Site>> => {
+      const response = await apiClient.get<PaginatedResponse<Site>>('/sites', { params });
       return response.data;
     },
-    getById: async (id: string) => {
-      const response = await apiClient.get(`/sites/${id}`);
+    getById: async (id: string): Promise<Site> => {
+      const response = await apiClient.get<Site>(`/sites/${id}`);
       return response.data;
     },
-    create: async (data: any) => {
-      const response = await apiClient.post('/sites', data);
+    create: async (data: Omit<Site, 'id' | 'createdAt' | 'updatedAt'>): Promise<Site> => {
+      const response = await apiClient.post<Site>('/sites', data);
       return response.data;
     },
-    update: async (id: string, data: any) => {
-      const response = await apiClient.patch(`/sites/${id}`, data);
+    update: async (id: string, data: Partial<Site>): Promise<Site> => {
+      const response = await apiClient.patch<Site>(`/sites/${id}`, data);
       return response.data;
     },
-    delete: async (id: string) => {
-      const response = await apiClient.delete(`/sites/${id}`);
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/sites/${id}`);
       return response.data;
     },
   },
 
   // Users endpoints
   users: {
-    update: async (id: string, data: any) => { const response = await apiClient.put("/users/" + id, data); return response.data; },
-    getById: async (id: string) => { const response = await apiClient.get("/users/" + id); return response.data; },
-    list: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/users', { params });
+    list: async (params?: PaginationParams): Promise<PaginatedResponse<User>> => {
+      const response = await apiClient.get<PaginatedResponse<User>>('/users', { params });
       return response.data;
     },
-    create: async (data: any) => {
-      const response = await apiClient.post('/users', data);
+    getById: async (id: string): Promise<User> => {
+      const response = await apiClient.get<User>(`/users/${id}`);
       return response.data;
     },
-    delete: async (id: string) => {
-      const response = await apiClient.delete(`/users/${id}`);
+    create: async (data: Partial<User> & { password: string }): Promise<User> => {
+      const response = await apiClient.post<User>('/users', data);
+      return response.data;
+    },
+    update: async (id: string, data: Partial<User>): Promise<User> => {
+      const response = await apiClient.put<User>(`/users/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/users/${id}`);
       return response.data;
     },
   },
+
   // Audit Logs endpoints
   auditLogs: {
-    list: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/audit-logs', { params });
+    list: async (params?: PaginationParams & AuditLogFilters): Promise<PaginatedResponse<AuditLog>> => {
+      const response = await apiClient.get<PaginatedResponse<AuditLog>>('/audit-logs', { params });
       return response.data;
     },
-    export: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/audit-logs/export', { 
+    export: async (params?: AuditLogFilters): Promise<Blob> => {
+      const response = await apiClient.get<Blob>('/audit-logs/export', {
         params,
-        responseType: 'blob' 
+        responseType: 'blob'
       });
       return response.data;
     },
-    getStatistics: async (params?: Record<string, any>) => {
-      const response = await apiClient.get('/audit-logs/statistics', { params });
+    getStatistics: async (params?: { startDate?: string; endDate?: string }): Promise<Record<string, any>> => {
+      const response = await apiClient.get<Record<string, any>>('/audit-logs/statistics', { params });
       return response.data;
     },
   },

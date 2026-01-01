@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { createETLSchedulerService } from "../services/etl-scheduler.service";
 import { createClickHouseETLService } from "../services/clickhouse-etl.service";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const triggerETLSchema = z.object({
@@ -23,6 +24,11 @@ const calculateKPISchema = z.object({
 export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and admin access for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ adminOnly: true }));
+
   const etlScheduler = createETLSchedulerService(fastify);
   const clickhouseETL = createClickHouseETLService(fastify);
 

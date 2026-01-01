@@ -16,6 +16,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AssetStatusBadge } from '@/components/assets/asset-status-badge';
 import { CardSkeleton } from '@/components/ui/card-skeleton';
 import { Package } from 'lucide-react';
+import { ProtectedButton } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Asset {
   id: string;
@@ -46,6 +48,7 @@ interface Asset {
 export default function AssetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { can } = usePermissions();
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,14 +145,22 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <Button variant="outline" onClick={() => router.push(`/assets/${params.id}/edit`)}>
+            <ProtectedButton
+              permissions={['update:assets']}
+              variant="outline"
+              onClick={() => router.push(`/assets/${params.id}/edit`)}
+            >
               <Edit className="mr-2 h-4 w-4" />
               Edit
-            </Button>
-            <Button variant="destructive" onClick={() => setDeleteDialog(true)}>
+            </ProtectedButton>
+            <ProtectedButton
+              permissions={['delete:assets']}
+              variant="destructive"
+              onClick={() => setDeleteDialog(true)}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
-            </Button>
+            </ProtectedButton>
           </>
         }
       />

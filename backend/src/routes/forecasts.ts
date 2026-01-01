@@ -6,10 +6,16 @@ import {
 } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { forecastService } from "../services/forecast.service";
+import { authorize } from "../middleware/authorize";
 
 const forecastRoutes: FastifyPluginAsync = async (server) => {
   server.setValidatorCompiler(validatorCompiler);
   server.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and RBAC for all routes
+  server.addHook("onRequest", server.authenticate);
+  server.addHook("onRequest", authorize({ permissions: ["read:forecasts"] }));
+
   const app = server.withTypeProvider<ZodTypeProvider>();
 
   // POST /api/v1/forecasts/generation/generate

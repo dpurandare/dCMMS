@@ -39,6 +39,8 @@ import {
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { ProtectedButton, ProtectedSection } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface WorkOrder {
   id: string;
@@ -61,6 +63,7 @@ interface WorkOrder {
 export default function WorkOrdersPage() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
+  const { can } = usePermissions();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,10 +152,13 @@ export default function WorkOrdersPage() {
         description="Manage maintenance and repair tasks across all sites"
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
         actions={
-          <Button onClick={() => router.push('/work-orders/new')}>
+          <ProtectedButton
+            permissions={['create:work-orders']}
+            onClick={() => router.push('/work-orders/new')}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Work Order
-          </Button>
+          </ProtectedButton>
         }
       />
 
@@ -330,27 +336,33 @@ export default function WorkOrdersPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/work-orders/${wo.id}/edit`);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedWO(wo);
-                            setDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {can('update:work-orders') && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/work-orders/${wo.id}/edit`);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {can('delete:work-orders') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedWO(wo);
+                                setDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

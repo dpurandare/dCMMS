@@ -6,6 +6,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { authorize } from "../middleware/authorize";
 
 const assetRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.setValidatorCompiler(validatorCompiler);
@@ -111,7 +112,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:assets"] })],
     },
     async (request) => {
       const user = request.user as any;

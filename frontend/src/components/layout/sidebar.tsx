@@ -34,6 +34,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/auth-store';
+import { usePermissions } from '@/hooks/use-permissions';
+import type { Permission } from '@/lib/permissions';
 
 interface NavItem {
   label: string;
@@ -41,23 +43,24 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
   badgeVariant?: 'default' | 'destructive';
+  permissions?: Permission[];
 }
 
 const mainNavItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Work Orders', href: '/work-orders', icon: Wrench },
-  { label: 'Assets', href: '/assets', icon: Package },
-  { label: 'Alerts', href: '/alerts', icon: Bell },
-  { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3 },
-  { label: 'Reports', href: '/reports', icon: FileText },
-  { label: 'Compliance', href: '/compliance-reports', icon: ScrollText },
+  { label: 'Work Orders', href: '/work-orders', icon: Wrench, permissions: ['read:work-orders'] },
+  { label: 'Assets', href: '/assets', icon: Package, permissions: ['read:assets'] },
+  { label: 'Alerts', href: '/alerts', icon: Bell, permissions: ['read:alerts'] },
+  { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3, permissions: ['read:analytics'] },
+  { label: 'Reports', href: '/reports', icon: FileText, permissions: ['read:reports'] },
+  { label: 'Compliance', href: '/compliance-reports', icon: ScrollText, permissions: ['read:compliance'] },
 ];
 
 const mlNavItems: NavItem[] = [
-  { label: 'Model Registry', href: '/ml/models', icon: Brain },
-  { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp },
-  { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle },
-  { label: 'AI Assistant', href: '/genai', icon: Brain },
+  { label: 'Model Registry', href: '/ml/models', icon: Brain, permissions: ['read:ml-features'] },
+  { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp, permissions: ['read:forecasts'] },
+  { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle, permissions: ['read:alerts'] },
+  { label: 'AI Assistant', href: '/genai', icon: Brain, permissions: ['use:genai'] },
 ];
 
 const secondaryNavItems: NavItem[] = [
@@ -69,6 +72,7 @@ const secondaryNavItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { canAll } = usePermissions();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const getUserInitials = () => {
@@ -85,6 +89,19 @@ export function Sidebar() {
     window.location.href = '/auth/login';
   };
 
+  const filterNavItems = (items: NavItem[]) => {
+    return items.filter((item) => {
+      if (!item.permissions || item.permissions.length === 0) {
+        return true; // No permissions required, show to everyone
+      }
+      return canAll(item.permissions);
+    });
+  };
+
+  const filteredMainNavItems = filterNavItems(mainNavItems);
+  const filteredMlNavItems = filterNavItems(mlNavItems);
+  const filteredSecondaryNavItems = filterNavItems(secondaryNavItems);
+
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-white">
       {/* Logo Section */}
@@ -96,7 +113,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
           {/* Main Navigation */}
-          {mainNavItems.map((item) => {
+          {filteredMainNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 
@@ -139,12 +156,13 @@ export function Sidebar() {
           })}
 
           {/* Machine Learning */}
-          <div className="px-3 py-2">
-            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-slate-500">
-              Machine Learning
-            </h2>
-            <div className="space-y-1">
-              {mlNavItems.map((item) => {
+          {filteredMlNavItems.length > 0 && (
+            <div className="px-3 py-2">
+              <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-slate-500">
+                Machine Learning
+              </h2>
+              <div className="space-y-1">
+                {filteredMlNavItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
 
@@ -172,14 +190,15 @@ export function Sidebar() {
                   </Link>
                 );
               })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Divider */}
           <Separator className="my-4" />
 
           {/* Settings & Support */}
-          {secondaryNavItems.map((item) => {
+          {filteredSecondaryNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 

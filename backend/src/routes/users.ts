@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { UserService } from "../services/user.service";
 import { AuthService, UserPayload } from "../services/auth.service";
+import { authorize } from "../middleware/authorize";
 
 const usersRoutes: FastifyPluginAsync = async (server) => {
   // GET /api/v1/users
@@ -31,7 +32,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["read:users"] })],
     },
     async (request, reply) => {
       const user = request.user;
@@ -79,12 +80,10 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["create:users"] })],
     },
     async (request, reply) => {
       const user = request.user;
-
-      // TODO: Add RBAC check here (only admins can create users)
 
       const newUser = await UserService.create({
         ...(request.body as any),
@@ -127,7 +126,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["read:users"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -160,11 +159,10 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["delete:users"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      // TODO: Add RBAC check here
 
       await UserService.delete(id);
       return reply.code(204).send();
@@ -240,24 +238,10 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["update:users"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const user = request.user as UserPayload;
-
-      // Ensure user can only update their own profile OR is an admin
-      const isSelf = id === user.id;
-      const isAdmin =
-        user.role === "tenant_admin" || user.role === "super_admin";
-
-      if (!isSelf && !isAdmin) {
-        return reply.status(403).send({
-          statusCode: 403,
-          error: "Forbidden",
-          message: "You do not have permission to update this user",
-        });
-      }
 
       const updatedUser = await UserService.updateProfile(
         id,

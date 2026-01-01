@@ -38,6 +38,8 @@ import {
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { ProtectedButton } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Asset {
   id: string;
@@ -55,6 +57,7 @@ interface Asset {
 export default function AssetsPage() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
+  const { can } = usePermissions();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,10 +135,13 @@ export default function AssetsPage() {
         description="Manage your asset inventory across all sites"
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
         actions={
-          <Button onClick={() => router.push('/assets/new')}>
+          <ProtectedButton
+            permissions={['create:assets']}
+            onClick={() => router.push('/assets/new')}
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Asset
-          </Button>
+          </ProtectedButton>
         }
       />
 
@@ -283,27 +289,33 @@ export default function AssetsPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/assets/${asset.id}/edit`);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedAsset(asset);
-                            setDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {can('update:assets') && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/assets/${asset.id}/edit`);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {can('delete:assets') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAsset(asset);
+                                setDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

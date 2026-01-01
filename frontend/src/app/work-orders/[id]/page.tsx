@@ -18,6 +18,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { ProtectedButton } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
+import { WorkOrderStateMachine } from '@/lib/work-order-state-machine';
+import type { WorkOrderStatus } from '@/types/api';
 
 interface Task {
   id: string;
@@ -72,6 +76,7 @@ export default function WorkOrderDetailsPage() {
   const params = useParams();
   const woId = params.id as string;
   const { isAuthenticated, logout } = useAuthStore();
+  const { can } = usePermissions();
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState(false);
@@ -136,64 +141,30 @@ export default function WorkOrderDetailsPage() {
   const getTransitionButtons = () => {
     if (!workOrder) return [];
 
-    const buttons = [];
-    const status = workOrder.status;
+    const currentStatus = workOrder.status as WorkOrderStatus;
+    const allowedTransitions = WorkOrderStateMachine.getAllowedTransitions(currentStatus);
 
-    if (status === 'draft' || status === 'scheduled') {
-      buttons.push({
-        label: 'Start',
-        action: 'start',
-        icon: PlayCircle,
-        variant: 'default' as const,
-      });
-    }
+    // Map transitions to button configurations
+    const statusToButtonConfig: Record<
+      WorkOrderStatus,
+      { label: string; icon: any; variant: 'default' | 'outline' | 'destructive' }
+    > = {
+      draft: { label: 'Save Draft', icon: Edit, variant: 'outline' },
+      open: { label: 'Mark Open', icon: PlayCircle, variant: 'default' },
+      scheduled: { label: 'Schedule', icon: PlayCircle, variant: 'default' },
+      in_progress: { label: 'Start Work', icon: PlayCircle, variant: 'default' },
+      on_hold: { label: 'Put on Hold', icon: PauseCircle, variant: 'outline' },
+      completed: { label: 'Mark Complete', icon: CheckCircle, variant: 'default' },
+      closed: { label: 'Close', icon: CheckCircle, variant: 'default' },
+      cancelled: { label: 'Cancel', icon: XCircle, variant: 'destructive' },
+    };
 
-    if (status === 'assigned' || status === 'in_progress') {
-      buttons.push({
-        label: 'Hold',
-        action: 'hold',
-        icon: PauseCircle,
-        variant: 'outline' as const,
-      });
-    }
-
-    if (status === 'on_hold') {
-      buttons.push({
-        label: 'Resume',
-        action: 'resume',
-        icon: PlayCircle,
-        variant: 'default' as const,
-      });
-    }
-
-    if (status === 'in_progress') {
-      buttons.push({
-        label: 'Complete',
-        action: 'complete',
-        icon: CheckCircle,
-        variant: 'default' as const,
-      });
-    }
-
-    if (status === 'completed') {
-      buttons.push({
-        label: 'Close',
-        action: 'close',
-        icon: CheckCircle,
-        variant: 'default' as const,
-      });
-    }
-
-    if (['draft', 'scheduled', 'assigned', 'on_hold'].includes(status)) {
-      buttons.push({
-        label: 'Cancel',
-        action: 'cancel',
-        icon: XCircle,
-        variant: 'destructive' as const,
-      });
-    }
-
-    return buttons;
+    return allowedTransitions.map((nextStatus) => ({
+      label: statusToButtonConfig[nextStatus].label,
+      action: nextStatus,
+      icon: statusToButtonConfig[nextStatus].icon,
+      variant: statusToButtonConfig[nextStatus].variant,
+    }));
   };
 
   const formatDate = (dateString?: string) => {
@@ -266,16 +237,24 @@ export default function WorkOrderDetailsPage() {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            {workOrder.status === 'draft' && (
-              <Button variant="outline" onClick={() => router.push(`/work-orders/${woId}/edit`)}>
+            {workOrder.status === 'draft' && can('update:work-orders') && (
+              <ProtectedButton
+                permissions={['update:work-orders']}
+                variant="outline"
+                onClick={() => router.push(`/work-orders/${woId}/edit`)}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
-              </Button>
+              </ProtectedButton>
             )}
-            <Button variant="destructive" onClick={() => setDeleteDialog(true)}>
+            <ProtectedButton
+              permissions={['delete:work-orders']}
+              variant="destructive"
+              onClick={() => setDeleteDialog(true)}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete
-            </Button>
+            </ProtectedButton>
           </>
         }
       />
@@ -298,13 +277,14 @@ export default function WorkOrderDetailsPage() {
         </CardHeader>
         <CardContent>
           {/* State Transition Buttons */}
-          {transitionButtons.length > 0 && (
+          {transitionButtons.length > 0 && can('update:work-orders') && (
             <div className="mb-6 flex flex-wrap gap-2 border-b pb-4">
               {transitionButtons.map((btn) => {
                 const Icon = btn.icon;
                 return (
-                  <Button
+                  <ProtectedButton
                     key={btn.action}
+                    permissions={['update:work-orders']}
                     variant={btn.variant}
                     onClick={() => {
                       setTransitionAction(btn.action);
@@ -313,7 +293,7 @@ export default function WorkOrderDetailsPage() {
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     {btn.label}
-                  </Button>
+                  </ProtectedButton>
                 );
               })}
             </div>

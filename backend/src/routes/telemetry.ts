@@ -1,8 +1,13 @@
 import { FastifyPluginAsync } from "fastify";
 import { kafkaService } from "../services/kafka.service";
 import { Pool } from "pg";
+import { authorize } from "../middleware/authorize";
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
+  // Require authentication and RBAC for all routes
+  server.addHook("onRequest", server.authenticate);
+  server.addHook("onRequest", authorize({ permissions: ["read:telemetry"] }));
+
   // QuestDB connection pool
   const questdb = new Pool({
     host: process.env.QUESTDB_HOST || "localhost",

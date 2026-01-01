@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { createReportService } from "../services/report.service";
 import { createReportBuilderService } from "../services/report-builder.service";
+import { authorize } from "../middleware/authorize";
 
 export default async function reportRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
@@ -14,8 +15,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   const reportBuilder = createReportBuilderService(fastify);
   const reportService = createReportService(fastify, reportBuilder);
 
-  // Apply authentication to all routes
+  // Apply authentication and RBAC to all routes
   fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ permissions: ["read:reports"] }));
 
   interface UserPayload {
     id: string;

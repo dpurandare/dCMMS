@@ -1,19 +1,29 @@
 import { FastifyInstance } from "fastify";
 import { UserPayload, RefreshTokenPayload } from "./auth.service";
+import { RefreshTokenService } from "./refresh-token.service";
 
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  refreshTokenExpiresAt?: Date;
+}
+
+export interface TokenGenerationContext {
+  ipAddress?: string;
+  userAgent?: string;
+  deviceInfo?: any;
 }
 
 export class TokenService {
   /**
    * Generate access and refresh tokens
+   * Now uses database-backed refresh tokens with rotation
    */
   static async generateTokens(
     server: FastifyInstance,
     user: UserPayload,
+    context?: TokenGenerationContext,
   ): Promise<TokenPair> {
     const accessToken = server.jwt.sign(
       {
@@ -28,15 +38,14 @@ export class TokenService {
       },
     );
 
-    const refreshTokenPayload: RefreshTokenPayload = {
-      id: user.id,
-      tenantId: user.tenantId,
-      type: "refresh",
-    };
-
-    const refreshToken = server.jwt.sign(refreshTokenPayload, {
-      expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || "7d",
-    });
+    // Generate database-backed refresh token
+    const { token: refreshToken, expiresAt } =
+      await RefreshTokenService.createRefreshToken({
+        userId: user.id,
+        ipAddress: context?.ipAddress,
+        userAgent: context?.userAgent,
+        deviceInfo: context?.deviceInfo,
+      });
 
     // Parse expiry time (e.g., "15m" -> 900 seconds)
     const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
@@ -46,28 +55,83 @@ export class TokenService {
       accessToken,
       refreshToken,
       expiresIn,
+      refreshTokenExpiresAt: expiresAt,
     };
   }
 
   /**
-   * Verify and decode refresh token
+   * Verify refresh token against database
+   * Returns the user ID if valid
    */
   static async verifyRefreshToken(
-    server: FastifyInstance,
     refreshToken: string,
-  ): Promise<RefreshTokenPayload> {
+  ): Promise<{ userId: string; tokenId: string }> {
     try {
-      const decoded = server.jwt.verify<RefreshTokenPayload>(refreshToken);
-
-      // Check if it's a refresh token
-      if (decoded.type !== "refresh") {
-        throw new Error("Invalid token type");
-      }
-
-      return decoded;
+      return await RefreshTokenService.validateRefreshToken(refreshToken);
     } catch (error) {
-      throw new Error("Invalid refresh token");
+      throw new Error("Invalid or expired refresh token");
     }
+  }
+
+  /**
+   * Rotate refresh token (generate new access + refresh token pair)
+   */
+  static async rotateRefreshToken(
+    server: FastifyInstance,
+    oldRefreshToken: string,
+    context?: TokenGenerationContext,
+  ): Promise<TokenPair> {
+    // Validate and rotate the refresh token
+    const { token: newRefreshToken, expiresAt } =
+      await RefreshTokenService.rotateRefreshToken(
+        oldRefreshToken,
+        context?.ipAddress,
+        context?.userAgent,
+      );
+
+    // Get user info from the token
+    const { userId } = await RefreshTokenService.validateRefreshToken(
+      newRefreshToken,
+    );
+
+    // Fetch user details to generate new access token
+    const { db } = await import("../db");
+    const { users } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Generate new access token
+    const accessToken = server.jwt.sign(
+      {
+        id: user.id,
+        tenantId: user.tenantId,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      },
+      {
+        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m",
+      },
+    );
+
+    const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
+    const expiresIn = this.parseExpiryToSeconds(expiryString);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      expiresIn,
+      refreshTokenExpiresAt: expiresAt,
+    };
   }
 
   /**

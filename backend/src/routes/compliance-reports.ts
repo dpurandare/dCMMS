@@ -7,6 +7,7 @@ import {
 import { createComplianceReportGenerationService } from "../services/compliance-report-generation.service";
 import { createAuditLogService } from "../services/audit-log.service";
 import { createReadStream, existsSync } from "fs";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const generateReportSchema = z.object({
@@ -30,6 +31,11 @@ const updateStatusSchema = z.object({
 export default async function complianceReportRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and RBAC for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ permissions: ["read:compliance"] }));
+
   const reportService = createComplianceReportGenerationService(fastify);
   const auditService = createAuditLogService(fastify);
 

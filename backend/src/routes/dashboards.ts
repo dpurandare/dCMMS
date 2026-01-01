@@ -7,6 +7,7 @@ import {
 import { createDashboardService } from "../services/dashboard.service";
 import { createKPICalculationService } from "../services/kpi-calculation.service";
 import { createReportBuilderService } from "../services/report-builder.service";
+import { authorize } from "../middleware/authorize";
 
 export async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
@@ -20,8 +21,9 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     reportService,
   );
 
-  // Apply authentication to all routes
+  // Apply authentication and RBAC to all routes
   fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ permissions: ["read:dashboards"] }));
 
   interface UserPayload {
     id: string;

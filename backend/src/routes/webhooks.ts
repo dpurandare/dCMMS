@@ -1,8 +1,13 @@
 import { FastifyPluginAsync } from "fastify";
 import { db, pool } from "../db";
 import WebhookService from "../services/webhook.service";
+import { authorize } from "../middleware/authorize";
 
 const webhookRoutes: FastifyPluginAsync = async (server) => {
+  // Require authentication and RBAC for all routes
+  server.addHook("onRequest", server.authenticate);
+  server.addHook("onRequest", authorize({ permissions: ["manage:webhooks"] }));
+
   const webhookService = new WebhookService();
 
   // POST /api/v1/webhooks

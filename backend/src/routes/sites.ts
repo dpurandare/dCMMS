@@ -6,6 +6,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { authorize } from "../middleware/authorize";
 
 const siteRoutes: FastifyPluginAsync = async (fastify) => {
   // Set up Zod validation for this plugin context
@@ -113,7 +114,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:sites"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -156,7 +157,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -197,7 +198,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -230,7 +231,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           201: SiteSchema,
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["create:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -271,7 +272,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -319,7 +320,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["delete:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;

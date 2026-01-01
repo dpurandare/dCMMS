@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import {
@@ -12,10 +13,14 @@ import {
 // Plugins
 import { registerJwt } from "./plugins/jwt";
 
+// Middleware
+import { auditHook } from "./middleware/audit";
+
 // Routes
 import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
 import workOrderRoutes from "./routes/work-orders";
+import attachmentsRoutes from "./routes/attachments";
 import { dashboardRoutes } from "./routes/dashboards";
 import assetRoutes from "./routes/assets";
 import siteRoutes from "./routes/sites";
@@ -89,6 +94,14 @@ export async function buildServer(): Promise<FastifyInstance> {
     timeWindow: parseInt(process.env.RATE_LIMIT_TIMEWINDOW || "60000", 10),
   });
 
+  // Multipart file upload support
+  await server.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+      files: 1, // Max 1 file per request
+    },
+  });
+
   // Swagger documentation
   if (process.env.SWAGGER_ENABLED !== "false") {
     await server.register(swagger, {
@@ -157,6 +170,11 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
             name: "work-orders",
             description:
               "Work order management - Create, assign, and track maintenance work",
+          },
+          {
+            name: "attachments",
+            description:
+              "File attachments - Upload, download, and manage work order file attachments",
           },
           {
             name: "assets",
@@ -253,6 +271,9 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
     );
   });
 
+  // Audit logging (compliance)
+  server.addHook("onRequest", auditHook);
+
   // ==========================================
   // ERROR HANDLER
   // ==========================================
@@ -313,6 +334,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(healthRoutes, { prefix: "/health" });
   await server.register(authRoutes, { prefix: "/api/v1/auth" });
   await server.register(workOrderRoutes, { prefix: "/api/v1/work-orders" });
+  await server.register(attachmentsRoutes, { prefix: "/api/v1/work-orders" });
   await server.register(permitRoutes, { prefix: "/api/v1/permits" });
   await server.register(assetRoutes, { prefix: "/api/v1/assets" });
   await server.register(siteRoutes, { prefix: "/api/v1/sites" });

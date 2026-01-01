@@ -5,6 +5,7 @@ import {
   serializerCompiler,
 } from "fastify-type-provider-zod";
 import { createKPICalculationService } from "../services/kpi-calculation.service";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const kpiQuerySchema = z.object({
@@ -32,6 +33,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   }>(
     "/analytics/kpis",
     {
+      preHandler: [authorize({ permissions: ["read:analytics"] })],
       schema: {
         querystring: kpiQuerySchema,
         tags: ["Analytics"],
@@ -160,6 +162,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   }>(
     "/analytics/kpis/trends",
     {
+      preHandler: [authorize({ permissions: ["read:analytics"] })],
       schema: {
         querystring: z.object({
           site_id: z.string().uuid().optional(),
@@ -246,6 +249,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   }>(
     "/admin/analytics/kpis/invalidate-cache",
     {
+      preHandler: [authorize({ adminOnly: true })],
       schema: {
         body: z.object({
           site_id: z.string().uuid().optional(),

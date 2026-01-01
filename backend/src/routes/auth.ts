@@ -66,8 +66,11 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           });
         }
 
-        // Generate tokens
-        const tokens = await TokenService.generateTokens(server, user);
+        // Generate tokens with request context for security tracking
+        const tokens = await TokenService.generateTokens(server, user, {
+          ipAddress: request.ip,
+          userAgent: request.headers["user-agent"],
+        });
 
         // If admin and requirePasswordChange, add reminder to response
         let passwordChangeReminder = undefined;
@@ -128,25 +131,15 @@ const authRoutes: FastifyPluginAsync = async (server) => {
       const { refreshToken } = request.body as { refreshToken: string };
 
       try {
-        // Verify refresh token
-        const decoded = await TokenService.verifyRefreshToken(
+        // Rotate refresh token (validates old token, creates new one)
+        const tokens = await TokenService.rotateRefreshToken(
           server,
           refreshToken,
+          {
+            ipAddress: request.ip,
+            userAgent: request.headers["user-agent"],
+          },
         );
-
-        // Get user details
-        const user = await AuthService.getUserById(decoded.id);
-
-        if (!user) {
-          return reply.status(401).send({
-            statusCode: 401,
-            error: "Unauthorized",
-            message: "User not found",
-          });
-        }
-
-        // Generate new tokens
-        const tokens = await TokenService.generateTokens(server, user);
 
         return tokens;
       } catch (error) {
@@ -154,7 +147,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         return reply.status(401).send({
           statusCode: 401,
           error: "Unauthorized",
-          message: "Invalid refresh token",
+          message: error instanceof Error ? error.message : "Invalid refresh token",
         });
       }
     },
@@ -165,22 +158,50 @@ const authRoutes: FastifyPluginAsync = async (server) => {
     "/logout",
     {
       schema: {
-        description: "User logout",
+        description: "User logout - revokes all refresh tokens for the user",
         tags: ["auth"],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          properties: {
+            allDevices: {
+              type: "boolean",
+              description: "If true, revoke tokens from all devices. Otherwise, only current device."
+            },
+          },
+        },
       },
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      // In a real implementation, you might want to:
-      // 1. Blacklist the token in Redis
-      // 2. Clear any session data
-      // 3. Log the logout event
+      const user = request.user as { id: string };
+      const { allDevices } = (request.body as { allDevices?: boolean }) || {};
 
-      return {
-        message: "Logged out successfully",
-      };
+      try {
+        const { RefreshTokenService } = await import("../services/refresh-token.service");
+
+        // Revoke all refresh tokens for this user for security
+        await RefreshTokenService.revokeAllUserTokens(user.id);
+
+        request.log.info(
+          { userId: user.id, allDevices },
+          "User logged out successfully"
+        );
+
+        return {
+          message: allDevices
+            ? "Logged out from all devices successfully"
+            : "Logged out successfully",
+        };
+      } catch (error) {
+        request.log.error({ err: error }, "Logout error");
+        return reply.status(500).send({
+          statusCode: 500,
+          error: "Internal Server Error",
+          message: "An error occurred during logout",
+        });
+      }
     },
   );
 

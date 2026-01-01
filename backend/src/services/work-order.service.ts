@@ -306,9 +306,23 @@ export class WorkOrderService {
   }
 
   static async transitionStatus(id: string, tenantId: string, action: string) {
+    // Get current work order to check current status
+    const wo = await this.getById(id, tenantId);
+
+    // 🔒 CRITICAL: Enforce state machine validation
+    const currentStatus = wo.status as WorkOrderStatus;
+    const nextStatus = action as WorkOrderStatus;
+
+    if (!WorkOrderStateMachine.isValidTransition(currentStatus, nextStatus)) {
+      const allowedTransitions = WorkOrderStateMachine.getAllowedTransitions(currentStatus);
+      throw new Error(
+        `Invalid state transition: Cannot transition from '${currentStatus}' to '${nextStatus}'. ` +
+        `Allowed transitions: ${allowedTransitions.join(", ")}`
+      );
+    }
+
+    // Safety Gate: Critical or Emergency WOs require an Active Permit when starting work
     if (action === "in_progress") {
-      const wo = await this.getById(id, tenantId);
-      // Safety Gate: Critical or Emergency WOs require an Active Permit
       if (wo.priority === "critical" || wo.type === "emergency") {
         const activePermit = await db.query.permits.findFirst({
           where: and(
@@ -325,7 +339,8 @@ export class WorkOrderService {
         }
       }
     }
-    return this.update(id, tenantId, { status: action as WorkOrderStatus });
+
+    return this.update(id, tenantId, { status: nextStatus });
   }
 
   // ==========================================

@@ -5,6 +5,7 @@ import {
   serializerCompiler,
 } from "fastify-type-provider-zod";
 import { createFeastFeatureService } from "../services/feast-feature.service";
+import { authorize } from "../middleware/authorize";
 
 // Validation schemas
 const getAssetFeaturesSchema = z.object({
@@ -22,6 +23,10 @@ const triggerMaterializationSchema = z.object({
 export default async function mlFeatureRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and RBAC for all routes
+  fastify.addHook("onRequest", fastify.authenticate);
+  fastify.addHook("onRequest", authorize({ permissions: ["read:ml-features"] }));
 
   const featureService = createFeastFeatureService(fastify);
 

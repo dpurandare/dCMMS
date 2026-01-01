@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 import { WorkOrderService } from "../services/work-order.service";
 import { workOrderStatusEnum } from "../db/schema";
+import { authorize } from "../middleware/authorize";
 
 const WorkOrderStatusSchema = z.enum([
   "draft",
@@ -107,7 +108,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         },
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["create:work-orders"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -148,7 +149,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -173,7 +174,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["read:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -193,7 +194,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: UpdateWorkOrderSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -220,7 +221,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: TransitionSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ anyPermissions: ["update:work-orders", "close:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -240,7 +241,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: CreateTaskSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;

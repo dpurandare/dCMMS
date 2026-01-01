@@ -8,10 +8,15 @@ import { z } from "zod";
 import { GenAIService } from "../services/genai.service";
 import multipart from "@fastify/multipart";
 import { UserPayload } from "../services/auth.service";
+import { authorize } from "../middleware/authorize";
 
 export const genaiRoutes = async (app: FastifyInstance) => {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Require authentication and RBAC for all routes
+  app.addHook("onRequest", app.authenticate);
+  app.addHook("onRequest", authorize({ permissions: ["use:genai"] }));
 
   const server = app.withTypeProvider<ZodTypeProvider>();
 
