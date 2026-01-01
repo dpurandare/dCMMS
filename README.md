@@ -39,6 +39,11 @@
 
 **dCMMS** is a comprehensive, production-ready Computerized Maintenance Management System (CMMS) designed specifically for utility-scale non-conventional energy power plants. Built with enterprise-grade reliability, AI-powered predictive maintenance, and compliance automation, dCMMS enables proactive operations management for non-conventional energy O&M teams.
 
+## User Seeding (Production & Dev/Test)
+
+- In production deployments, if no users exist, the system will automatically seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately.
+- In dev/test, standard users (admin, manager, technician) are seeded with known credentials for testing and sample data is provided.
+
 ### What Makes dCMMS Different?
 
 - 🤖 **ML-Powered Predictive Maintenance**: Detect equipment failures before they happen with 92-96% accuracy

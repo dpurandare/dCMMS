@@ -29,6 +29,9 @@
 | **Staging** | QA & UAT testing | On tag `staging-*` | Auto |
 | **Production** | Live system | On tag `release-*` | Manual (Product Owner + Tech Lead) |
 
+**User Seeding Note:**
+- In production, if no users exist, the system will seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately.
+
 ### 1.2 Infrastructure Components
 
 **Kubernetes Clusters:**

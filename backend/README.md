@@ -69,6 +69,11 @@ npm run db:seed
 
 ### Default Credentials
 
+## User Seeding (Production & Dev/Test)
+
+- In production deployments, if no users exist, the system will automatically seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately.
+- In dev/test, standard users (admin, manager, technician) are seeded with known credentials for testing and sample data is provided.
+
 After seeding, login with these credentials:
 
 | Email                  | Username   | Role         | Password     |

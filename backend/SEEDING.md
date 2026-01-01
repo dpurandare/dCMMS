@@ -2,7 +2,11 @@
 
 ## Overview
 
-The dCMMS backend includes a seeding system to populate the database with default data for development and testing environments.
+The dCMMS backend includes a seeding system to populate the database with default data for development and testing environments, and to ensure a secure admin user is available in production.
+
+## Production Admin Seeding
+
+- In production deployments, if no users exist, the system will automatically seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately. This reminder is not shown in dev/test environments.
 
 ## Default Data
 

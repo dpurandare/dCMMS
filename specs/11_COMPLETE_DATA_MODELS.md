@@ -1,5 +1,10 @@
 # Complete Data Models & Schema Specifications
 
+## User Seeding (Production & Dev/Test)
+
+- In production deployments, if no users exist, the system will automatically seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately. This reminder is not shown in dev/test environments.
+- In dev/test, standard users (admin, manager, technician) are seeded with known credentials for testing and sample data is provided.
+
 **Version:** 1.0
 **Date:** November 10, 2025
 **Status:** Draft - For Review

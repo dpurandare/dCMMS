@@ -211,6 +211,10 @@ Each release produces a deployable increment with automated regression coverage.
 ## 6. Detailed Functional Requirements
 
 ### 6.1 Product Features
+#### 6.1.0 User Seeding (Production & Dev/Test)
+
+- In production deployments, the system will automatically seed a single admin user if no users exist. The seeded admin will have a known, strong default password, which must be changed after first login.
+- On first login in production, the admin user will be shown a mandatory reminder to change their password immediately. This reminder is not shown in dev/test environments.
 
 #### 6.1.1 Core Features (MVP)
 

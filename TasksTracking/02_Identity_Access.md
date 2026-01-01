@@ -1,6 +1,8 @@
 # 02. Identity & Access
 
 **Focus:** Authentication, Authorization, RBAC, User Management
+
+- [ ] **DCMMS-NEW** - Production admin user is seeded if no users exist; admin is shown a mandatory password change reminder on first login in production.
 **Specs Covered:** 03 (Auth), 08 (Org Structure), 09 (RBAC)
 
 ## Authentication Infrastructure
