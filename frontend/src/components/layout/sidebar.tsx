@@ -34,6 +34,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/auth-store';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface NavItem {
   label: string;
@@ -41,35 +42,50 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
   badgeVariant?: 'default' | 'destructive';
+  permission?: string; // Permission required to see this item
 }
 
 const mainNavItems: NavItem[] = [
-  { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Work Orders', href: '/work-orders', icon: Wrench },
-  { label: 'Assets', href: '/assets', icon: Package },
-  { label: 'Alerts', href: '/alerts', icon: Bell },
-  { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3 },
-  { label: 'Reports', href: '/reports', icon: FileText },
-  { label: 'Compliance', href: '/compliance-reports', icon: ScrollText },
+  { label: 'Home', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+  { label: 'Work Orders', href: '/work-orders', icon: Wrench, permission: 'work-orders.view' },
+  { label: 'Assets', href: '/assets', icon: Package, permission: 'assets.view' },
+  { label: 'Alerts', href: '/alerts', icon: Bell, permission: 'alerts.view' },
+  { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3, permission: 'analytics.view' },
+  { label: 'Reports', href: '/reports', icon: FileText, permission: 'reports.view' },
+  { label: 'Compliance', href: '/compliance-reports', icon: ScrollText, permission: 'compliance.view' },
 ];
 
 const mlNavItems: NavItem[] = [
-  { label: 'Model Registry', href: '/ml/models', icon: Brain },
-  { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp },
-  { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle },
-  { label: 'AI Assistant', href: '/genai', icon: Brain },
+  { label: 'Model Registry', href: '/ml/models', icon: Brain, permission: 'ml.models.view' },
+  { label: 'Forecasts', href: '/ml/forecasts', icon: TrendingUp, permission: 'ml.forecasts.view' },
+  { label: 'Anomalies', href: '/ml/anomalies', icon: AlertTriangle, permission: 'ml.anomalies.view' },
+  { label: 'AI Assistant', href: '/genai', icon: Brain, permission: 'genai.use' },
 ];
 
 const secondaryNavItems: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: Settings },
-  { label: 'Help & Support', href: '/help', icon: HelpCircle },
-  { label: 'Documentation', href: '/docs', icon: Book },
+  { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
+  { label: 'Help & Support', href: '/help', icon: HelpCircle }, // No permission - always visible
+  { label: 'Documentation', href: '/docs', icon: Book }, // No permission - always visible
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  // Filter navigation items based on user permissions
+  const visibleMainNav = mainNavItems.filter(item =>
+    !item.permission || hasPermission(item.permission as any)
+  );
+
+  const visibleMLNav = mlNavItems.filter(item =>
+    !item.permission || hasPermission(item.permission as any)
+  );
+
+  const visibleSecondaryNav = secondaryNavItems.filter(item =>
+    !item.permission || hasPermission(item.permission as any)
+  );
 
   const getUserInitials = () => {
     if (!user) return 'U';
@@ -96,7 +112,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="space-y-1">
           {/* Main Navigation */}
-          {mainNavItems.map((item) => {
+          {visibleMainNav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 
@@ -127,8 +143,8 @@ export function Sidebar() {
                     className={cn(
                       'min-w-[20px] px-2 py-0 text-xs',
                       item.badgeVariant === 'destructive'
-                        ? 'bg-red-500 hover:bg-red-600'
-                        : 'bg-blue-500 hover:bg-blue-600'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-blue-600 text-white'
                     )}
                   >
                     {item.badge}
@@ -138,48 +154,50 @@ export function Sidebar() {
             );
           })}
 
-          {/* Machine Learning */}
-          <div className="px-3 py-2">
-            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-slate-500">
-              Machine Learning
-            </h2>
-            <div className="space-y-1">
-              {mlNavItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const Icon = item.icon;
+          {/* Machine Learning - Only show if user has ML permissions */}
+          {visibleMLNav.length > 0 && (
+            <div className="px-3 py-2">
+              <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-slate-500">
+                Machine Learning
+              </h2>
+              <div className="space-y-1">
+                {visibleMLNav.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const Icon = item.icon;
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-all',
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                    )}
-                  >
-                    {isActive && (
-                      <div className="absolute left-0 h-full w-0.5 rounded-r bg-blue-600" />
-                    )}
-                    <Icon
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
                       className={cn(
-                        'h-5 w-5',
-                        isActive ? 'text-blue-600' : 'text-slate-600 group-hover:text-slate-900'
+                        'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-all',
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                       )}
-                    />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 h-full w-0.5 rounded-r bg-blue-600" />
+                      )}
+                      <Icon
+                        className={cn(
+                          'h-5 w-5',
+                          isActive ? 'text-blue-600' : 'text-slate-600 group-hover:text-slate-900'
+                        )}
+                      />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Divider */}
           <Separator className="my-4" />
 
           {/* Settings & Support */}
-          {secondaryNavItems.map((item) => {
+          {visibleSecondaryNav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
 

@@ -38,6 +38,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 interface Asset {
   id: string;
@@ -53,6 +54,14 @@ interface Asset {
 }
 
 export default function AssetsPage() {
+  return (
+    <PermissionGuard permission="assets.view" showAccessDenied>
+      <AssetsContent />
+    </PermissionGuard>
+  );
+}
+
+function AssetsContent() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
   const [assets, setAssets] = useState<Asset[]>([]);

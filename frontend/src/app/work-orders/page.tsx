@@ -39,6 +39,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 interface WorkOrder {
   id: string;
@@ -59,6 +60,14 @@ interface WorkOrder {
 }
 
 export default function WorkOrdersPage() {
+  return (
+    <PermissionGuard permission="work-orders.view" showAccessDenied>
+      <WorkOrdersContent />
+    </PermissionGuard>
+  );
+}
+
+function WorkOrdersContent() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -224,18 +233,18 @@ export default function WorkOrdersPage() {
             statusFilter !== 'all' ||
             priorityFilter !== 'all' ||
             typeFilter !== 'all') && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-                setPriorityFilter('all');
-                setTypeFilter('all');
-              }}
-            >
-              Clear
-            </Button>
-          )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPriorityFilter('all');
+                  setTypeFilter('all');
+                }}
+              >
+                Clear
+              </Button>
+            )}
         </div>
       </Card>
 
