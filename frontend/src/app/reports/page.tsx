@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { AuthGuard } from "@/components/auth/auth-guard";
 import { ReportList } from "@/components/reports/report-list";
 import { ReportForm } from "@/components/reports/report-form";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ReportDefinition, ReportExecutionResult } from "@/types/report";
 import { reportService } from "@/services/report.service";
+import { useAuthStore } from '@/store/auth-store';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import {
     Dialog,
     DialogContent,
@@ -20,9 +21,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ReportsPage() {
     return (
-        <AuthGuard>
+        <PermissionGuard permission="reports.view" showAccessDenied>
             <ReportsContent />
-        </AuthGuard>
+        </PermissionGuard>
     );
 }
 

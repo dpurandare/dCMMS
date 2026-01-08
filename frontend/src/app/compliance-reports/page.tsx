@@ -40,6 +40,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { MoreHorizontal } from 'lucide-react';
 import { API_CONFIG } from '@/config';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 interface ComplianceReport {
   reportId: string;
@@ -54,6 +55,14 @@ interface ComplianceReport {
 }
 
 export default function ComplianceReportsPage() {
+  return (
+    <PermissionGuard permission="compliance.view" showAccessDenied>
+      <ComplianceReportsContent />
+    </PermissionGuard>
+  );
+}
+
+function ComplianceReportsContent() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [reports, setReports] = useState<ComplianceReport[]>([]);

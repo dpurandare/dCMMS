@@ -28,13 +28,13 @@ import { useAuthStore } from '@/store/auth-store';
 import { alertsService, Alert, AlertStats } from '@/services/alerts.service';
 import { Bell, CheckCircle, AlertTriangle, Info, XCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
-import { AuthGuard } from '@/components/auth/auth-guard';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 export default function AlertsPage() {
     return (
-        <AuthGuard>
+        <PermissionGuard permission="alerts.view" showAccessDenied>
             <AlertsContent />
-        </AuthGuard>
+        </PermissionGuard>
     );
 }
 

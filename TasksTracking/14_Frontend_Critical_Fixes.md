@@ -144,15 +144,15 @@
 - [/] **FE-012** - Protect Routes with PermissionGuard
   - [x] Add PermissionGuard to Work Orders page ✅
   - [x] Add PermissionGuard to Assets page ✅
-  - [ ] Add PermissionGuard to Alerts page
+  - [x] Add PermissionGuard to Alerts page ✅
+  - [x] Add PermissionGuard to Reports page ✅
+  - [x] Add PermissionGuard to Compliance pages ✅
   - [ ] Add PermissionGuard to Analytics pages
-  - [ ] Add PermissionGuard to ML pages
+  - [ ] Add PermissionGuard to ML pages (3 pages: models, forecasts, anomalies)
   - [ ] Add PermissionGuard to User Management (when implemented)
-  - [ ] Add PermissionGuard to Reports page
-  - [ ] Add PermissionGuard to Compliance pages
   - **Priority:** 🔴 CRITICAL
   - **Estimated:** 2-3 hours
-  - **Status:** ⏳ IN PROGRESS (25% complete)
+  - **Status:** 🔄 IN PROGRESS (62% complete - 5 of 8 pages protected)
 
 - [ ] **FE-013** - Implement Feature-Level Permissions
   - [ ] Add permission checks for Create buttons
