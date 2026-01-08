@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { AuditLogger, AuditActions, AuditResources } from '@/lib/audit-logger';
 import { Button } from '@/components/ui/button';
 import {
     Form,
@@ -53,6 +55,14 @@ const userSchema = z.object({
 type UserFormValues = z.infer<typeof userSchema>;
 
 export default function NewUserPage() {
+    return (
+        <PermissionGuard permission="users.create" showAccessDenied>
+            <NewUserContent />
+        </PermissionGuard>
+    );
+}
+
+function NewUserContent() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,7 +83,7 @@ export default function NewUserPage() {
     const onSubmit = async (data: UserFormValues) => {
         try {
             setIsSubmitting(true);
-            await api.users.create({
+            const response = await api.post('/users', {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 username: data.username,
@@ -82,6 +92,15 @@ export default function NewUserPage() {
                 role: data.role,
                 password: data.password,
             });
+
+            // Audit log
+            AuditLogger.log(
+                AuditActions.CREATE,
+                AuditResources.USER,
+                response.data?.id,
+                { username: data.username, email: data.email, role: data.role }
+            );
+
             router.push('/users');
         } catch (error) {
             console.error('Failed to create user:', error);

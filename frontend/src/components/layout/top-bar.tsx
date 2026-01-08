@@ -7,6 +7,7 @@ import { Search, Bell, Plus, Menu, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Breadcrumbs, BreadcrumbItem } from './breadcrumbs';
 import { cn } from '@/lib/utils';
 import {
@@ -133,6 +134,9 @@ export function TopBar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notifications */}
         <Button

@@ -3,6 +3,7 @@
 import { Download, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { API_CONFIG } from '@/config';
 
 interface PDFPreviewProps {
   reportId: string;
@@ -11,7 +12,7 @@ interface PDFPreviewProps {
 }
 
 export function PDFPreview({ reportId, downloadUrl, format }: PDFPreviewProps) {
-  const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${downloadUrl}`;
+  const fullUrl = `${API_CONFIG.baseURL}${downloadUrl}`;
 
   const handleDownload = () => {
     const link = document.createElement('a');

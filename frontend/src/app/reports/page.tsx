@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { AuthGuard } from "@/components/auth/auth-guard";
 import { ReportList } from "@/components/reports/report-list";
 import { ReportForm } from "@/components/reports/report-form";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ReportDefinition, ReportExecutionResult } from "@/types/report";
 import { reportService } from "@/services/report.service";
+import { useAuthStore } from '@/store/auth-store';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
     Dialog,
     DialogContent,
@@ -20,13 +22,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ReportsPage() {
     return (
-        <AuthGuard>
+        <PermissionGuard permission="reports.view" showAccessDenied>
             <ReportsContent />
-        </AuthGuard>
+        </PermissionGuard>
     );
 }
 
 function ReportsContent() {
+    const { hasPermission } = usePermissions();
     const [executionResult, setExecutionResult] = useState<ReportExecutionResult | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [executingReportId, setExecutingReportId] = useState<string | null>(null);
@@ -75,10 +78,12 @@ function ReportsContent() {
                             Create and execute custom reports from your data.
                         </p>
                     </div>
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Report
-                    </Button>
+                    {hasPermission('reports.create') && (
+                        <Button onClick={handleCreate}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Report
+                        </Button>
+                    )}
                 </div>
 
                 <ReportList

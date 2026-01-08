@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import { API_CONFIG } from '@/config';
 
 interface ComplianceReport {
   reportId: string;
@@ -89,8 +90,7 @@ export default function ComplianceReportDetailsPage() {
   const handleDownload = () => {
     if (!report) return;
 
-    const fullUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'}${report.downloadUrl
-      }`;
+    const fullUrl = `${API_CONFIG.baseURL}${report.downloadUrl}`;
     const link = document.createElement('a');
     link.href = fullUrl;
     link.download = `${report.reportId}.${report.format}`;

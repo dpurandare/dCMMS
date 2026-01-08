@@ -4,7 +4,7 @@ import { UserProfile, UpdateProfileDTO } from "../types/user";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
 
 const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     return { Authorization: `Bearer ${token}` };
 };
 
