@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 import { WorkOrderService } from "../services/work-order.service";
 import { workOrderStatusEnum } from "../db/schema";
+import { requirePermission } from "../middleware/rbac";
 
 const WorkOrderStatusSchema = z.enum([
   "draft",
@@ -107,7 +108,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         },
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, requirePermission("work-orders.create")],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -355,7 +356,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
           200: z.object({ success: z.boolean() }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, requirePermission("work-orders.delete")],
     },
     async (request) => {
       const user = request.user as any;

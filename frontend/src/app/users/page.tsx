@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { AuditLogger, AuditActions, AuditResources } from '@/lib/audit-logger';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +23,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { PageHeader } from '@/components/ui/page-header';
 import { format } from 'date-fns';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Pagination } from '@/components/ui/pagination';
 
 interface User {
     id: string;
@@ -33,25 +37,53 @@ interface User {
 }
 
 export default function UsersPage() {
+    return (
+        <PermissionGuard permission="users.view" showAccessDenied>
+            <UsersContent />
+        </PermissionGuard>
+    );
+}
+
+function UsersContent() {
     const router = useRouter();
     const { isAuthenticated, user: currentUser } = useAuthStore();
+    const { hasPermission } = usePermissions();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+    const [totalPages, setTotalPages] = useState(1);
+
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/auth/login');
-            return;
+        } else {
+            fetchUsers();
         }
-        fetchUsers();
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, router, currentPage]); // Re-fetch when page changes
 
     const fetchUsers = async () => {
         try {
             setIsLoading(true);
-            const data = await api.users.list();
-            setUsers(data);
+            const response = await api.get('/users', {
+                params: {
+                    page: currentPage,
+                    limit: itemsPerPage,
+                },
+            });
+
+            // Server returns { data, pagination }
+            if (response.data.data && response.data.pagination) {
+                setUsers(response.data.data);
+                setTotalPages(response.data.pagination.totalPages);
+            } else {
+                // Fallback for backward compatibility
+                setUsers(response.data || []);
+            }
         } catch (error) {
             console.error('Failed to fetch users:', error);
         } finally {
@@ -62,7 +94,17 @@ export default function UsersPage() {
     const handleDelete = async () => {
         if (!deleteId) return;
         try {
-            await api.users.delete(deleteId);
+            const userToDelete = users.find(u => u.id === deleteId);
+            await api.delete(`/users/${deleteId}`);
+
+            // Audit log
+            AuditLogger.log(
+                AuditActions.DELETE,
+                AuditResources.USER,
+                deleteId,
+                { username: userToDelete?.username, email: userToDelete?.email }
+            );
+
             setDeleteId(null);
             fetchUsers();
         } catch (error) {
@@ -94,10 +136,12 @@ export default function UsersPage() {
                 title="Users"
                 description="Manage system users, roles, and permissions."
                 actions={
-                    <Button onClick={() => router.push('/users/new')}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add User
-                    </Button>
+                    hasPermission('users.create') ? (
+                        <Button onClick={() => router.push('/users/new')}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add User
+                        </Button>
+                    ) : null
                 }
             />
 
@@ -155,7 +199,7 @@ export default function UsersPage() {
                                             {format(new Date(user.createdAt), 'MMM d, yyyy')}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {currentUser?.id !== user.id && (
+                                            {currentUser?.id !== user.id && hasPermission('users.delete') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -177,6 +221,16 @@ export default function UsersPage() {
                                 )}
                             </TableBody>
                         </Table>
+                    )}
+
+                    {/* Pagination */}
+                    {!isLoading && totalPages > 1 && (
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={setCurrentPage}
+                        />
                     )}
                 </CardContent>
             </Card>

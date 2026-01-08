@@ -40,6 +40,7 @@ import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface WorkOrder {
   id: string;
@@ -70,6 +71,7 @@ export default function WorkOrdersPage() {
 function WorkOrdersContent() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,18 +92,19 @@ function WorkOrdersContent() {
   }, [isAuthenticated, router]);
 
   const fetchWorkOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      setError(null);
-      const data = await api.workOrders.list();
-      setWorkOrders(data.data || []);
+      const params: any = {};
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (priorityFilter !== 'all') params.priority = priorityFilter;
+      if (typeFilter !== 'all') params.type = typeFilter;
+
+      const response = await api.get('/work-orders', { params });
+      setWorkOrders(response.data || []);
     } catch (err: any) {
-      console.error('Failed to fetch work orders:', err);
-      setError(err.message || 'Failed to load work orders');
-      if (err.response?.status === 401) {
-        logout();
-        router.push('/auth/login');
-      }
+      setError(err.response?.data?.message || 'Failed to fetch work orders');
     } finally {
       setIsLoading(false);
     }
@@ -111,13 +114,12 @@ function WorkOrdersContent() {
     if (!selectedWO) return;
 
     try {
-      await api.workOrders.delete(selectedWO.id);
-      setWorkOrders(workOrders.filter((wo) => wo.id !== selectedWO.id));
+      await api.delete(`/work-orders/${selectedWO.id}`);
       setDeleteDialog(false);
       setSelectedWO(null);
-    } catch (err) {
-      console.error('Failed to delete work order:', err);
-      alert('Failed to delete work order');
+      fetchWorkOrders();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to delete work order');
     }
   };
 
@@ -135,7 +137,7 @@ function WorkOrdersContent() {
   });
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'Not set';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -158,10 +160,12 @@ function WorkOrdersContent() {
         description="Manage maintenance and repair tasks across all sites"
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
         actions={
-          <Button onClick={() => router.push('/work-orders/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Work Order
-          </Button>
+          hasPermission('work-orders.create') ? (
+            <Button onClick={() => router.push('/work-orders/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Work Order
+            </Button>
+          ) : null
         }
       />
 
@@ -339,27 +343,33 @@ function WorkOrdersContent() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/work-orders/${wo.id}/edit`);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedWO(wo);
-                            setDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {hasPermission('work-orders.edit') && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/work-orders/${wo.id}/edit`);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {hasPermission('work-orders.delete') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedWO(wo);
+                                setDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

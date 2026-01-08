@@ -29,6 +29,7 @@ import { alertsService, Alert, AlertStats } from '@/services/alerts.service';
 import { Bell, CheckCircle, AlertTriangle, Info, XCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function AlertsPage() {
     return (
@@ -40,6 +41,7 @@ export default function AlertsPage() {
 
 function AlertsContent() {
     const { user } = useAuthStore();
+    const { hasPermission } = usePermissions();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [stats, setStats] = useState<AlertStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -235,7 +237,7 @@ function AlertsContent() {
                                             {format(new Date(alert.triggeredAt), 'MMM d, HH:mm')}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {alert.status === 'active' && (
+                                            {alert.status === 'active' && hasPermission('alerts.acknowledge') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -244,7 +246,7 @@ function AlertsContent() {
                                                     Acknowledge
                                                 </Button>
                                             )}
-                                            {alert.status === 'acknowledged' && (
+                                            {alert.status === 'acknowledged' && hasPermission('alerts.resolve') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

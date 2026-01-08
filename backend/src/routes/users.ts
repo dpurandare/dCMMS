@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { UserService } from "../services/user.service";
 import { AuthService, UserPayload } from "../services/auth.service";
+import { requirePermission } from "../middleware/rbac";
 
 const usersRoutes: FastifyPluginAsync = async (server) => {
   // GET /api/v1/users
@@ -9,23 +10,46 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     "/",
     {
       schema: {
-        description: "Get all users",
+        description: "Get all users with pagination",
         tags: ["users"],
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "number", default: 1 },
+            limit: { type: "number", default: 20 },
+            search: { type: "string" },
+            role: { type: "string" },
+          },
+        },
         response: {
           200: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                email: { type: "string" },
-                username: { type: "string" },
-                firstName: { type: "string", nullable: true },
-                lastName: { type: "string", nullable: true },
-                role: { type: "string" },
-                isActive: { type: "boolean" },
-                createdAt: { type: "string" },
+            type: "object",
+            properties: {
+              data: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    email: { type: "string" },
+                    username: { type: "string" },
+                    firstName: { type: "string", nullable: true },
+                    lastName: { type: "string", nullable: true },
+                    role: { type: "string" },
+                    isActive: { type: "boolean" },
+                    createdAt: { type: "string" },
+                  },
+                },
+              },
+              pagination: {
+                type: "object",
+                properties: {
+                  page: { type: "number" },
+                  limit: { type: "number" },
+                  total: { type: "number" },
+                  totalPages: { type: "number" },
+                },
               },
             },
           },
@@ -35,8 +59,16 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const user = request.user;
-      const users = await UserService.findAll(user.tenantId);
-      return users;
+      const query = request.query as any;
+
+      const result = await UserService.findAll(user.tenantId, {
+        page: query.page,
+        limit: query.limit,
+        search: query.search,
+        role: query.role,
+      });
+
+      return result;
     },
   );
 
@@ -79,12 +111,10 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, requirePermission("users.create")],
     },
     async (request, reply) => {
       const user = request.user;
-
-      // TODO: Add RBAC check here (only admins can create users)
 
       const newUser = await UserService.create({
         ...(request.body as any),
@@ -160,11 +190,10 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, requirePermission("users.delete")],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      // TODO: Add RBAC check here
 
       await UserService.delete(id);
       return reply.code(204).send();

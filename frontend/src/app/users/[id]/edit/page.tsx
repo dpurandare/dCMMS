@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { AuditLogger, AuditActions, AuditResources } from '@/lib/audit-logger';
 import { Button } from '@/components/ui/button';
 import {
     Form,
@@ -49,6 +51,14 @@ const userSchema = z.object({
 type UserFormValues = z.infer<typeof userSchema>;
 
 export default function EditUserPage({ params }: { params: { id: string } }) {
+    return (
+        <PermissionGuard permission="users.edit" showAccessDenied>
+            <EditUserContent params={params} />
+        </PermissionGuard>
+    );
+}
+
+function EditUserContent({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,7 +83,8 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
     const fetchUser = async () => {
         try {
             setIsLoading(true);
-            const user = await api.users.getById(params.id);
+            const response = await api.get(`/users/${params.id}`);
+            const user = response.data;
             form.reset({
                 firstName: user.firstName,
                 lastName: user.lastName,
@@ -93,7 +104,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
     const onSubmit = async (data: UserFormValues) => {
         try {
             setIsSubmitting(true);
-            await api.users.update(params.id, {
+            await api.put(`/users/${params.id}`, {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 username: data.username,
@@ -104,6 +115,15 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
                 // Logic check: Backend updateProfile only takes {firstName, lastName, email, username, phone}. Role is ignored!
                 // We might need an admin endpoint to update role.
             });
+
+            // Audit log
+            AuditLogger.log(
+                AuditActions.UPDATE,
+                AuditResources.USER,
+                params.id,
+                { username: data.username, email: data.email }
+            );
+
             router.push('/users');
         } catch (error) {
             console.error('Failed to update user:', error);

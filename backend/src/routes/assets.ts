@@ -6,6 +6,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { requirePermission } from "../middleware/rbac";
 
 const assetRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.setValidatorCompiler(validatorCompiler);
@@ -226,7 +227,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           201: AssetSchema,
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, requirePermission("assets.create")],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -278,7 +279,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, requirePermission("assets.edit")],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -332,7 +333,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, requirePermission("assets.delete")],
     },
     async (request, reply) => {
       const user = request.user as any;

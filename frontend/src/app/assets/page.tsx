@@ -39,6 +39,7 @@ import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface Asset {
   id: string;
@@ -64,6 +65,7 @@ export default function AssetsPage() {
 function AssetsContent() {
   const router = useRouter();
   const { isAuthenticated, logout } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,8 +88,8 @@ function AssetsContent() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await api.assets.list();
-      setAssets(data.data || []);
+      const response = await api.get('/assets');
+      setAssets(response.data || []);
     } catch (err: any) {
       console.error('Failed to fetch assets:', err);
       setError(err.message || 'Failed to load assets');
@@ -104,7 +106,7 @@ function AssetsContent() {
     if (!selectedAsset) return;
 
     try {
-      await api.assets.delete(selectedAsset.id);
+      await api.delete(`/assets/${selectedAsset.id}`);
       setAssets(assets.filter((a) => a.id !== selectedAsset.id));
       setDeleteDialog(false);
       setSelectedAsset(null);
@@ -141,10 +143,12 @@ function AssetsContent() {
         description="Manage your asset inventory across all sites"
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
         actions={
-          <Button onClick={() => router.push('/assets/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Asset
-          </Button>
+          hasPermission('assets.create') ? (
+            <Button onClick={() => router.push('/assets/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Asset
+            </Button>
+          ) : null
         }
       />
 
@@ -292,27 +296,33 @@ function AssetsContent() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/assets/${asset.id}/edit`);
-                          }}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedAsset(asset);
-                            setDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {hasPermission('assets.edit') && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/assets/${asset.id}/edit`);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+                        {hasPermission('assets.delete') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAsset(asset);
+                                setDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

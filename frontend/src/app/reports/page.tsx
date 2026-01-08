@@ -10,6 +10,7 @@ import { ReportDefinition, ReportExecutionResult } from "@/types/report";
 import { reportService } from "@/services/report.service";
 import { useAuthStore } from '@/store/auth-store';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
     Dialog,
     DialogContent,
@@ -28,6 +29,7 @@ export default function ReportsPage() {
 }
 
 function ReportsContent() {
+    const { hasPermission } = usePermissions();
     const [executionResult, setExecutionResult] = useState<ReportExecutionResult | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [executingReportId, setExecutingReportId] = useState<string | null>(null);
@@ -76,10 +78,12 @@ function ReportsContent() {
                             Create and execute custom reports from your data.
                         </p>
                     </div>
-                    <Button onClick={handleCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Report
-                    </Button>
+                    {hasPermission('reports.create') && (
+                        <Button onClick={handleCreate}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create Report
+                        </Button>
+                    )}
                 </div>
 
                 <ReportList

@@ -21,6 +21,7 @@ import {
   Brain,
   TrendingUp,
   AlertTriangle,
+  Users,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,7 @@ const mlNavItems: NavItem[] = [
 ];
 
 const secondaryNavItems: NavItem[] = [
+  { label: 'Users', href: '/users', icon: Users, permission: 'users.view' },
   { label: 'Settings', href: '/settings', icon: Settings, permission: 'settings.view' },
   { label: 'Help & Support', href: '/help', icon: HelpCircle }, // No permission - always visible
   { label: 'Documentation', href: '/docs', icon: Book }, // No permission - always visible
