@@ -148,4 +148,7 @@ tramp
 *.tmp
 *.temp
 venv/
+# But keep mobile library code (Flutter/Dart specific)
 !mobile/lib/
+# And frontend library code (TypeScript utilities)
+!frontend/src/lib/

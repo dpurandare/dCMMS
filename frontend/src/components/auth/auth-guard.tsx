@@ -22,8 +22,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
             }
 
             try {
-                // Optional: Verify token validity with backend
+                // Verify token validity with backend
+                // Note: This will automatically refresh token if expired (via apiClient interceptor)
                 // await api.auth.getMe();
+                // Temporarily disabled until auth service is created
                 setIsChecking(false);
             } catch (error) {
                 console.error('Auth verification failed:', error);
