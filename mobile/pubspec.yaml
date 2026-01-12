@@ -43,7 +43,7 @@ dependencies:
   path: ^1.9.1
   dio: ^5.9.0
   connectivity_plus: ^7.0.0
-  google_fonts: ^6.3.3
+  google_fonts: ^7.0.0
   flutter_animate: ^4.5.2
   flutter_secure_storage: ^10.0.0
   flutter_markdown: ^0.7.1
