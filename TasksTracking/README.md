@@ -8,23 +8,23 @@ This directory contains the master task list for the dCMMS project, broken down 
 
 ## Task Modules
 
-| ID     | Module Name                                                | Focus Area                             | Status        |
-| :----- | :--------------------------------------------------------- | :------------------------------------- | :------------ |
-| **01** | [Foundation & Architecture](01_Foundation_Architecture.md) | Specs 01, 05, 07, 13, 17, 19           | ✅ Complete    |
-| **02** | [Identity & Access](02_Identity_Access.md)                 | Specs 03, 08, 09                       | ✅ Complete    |
-| **03** | [Asset Management](03_Asset_Management.md)                 | Spec 11 (Assets)                       | ✅ Complete    |
-| **04** | [Work Order Management](04_Work_Order_Management.md)       | Spec 02 (WO), Spec 23 (Basic)          | ✅ Complete    |
-| **05** | [Mobile & Offline](05_Mobile_Offline.md)                   | Spec 04 (Offline), Spec 21 (Mobile)    | ✅ Complete    |
-| **06** | [Telemetry Ingestion](06_Telemetry_Ingestion.md)           | Spec 10, Spec 18, Spec 21              | ✅ Complete    |
-| **07** | [Notifications & Alerts](07_Notifications_Alerts.md)       | Spec 14                                | ✅ Complete    |
-| **08** | [Analytics & Compliance](08_Analytics_Compliance.md)       | Spec 15, Spec 16                       | ✅ Complete    |
-| **09** | [Machine Learning](09_Machine_Learning.md)                 | Spec 22                                | ✅ Complete    |
-| **10** | [Cost Management](10_Cost_Management.md)                   | Spec 23 (Advanced)                     | ✅ Complete    |
-| **11** | [Advanced Forecasting](11_Advanced_Forecasting.md)         | Spec 25                                | ✅ Complete    |
-| **12** | [Gap Remediation](12_Gap_Remediation.md)                   | Safety Gates, Permits (Sprint 3 Fixes) | ✅ Complete    |
-| **13** | [GenAI Implementation](13_GenAI_Implementation.md)         | Spec 26 (RAG Pipeline)                 | ✅ Complete    |
-| **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md)   | Auth, API Client, RBAC                 | ⚠️ In Progress |
-| **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived    |
+| ID     | Module Name                                                | Focus Area                             | Status     |
+| :----- | :--------------------------------------------------------- | :------------------------------------- | :--------- |
+| **01** | [Foundation & Architecture](01_Foundation_Architecture.md) | Specs 01, 05, 07, 13, 17, 19           | ✅ Complete |
+| **02** | [Identity & Access](02_Identity_Access.md)                 | Specs 03, 08, 09                       | ✅ Complete |
+| **03** | [Asset Management](03_Asset_Management.md)                 | Spec 11 (Assets)                       | ✅ Complete |
+| **04** | [Work Order Management](04_Work_Order_Management.md)       | Spec 02 (WO), Spec 23 (Basic)          | ✅ Complete |
+| **05** | [Mobile & Offline](05_Mobile_Offline.md)                   | Spec 04 (Offline), Spec 21 (Mobile)    | ✅ Complete |
+| **06** | [Telemetry Ingestion](06_Telemetry_Ingestion.md)           | Spec 10, Spec 18, Spec 21              | ✅ Complete |
+| **07** | [Notifications & Alerts](07_Notifications_Alerts.md)       | Spec 14                                | ✅ Complete |
+| **08** | [Analytics & Compliance](08_Analytics_Compliance.md)       | Spec 15, Spec 16                       | ✅ Complete |
+| **09** | [Machine Learning](09_Machine_Learning.md)                 | Spec 22                                | ✅ Complete |
+| **10** | [Cost Management](10_Cost_Management.md)                   | Spec 23 (Advanced)                     | ✅ Complete |
+| **11** | [Advanced Forecasting](11_Advanced_Forecasting.md)         | Spec 25                                | ✅ Complete |
+| **12** | [Gap Remediation](12_Gap_Remediation.md)                   | Safety Gates, Permits (Sprint 3 Fixes) | ✅ Complete |
+| **13** | [GenAI Implementation](13_GenAI_Implementation.md)         | Spec 26 (RAG Pipeline)                 | ✅ Complete |
+| **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md)   | Auth, API Client, RBAC                 | ✅ Complete |
+| **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived |
 
 ## Status Legend
 - ✅ **Complete**: Implemented and Verified.

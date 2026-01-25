@@ -9,10 +9,14 @@ interface AuthGuardProps {
     children: React.ReactNode;
 }
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 500;
+
 export function AuthGuard({ children }: AuthGuardProps) {
     const router = useRouter();
-    const { isAuthenticated, logout } = useAuthStore();
+    const { isAuthenticated, logout, setUser } = useAuthStore();
     const [isChecking, setIsChecking] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -21,20 +25,58 @@ export function AuthGuard({ children }: AuthGuardProps) {
                 return;
             }
 
-            try {
-                // Verify token validity with backend
-                // Note: This will automatically refresh token if expired (via apiClient interceptor)
-                await api.get('/auth/me');
+            let retries = 0;
+            let lastError: any = null;
+
+            while (retries <= MAX_RETRIES) {
+                try {
+                    // Verify token validity with backend using centralized method
+                    // This will automatically refresh token if expired via apiClient interceptor
+                    const user = await api.auth.getMe();
+
+                    // Update user in store with fresh data
+                    setUser(user);
+                    setIsChecking(false);
+                    setError(null);
+                    return;
+                } catch (err: any) {
+                    lastError = err;
+
+                    // Check if it's a network error that we should retry
+                    const isNetworkError = err.message?.includes('Network Error') ||
+                        err.code === 'ECONNABORTED' ||
+                        err.code === 'ERR_NETWORK';
+
+                    // Check if it's a server error (5xx)
+                    const isServerError = err.response?.status >= 500;
+
+                    if ((isNetworkError || isServerError) && retries < MAX_RETRIES) {
+                        // Retry with exponential backoff
+                        retries++;
+                        const delay = RETRY_DELAY_MS * Math.pow(2, retries - 1);
+                        console.log(`Auth verification failed, retrying in ${delay}ms (attempt ${retries}/${MAX_RETRIES})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+
+                    // For 401/403 or after max retries, logout user
+                    console.error('Auth verification failed:', err);
+                    logout();
+                    router.push('/auth/login');
+                    return;
+                }
+            }
+
+            // If we exhausted retries
+            if (lastError) {
+                console.error('Auth verification failed after retries:', lastError);
+                setError('Unable to verify session. Please try again.');
                 setIsChecking(false);
-            } catch (error) {
-                console.error('Auth verification failed:', error);
-                logout();
-                router.push('/auth/login');
             }
         };
 
         checkAuth();
-    }, [isAuthenticated, router, logout]);
+    }, [isAuthenticated, router, logout, setUser]);
 
     if (isChecking) {
         return (
@@ -47,5 +89,22 @@ export function AuthGuard({ children }: AuthGuardProps) {
         );
     }
 
+    if (error) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="flex flex-col items-center gap-4 text-center">
+                    <p className="text-red-600">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return <>{children}</>;
 }
+

@@ -440,52 +440,73 @@ export interface GenAIDocument {
 // ==========================================
 
 export type Permission =
-  | "create:work-orders"
-  | "read:work-orders"
-  | "update:work-orders"
-  | "delete:work-orders"
-  | "approve:work-orders"
-  | "assign:work-orders"
-  | "close:work-orders"
-  | "create:assets"
-  | "read:assets"
-  | "update:assets"
-  | "delete:assets"
-  | "manage:assets"
-  | "create:parts"
-  | "read:parts"
-  | "update:parts"
-  | "delete:parts"
-  | "consume:parts"
-  | "create:sites"
-  | "read:sites"
-  | "update:sites"
-  | "delete:sites"
-  | "create:users"
-  | "read:users"
-  | "update:users"
-  | "delete:users"
-  | "manage:roles"
-  | "create:alerts"
-  | "read:alerts"
-  | "acknowledge:alerts"
-  | "resolve:alerts"
-  | "manage:notifications"
-  | "read:reports"
-  | "create:reports"
-  | "read:analytics"
-  | "read:compliance"
-  | "create:compliance"
-  | "approve:compliance"
-  | "submit:compliance"
-  | "create:permits"
-  | "read:permits"
-  | "approve:permits"
-  | "close:permits"
-  | "manage:system"
-  | "manage:tenants"
-  | "read:audit-logs"
-  | "manage:integrations";
+  // Dashboard
+  | 'dashboard.view'
+
+  // Work Orders
+  | 'work-orders.view'
+  | 'work-orders.create'
+  | 'work-orders.edit'
+  | 'work-orders.delete'
+  | 'work-orders.assign'
+  | 'work-orders.complete'
+
+  // Assets
+  | 'assets.view'
+  | 'assets.create'
+  | 'assets.edit'
+  | 'assets.delete'
+
+  // Alerts
+  | 'alerts.view'
+  | 'alerts.acknowledge'
+  | 'alerts.resolve'
+  | 'alerts.manage'
+
+  // Analytics
+  | 'analytics.view'
+  | 'analytics.advanced'
+
+  // Reports
+  | 'reports.view'
+  | 'reports.create'
+  | 'reports.export'
+
+  // Compliance
+  | 'compliance.view'
+  | 'compliance.create'
+  | 'compliance.submit'
+  | 'compliance.manage'
+
+  // Machine Learning
+  | 'ml.models.view'
+  | 'ml.models.deploy'
+  | 'ml.forecasts.view'
+  | 'ml.anomalies.view'
+
+  // GenAI
+  | 'genai.use'
+  | 'genai.admin'
+
+  // Users & Security
+  | 'users.view'
+  | 'users.create'
+  | 'users.edit'
+  | 'users.delete'
+  | 'users.manage-roles'
+
+  // Settings
+  | 'settings.view'
+  | 'settings.edit'
+  | 'settings.system'
+
+  // Sites
+  | 'sites.view'
+  | 'sites.manage'
+
+  // Audit Logs
+  | 'audit-logs.view';
+
 
 export interface UserPermissions {
   role: UserRole;

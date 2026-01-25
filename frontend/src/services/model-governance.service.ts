@@ -1,11 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem("accessToken");
-    return { Authorization: `Bearer ${token}` };
-};
+import { apiClient } from "@/lib/api-client";
 
 export type ModelStage = "development" | "staging" | "review" | "production" | "retired";
 
@@ -33,24 +26,18 @@ export const modelGovernanceService = {
         const params: any = {};
         if (stage) params.stage = stage;
 
-        const response = await axios.get(`${API_URL}/model-governance/models`, {
-            headers: getAuthHeader(),
-            params,
-        });
+        const response = await apiClient.get('/model-governance/models', { params });
         return response.data;
     },
 
     async registerModel(data: ModelRegistration): Promise<{ message: string; registration: Model }> {
-        const response = await axios.post(`${API_URL}/model-governance/register`, data, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.post('/model-governance/register', data);
         return response.data;
     },
 
     async updateStage(modelId: string, newStage: ModelStage, updatedBy: string): Promise<{ message: string; model: Model }> {
-        const response = await axios.put(`${API_URL}/model-governance/${modelId}/stage`, { newStage, updatedBy }, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.put(`/model-governance/${modelId}/stage`, { newStage, updatedBy });
         return response.data;
     },
 };
+

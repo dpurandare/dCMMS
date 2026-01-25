@@ -148,6 +148,12 @@ tramp
 *.tmp
 *.temp
 venv/
+
+# Backup files from scripts/migrations
+*.bak
+*.bak2
+*.backup
+
 # But keep mobile library code (Flutter/Dart specific)
 !mobile/lib/
 # And frontend library code (TypeScript utilities)

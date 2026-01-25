@@ -153,7 +153,7 @@ export default function WorkOrdersPage() {
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
         actions={
           <ProtectedButton
-            permissions={['create:work-orders']}
+            permissions={['work-orders.create']}
             onClick={() => router.push('/work-orders/new')}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -230,18 +230,18 @@ export default function WorkOrdersPage() {
             statusFilter !== 'all' ||
             priorityFilter !== 'all' ||
             typeFilter !== 'all') && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-                setPriorityFilter('all');
-                setTypeFilter('all');
-              }}
-            >
-              Clear
-            </Button>
-          )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPriorityFilter('all');
+                  setTypeFilter('all');
+                }}
+              >
+                Clear
+              </Button>
+            )}
         </div>
       </Card>
 
@@ -336,7 +336,7 @@ export default function WorkOrdersPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        {can('update:work-orders') && (
+                        {can('work-orders.edit') && (
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
@@ -347,7 +347,7 @@ export default function WorkOrdersPage() {
                             Edit
                           </DropdownMenuItem>
                         )}
-                        {can('delete:work-orders') && (
+                        {can('work-orders.delete') && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem

@@ -50,6 +50,11 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+
+          // Clear CSRF token
+          import('@/lib/csrf').then(({ clearCsrfToken }) => {
+            clearCsrfToken();
+          });
         }
 
         set({

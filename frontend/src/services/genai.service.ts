@@ -1,6 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+import { apiClient } from "@/lib/api-client";
 
 // Types
 export interface ChatContext {
@@ -54,12 +52,10 @@ export const GenAIService = {
         if (metadata.category) formData.append("category", metadata.category);
         if (metadata.type) formData.append("type", metadata.type);
 
-        const response = await axios.post(`${API_URL}/genai/upload`, formData, {
+        const response = await apiClient.post('/genai/upload', formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
-            // Check if we have a token in localStorage (naive auth for now, or rely on axios interceptor if exists)
-            // headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } 
         });
         return response.data;
     },
@@ -68,7 +64,7 @@ export const GenAIService = {
      * Get job status by ID
      */
     async getJobStatus(jobId: string): Promise<JobStatus> {
-        const response = await axios.get(`${API_URL}/genai/jobs/${jobId}`);
+        const response = await apiClient.get(`/genai/jobs/${jobId}`);
         return response.data;
     },
 
@@ -76,7 +72,7 @@ export const GenAIService = {
      * Send a query to the chat endpoint
      */
     async chat(query: string): Promise<ChatResponse> {
-        const response = await axios.post(`${API_URL}/genai/chat`, { query });
+        const response = await apiClient.post('/genai/chat', { query });
         return response.data;
     },
 
@@ -84,7 +80,7 @@ export const GenAIService = {
      * Get list of uploaded documents
      */
     async getDocuments(): Promise<GenAIDocument[]> {
-        const response = await axios.get(`${API_URL}/genai/documents`);
+        const response = await apiClient.get('/genai/documents');
         return response.data;
     },
 
@@ -92,7 +88,7 @@ export const GenAIService = {
      * Delete a document
      */
     async deleteDocument(filename: string): Promise<{ message: string }> {
-        const response = await axios.delete(`${API_URL}/genai/documents/${filename}`);
+        const response = await apiClient.delete(`/genai/documents/${filename}`);
         return response.data;
     },
 
@@ -106,7 +102,7 @@ export const GenAIService = {
         contextIds: string[],
         comment?: string
     ): Promise<{ id: string; message: string }> {
-        const response = await axios.post(`${API_URL}/genai/feedback`, {
+        const response = await apiClient.post('/genai/feedback', {
             query,
             answer,
             rating,

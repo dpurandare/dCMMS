@@ -29,13 +29,23 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and CSRF token
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
+      // Add auth token
       const token = localStorage.getItem('accessToken');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      // Add CSRF token for state-changing requests
+      const { getCsrfToken, requiresCsrfProtection } = await import('@/lib/csrf');
+      if (config.method && requiresCsrfProtection(config.method)) {
+        const csrfToken = getCsrfToken();
+        if (csrfToken && config.headers) {
+          config.headers['X-CSRF-Token'] = csrfToken;
+        }
       }
     }
     return config;
@@ -49,7 +59,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }; 
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // Import error handler for better error messages
+    const { handleErrorWithToast, categorizeError, ErrorCategory } = await import('@/lib/error-handler');
 
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -57,41 +70,30 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-
         if (!refreshToken) {
-          // No refresh token available, redirect to login
-          if (typeof window !== 'undefined') {
-            window.location.href = '/auth/login';
-          }
-          return Promise.reject(error);
+          throw new Error('No refresh token available');
         }
 
-        // Try to refresh the token
         const response = await axios.post(`${API_URL}/auth/refresh`, {
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
         // Store new tokens
-        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('accessToken', newAccessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        // Retry the original request with new token
+        // Update header and retry original request
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, logout user
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-
-        if (typeof window !== 'undefined') {
-          showToast.info('Your session has expired. Please log in again.');
-          window.location.href = '/auth/login';
-        }
-
+        window.location.href = '/auth/login';
         return Promise.reject(refreshError);
       }
     }
