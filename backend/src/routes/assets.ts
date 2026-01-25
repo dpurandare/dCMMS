@@ -15,6 +15,9 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>();
   const authenticate = (fastify as any).authenticate;
 
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   // Schema Definitions
   const AssetSchema = z.object({
     id: z.string().uuid(),
@@ -227,7 +230,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           201: AssetSchema,
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -279,7 +282,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -333,7 +336,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -391,7 +394,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -437,7 +440,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as any;

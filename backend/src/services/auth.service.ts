@@ -16,6 +16,7 @@ export interface UserPayload {
   email: string;
   username: string;
   role: string;
+  requirePasswordChange?: boolean;
 }
 
 export interface RefreshTokenPayload {

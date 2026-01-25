@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { ModelPerformanceService } from "../services/model-performance.service";
 
 const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+  
   const performanceService = new ModelPerformanceService();
 
   // GET /api/v1/model-performance/metrics/:modelName
@@ -25,7 +28,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -75,7 +78,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -120,7 +123,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -167,7 +170,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -204,7 +207,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -252,7 +255,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -287,7 +290,7 @@ const modelPerformanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

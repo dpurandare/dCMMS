@@ -57,6 +57,20 @@
       "when": 1765958553346,
       "tag": "0007_silky_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1734968269200,
+      "tag": "0008_add_genai_rbac",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1769340015674,
+      "tag": "0009_clumsy_toad",
+      "breakpoints": true
     }
   ]
 }

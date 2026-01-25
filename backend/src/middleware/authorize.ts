@@ -18,11 +18,8 @@ export interface AuthorizedUser {
   role: UserRole;
 }
 
-declare module "fastify" {
-  interface FastifyRequest {
-    user: AuthorizedUser;
-  }
-}
+// Note: FastifyRequest.user is already augmented by @fastify/jwt
+// We use type assertions to AuthorizedUser where needed
 
 /**
  * Authorization Options
@@ -32,6 +29,8 @@ export interface AuthorizeOptions {
   permissions?: Permission[];
   /** Alternative permissions (user must have ANY) */
   anyPermissions?: Permission[];
+  /** Require admin role (super_admin or tenant_admin) */
+  adminOnly?: boolean;
   /** Allow users to access their own resources */
   allowOwn?: boolean;
   /** Custom authorization function */
@@ -67,6 +66,24 @@ export function authorize(options: AuthorizeOptions = {}) {
         error: "Unauthorized",
         message: "Authentication required",
       });
+    }
+
+    // Check if admin access is required
+    if (options.adminOnly) {
+      if (user.role !== "super_admin" && user.role !== "tenant_admin") {
+        request.log.warn(
+          {
+            userId: user.id,
+            role: user.role,
+          },
+          "Admin access denied",
+        );
+        return reply.status(403).send({
+          statusCode: 403,
+          error: "Forbidden",
+          message: "Administrator access required",
+        });
+      }
     }
 
     // Check if user has required permissions (ALL)

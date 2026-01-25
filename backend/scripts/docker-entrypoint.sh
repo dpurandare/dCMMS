@@ -25,7 +25,7 @@ echo "✅ PostgreSQL is ready"
 
 # Run migrations
 echo "🔄 Running database migrations..."
-npm run db:migrate
+npm run db:migrate:prod
 
 if [ $? -ne 0 ]; then
   echo "❌ Migration failed"

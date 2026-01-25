@@ -49,10 +49,16 @@ export type Permission =
   | "acknowledge:alerts"
   | "resolve:alerts"
   | "manage:notifications"
+  | "read:notifications"
+  | "update:notifications"
+  | "update:alerts"
   // Reports & Analytics
   | "read:reports"
   | "create:reports"
   | "read:analytics"
+  | "read:dashboards"
+  | "read:telemetry"
+  | "read:forecasts"
   // Compliance
   | "read:compliance"
   | "create:compliance"
@@ -63,11 +69,17 @@ export type Permission =
   | "read:permits"
   | "approve:permits"
   | "close:permits"
+  | "update:permits"
+  | "delete:permits"
   // System Admin
   | "manage:system"
   | "manage:tenants"
   | "read:audit-logs"
-  | "manage:integrations";
+  | "manage:integrations"
+  | "manage:webhooks"
+  // AI/ML Features
+  | "use:genai"
+  | "read:ml-features";
 
 /**
  * Role-based Permission Matrix

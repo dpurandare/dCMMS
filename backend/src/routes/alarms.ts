@@ -3,6 +3,9 @@ import { pool } from "../db";
 import { z } from "zod";
 
 const alarmsRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   // GET /api/v1/alarms
   server.get(
     "/",
@@ -28,7 +31,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -173,7 +176,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
         tags: ["Alarms"],
         security: [{ bearerAuth: [] }],
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -243,7 +246,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -374,7 +377,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -466,7 +469,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -566,7 +569,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -673,7 +676,7 @@ const alarmsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

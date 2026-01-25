@@ -74,6 +74,10 @@ async function seed() {
     }
     // Non-production: continue with full seed
     // ...existing code for dev/test seeding...
+    
+    // Hash password for non-production users
+    const defaultPassword = "Password123!";
+    const passwordHash = await AuthService.hashPassword(defaultPassword);
 
     const [managerUser] = await db
       .insert(users)

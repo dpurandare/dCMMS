@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { MLExplainabilityService } from "../services/ml-explainability.service";
 
 const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+  
   const explainabilityService = new MLExplainabilityService();
 
   // POST /api/v1/ml-explainability/explain
@@ -21,7 +24,7 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -71,7 +74,7 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -113,7 +116,7 @@ const mlExplainabilityRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

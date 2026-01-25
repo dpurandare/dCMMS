@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { MLInferenceService } from "../services/ml-inference.service";
 
 const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+  
   const inferenceService = new MLInferenceService();
 
   // GET /api/v1/ml-inference/predict/asset/:assetId
@@ -26,7 +29,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -66,7 +69,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -105,7 +108,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -132,7 +135,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
         tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

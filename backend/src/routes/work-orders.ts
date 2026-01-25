@@ -93,6 +93,9 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
   const server = app.withTypeProvider<ZodTypeProvider>();
   const authenticate = (app as any).authenticate;
 
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   server.post(
     "/",
     {
@@ -108,7 +111,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         },
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ permissions: ["create:work-orders"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["create:work-orders"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -221,7 +224,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: TransitionSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ anyPermissions: ["update:work-orders", "close:work-orders"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ anyPermissions: ["update:work-orders", "close:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -241,7 +244,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: CreateTaskSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -356,7 +359,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
           200: z.object({ success: z.boolean() }),
         },
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, csrfProtection],
     },
     async (request) => {
       const user = request.user as any;

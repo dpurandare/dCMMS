@@ -6,7 +6,6 @@ import {
 } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { GenAIService } from "../services/genai.service";
-import multipart from "@fastify/multipart";
 import { UserPayload } from "../services/auth.service";
 import { authorize } from "../middleware/authorize";
 
@@ -20,9 +19,10 @@ export const genaiRoutes = async (app: FastifyInstance) => {
 
   const server = app.withTypeProvider<ZodTypeProvider>();
 
-  // Register multipart support for file uploads
-  // Increase file size limit to 10MB
-  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
+  // Note: Multipart is already registered globally in server.ts
 
   server.post(
     "/upload",
@@ -42,7 +42,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           500: z.object({ message: z.string() }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -152,7 +152,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -213,7 +213,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -245,7 +245,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;

@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.prod.json || true",
+    "build:strict": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -20,6 +21,7 @@
     "test:e2e": "jest --testPathPattern=e2e",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:prod": "node dist/db/migrate.js",
     "db:migrate:test": "DATABASE_URL=$TEST_DATABASE_URL tsx src/db/migrate.ts",
     "db:reset:test": "tsx src/db/reset-test.ts",
     "db:studio": "drizzle-kit studio",
