@@ -197,21 +197,25 @@
 
 ### 5.1 Enhanced Error Handling
 
-- [ ] **FE-016** - Implement Error Boundaries
-  - [ ] Create root error boundary component
-  - [ ] Add error boundaries for major features
-  - [ ] Implement error logging
-  - [ ] Create user-friendly error pages
+- [x] **FE-016** - Implement Error Boundaries ✅ COMPLETE
+  - [x] Create root error boundary component
+  - [x] Add error boundaries for major features
+  - [x] Implement error logging
+  - [x] Create user-friendly error pages
+  - [x] Wrap app layout in ErrorBoundary
   - **Priority:** 🟡 MODERATE
-  - **Estimated:** 2-3 hours
+  - **Completed:** January 2026
+  - **Status:** ✅ COMPLETE
 
-- [ ] **FE-017** - Centralized Error Handler
-  - [ ] Create error handling utility
-  - [ ] Standardize error messages
-  - [ ] Add error categorization (network, auth, validation, server)
-  - [ ] Implement error toast notifications
+- [x] **FE-017** - Centralized Error Handler ✅ COMPLETE
+  - [x] Create error handling utility (src/lib/error-handler.ts)
+  - [x] Standardize error messages
+  - [x] Add error categorization (network, auth, validation, server)
+  - [x] Implement error toast notifications with sonner
+  - [x] Integrate with API client interceptors
   - **Priority:** 🟡 MODERATE
-  - **Estimated:** 2 hours
+  - **Completed:** January 2026
+  - **Status:** ✅ COMPLETE
 
 ### 5.2 Loading States
 
@@ -229,13 +233,19 @@
 
 ### 6.1 Security Improvements
 
-- [ ] **FE-019** - Enhance Token Security
-  - [ ] Evaluate HttpOnly cookie for refresh token
-  - [ ] Implement CSRF protection
-  - [ ] Add input sanitization for user content
-  - [ ] Remove sensitive data from console logs (production)
+- [x] **FE-019** - Enhance Token Security ✅ COMPLETE
+  - [x] Implement CSRF protection (full integration)
+  - [x] Create CSRF utilities (src/lib/csrf.ts)
+  - [x] Add CSRF token injection to API client
+  - [x] Automatically add CSRF header for state-changing requests (POST, PUT, PATCH, DELETE)
+  - [x] Store CSRF token in sessionStorage
+  - [x] Retrieve token on login and store locally
+  - [x] Add input sanitization for user content
+  - [x] Remove sensitive data from console logs (production)
+  - [ ] Evaluate HttpOnly cookie for refresh token (future enhancement)
   - **Priority:** 🟡 MODERATE
-  - **Estimated:** 4-5 hours
+  - **Completed:** January 25, 2026
+  - **Status:** ✅ CSRF COMPLETE, HttpOnly cookies deferred
 
 - [ ] **FE-020** - Security Headers
   - [ ] Add Content Security Policy (CSP)

@@ -82,11 +82,42 @@
   - [ ] Implement transparent encryption/decryption in services
   - **Effort:** 3 days
 
-- [ ] **DCMMS-SEC-002** - Input Sanitization
-  - [ ] Add XSS prevention middleware
-  - [ ] Add SQL injection protection (validate Drizzle usage)
-  - [ ] Add CSRF token support
-  - **Effort:** 2 days
+- [x] **DCMMS-SEC-002** - CSRF Protection & Input Sanitization ✅ COMPLETED
+  - [x] Implement CSRF token generation and validation middleware
+  - [x] Create /api/v1/csrf/token endpoint for token generation
+  - [x] Store CSRF tokens in Redis with 1-hour expiry
+  - [x] Integrate CSRF protection across all state-changing routes
+  - [x] Add CSRF header validation (x-csrf-token)
+  - [x] Skip CSRF for auth routes (login already protected)
+  - [x] Add CSRF token to login response
+  - [x] Frontend: Integrate CSRF token injection in API client
+  - [x] Frontend: Implement CSRF utilities (getCsrfToken, setCsrfToken)
+  - [x] Add XSS prevention via Helmet middleware
+  - [x] Validate SQL injection protection (Drizzle ORM parameterized queries)
+  - **Status:** Full CSRF protection deployed and verified end-to-end
+  - **Completed:** January 25, 2026
+  - **Files:** csrf.ts middleware, csrf.ts routes, redis.ts plugin, api-client.ts, csrf.ts lib
+
+- [x] **DCMMS-INFRA-001** - Redis Integration ✅ COMPLETED
+  - [x] Create Redis plugin for Fastify
+  - [x] Configure Redis connection with retrying
+  - [x] Decorate Fastify server with redis instance
+  - [x] Add connection event handlers (connect, error, close)
+  - [x] Implement graceful shutdown on server close
+  - **Status:** Redis fully integrated for session and CSRF token storage
+  - **Completed:** January 25, 2026
+  - **File:** src/plugins/redis.ts
+
+- [x] **DCMMS-INFRA-002** - Docker Production Fixes ✅ COMPLETED
+  - [x] Fix exit code 127 (tsx command not found in production)
+  - [x] Add db:migrate:prod script using compiled JavaScript
+  - [x] Update docker-entrypoint.sh to use production migration
+  - [x] Fix duplicate multipart plugin registration
+  - [x] Generate missing database migration (0009_clumsy_toad.sql)
+  - [x] Add missing refresh_tokens, genai_feedback, work_order_attachments tables
+  - **Status:** Docker container runs successfully, all migrations work
+  - **Completed:** January 25, 2026
+  - **Files:** package.json, docker-entrypoint.sh, drizzle/0009_clumsy_toad.sql
 
 ### 📊 SPECIFICATION COVERAGE STATUS
 
