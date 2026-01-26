@@ -133,6 +133,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage:system",
     "manage:tenants",
     "read:audit-logs",
+    "use:genai",
+    "read:ml-features",
     "manage:integrations",
   ],
 
@@ -181,6 +183,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "approve:permits",
     "close:permits",
     "read:audit-logs",
+    "use:genai",
+    "read:ml-features",
   ],
 
   site_manager: [

@@ -86,13 +86,13 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
           userId: user.id,
           action,
           entityType: resource,
-          entityId: resourceId,
-          metadata: {
+          entityId: resourceId || "",
+          metadata: JSON.stringify({
             ...metadata,
-            ipAddress: request.ip,
-            userAgent: request.headers["user-agent"],
+            ipAddress: request.ip || "",
+            userAgent: request.headers["user-agent"] || "",
             frontend: true,
-          },
+          }),
         });
 
         return reply.send({ success: true });

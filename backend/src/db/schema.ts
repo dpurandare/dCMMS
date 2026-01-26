@@ -1439,7 +1439,7 @@ export const reportsRelations = relations(reports, ({ one }) => ({
 
 const vector = customType<{ data: number[] }>({
   dataType() {
-    return "vector(768)";
+    return "vector(768)"; // Gemini text-embedding-004 uses 768 dimensions
   },
 });
 

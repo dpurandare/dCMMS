@@ -7,6 +7,7 @@ import {
   workOrders,
   workOrderTasks,
 } from "./schema";
+import { eq } from "drizzle-orm";
 import { AuthService } from "../services/auth.service";
 
 async function seed() {
@@ -35,6 +36,7 @@ async function seed() {
       // In production, create a default tenant if none exists
       const existingTenants = await db.select().from(tenants).limit(1);
       if (existingTenants.length === 0) {
+        // Original logic: insert a new tenant
         [tenant] = await db
           .insert(tenants)
           .values({
@@ -73,11 +75,56 @@ async function seed() {
       return;
     }
     // Non-production: continue with full seed
-    // ...existing code for dev/test seeding...
-    
+    console.log("Loading or creating demo tenant...");
+
+    // Load or create demo tenant for non-production
+    const [existingDemoTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.tenantId, "demo-tenant"))
+      .limit(1);
+
+    if (existingDemoTenant) {
+      tenant = existingDemoTenant;
+      console.log(`  ✓ Using existing tenant: ${tenant.name}`);
+    } else {
+      [tenant] = await db
+        .insert(tenants)
+        .values({
+          tenantId: "demo-tenant",
+          name: "Demo Corporation",
+          domain: "demo.dcmms.local",
+          config: JSON.stringify({
+            timezone: "America/New_York",
+            dateFormat: "MM/DD/YYYY",
+            currency: "USD",
+          }),
+        })
+        .returning();
+      console.log(`  ✓ Created tenant: ${tenant.name}`);
+    }
+
+    if (!tenant) {
+      throw new Error("Failed to load or create tenant");
+    }
+
     // Hash password for non-production users
     const defaultPassword = "Password123!";
     const passwordHash = await AuthService.hashPassword(defaultPassword);
+
+    // Create admin user
+    const [adminUser] = await db
+      .insert(users)
+      .values({
+        tenantId: tenant.id,
+        email: "admin@example.com",
+        username: "admin",
+        firstName: "Admin",
+        lastName: "User",
+        role: "tenant_admin",
+        passwordHash,
+      })
+      .returning();
 
     const [managerUser] = await db
       .insert(users)

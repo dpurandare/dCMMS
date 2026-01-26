@@ -158,12 +158,14 @@ export const genaiRoutes = async (app: FastifyInstance) => {
       const user = request.user as UserPayload;
       const { query } = request.body;
 
-      // TODO: Fetch user's accessible siteIds from user_sites table
-      // For now, passing undefined means user can access all tenant sites
+      // RBAC: Current implementation uses tenant-level isolation.
+      // All users within a tenant can query documents uploaded to that tenant.
+      // Site-level filtering (userSiteIds parameter) is reserved for future use
+      // when user-to-site assignments are implemented system-wide.
       const result = await GenAIService.query(
         query,
         user.tenantId,
-        undefined,
+        undefined, // userSiteIds - currently undefined for tenant-wide access
       );
       return reply.status(200).send(result as any);
     },

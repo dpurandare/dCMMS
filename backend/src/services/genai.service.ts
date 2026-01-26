@@ -59,6 +59,20 @@ export class GenAIService {
     };
   }
 
+
+  /**
+   * Query the knowledge base using RAG (Retrieval-Augmented Generation)
+   * 
+   * RBAC Filtering:
+   * - Tenant-level isolation is enforced (users can only query their tenant's documents)
+   * - Site-level filtering is supported via userSiteIds but currently not used
+   * - When site-level RBAC is implemented system-wide, pass user's site IDs to restrict access
+   * 
+   * @param query - Natural language question from the user
+   * @param tenantId - Tenant ID for RBAC filtering (required)
+   * @param userSiteIds - Optional array of site IDs the user has access to (for future use)
+   * @returns Answer with citations and context chunks
+   */
   static async query(
     query: string,
     tenantId: string,
