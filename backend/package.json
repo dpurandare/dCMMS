@@ -74,6 +74,7 @@
     "@types/jest": "^29.5.12",
     "@types/node": "^20.19.26",
     "@types/node-cron": "^3.0.11",
+    "@types/node-fetch": "^2.6.13",
     "@types/nodemailer": "^7.0.4",
     "@types/pdf-parse": "^1.1.5",
     "@types/pdfkit": "^0.13.4",
