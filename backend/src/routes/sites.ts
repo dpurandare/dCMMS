@@ -247,7 +247,20 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
       const site = await SiteService.create({
         tenantId: user.tenantId,
         siteId,
-        ...body,
+        name: body.name,
+        description: body.description,
+        type: body.type,
+        energyType: body.energyType,
+        address: body.address,
+        city: body.city,
+        state: body.state,
+        postalCode: body.postalCode,
+        country: body.country,
+        timezone: body.timezone,
+        contactName: body.contactName,
+        contactEmail: body.contactEmail,
+        contactPhone: body.contactPhone,
+        isActive: body.isActive,
       });
 
       return reply.status(201).send(site);

@@ -162,7 +162,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
         try {
           await kafkaService.publishTelemetry("raw_telemetry", accepted);
         } catch (error: any) {
-          server.log.error("Failed to publish to Kafka:", error);
+          server.log.error({ error }, "Failed to publish to Kafka");
           return reply.status(500).send({
             statusCode: 500,
             error: "Internal Server Error",
@@ -363,7 +363,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           query_duration_ms: queryDuration,
         };
       } catch (error: any) {
-        server.log.error("Failed to query QuestDB:", error);
+        server.log.error({ error }, "Failed to query QuestDB");
         return reply.status(500).send({
           statusCode: 500,
           error: "Internal Server Error",
@@ -457,7 +457,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         };
       } catch (error: any) {
-        server.log.error("Failed to get telemetry stats:", error);
+        server.log.error({ error }, "Failed to get telemetry stats");
         return reply.status(500).send({
           statusCode: 500,
           error: "Internal Server Error",

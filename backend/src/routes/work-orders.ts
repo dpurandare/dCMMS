@@ -116,15 +116,23 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
     async (request, reply) => {
       const user = request.user as any;
       const data = {
-        ...request.body,
         tenantId: user.tenantId,
         createdBy: user.id,
+        title: request.body.title,
+        description: request.body.description,
+        type: request.body.type,
+        priority: request.body.priority,
+        siteId: request.body.siteId,
+        assetId: request.body.assetId,
+        assignedTo: request.body.assignedTo,
         scheduledStart: request.body.scheduledStart
           ? new Date(request.body.scheduledStart)
           : undefined,
         scheduledEnd: request.body.scheduledEnd
           ? new Date(request.body.scheduledEnd)
           : undefined,
+        estimatedHours: request.body.estimatedHours,
+        metadata: request.body.metadata,
       };
 
       const workOrder = await WorkOrderService.create(data);
@@ -249,7 +257,11 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
-      return WorkOrderService.addTask(id, user.tenantId, request.body);
+      return WorkOrderService.addTask(id, user.tenantId, {
+        title: request.body.title,
+        description: request.body.description,
+        taskOrder: request.body.taskOrder,
+      });
     },
   );
 
@@ -305,7 +317,11 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
-      return WorkOrderService.addPart(id, user.tenantId, request.body);
+      return WorkOrderService.addPart(id, user.tenantId, {
+        partId: request.body.partId,
+        quantityRequired: request.body.quantityRequired,
+        notes: request.body.notes,
+      });
     },
   );
 
@@ -342,7 +358,11 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
     async (request) => {
       const user = request.user as any;
       const { id } = request.params;
-      return WorkOrderService.addLabor(id, user.tenantId, request.body);
+      return WorkOrderService.addLabor(id, user.tenantId, {
+        userId: request.body.userId,
+        hours: request.body.hours,
+        description: request.body.description,
+      });
     },
   );
 

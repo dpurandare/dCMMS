@@ -247,14 +247,30 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
 
       const asset = await AssetService.create({
         tenantId: user.tenantId,
+        siteId: body.siteId,
         assetTag,
-        ...body,
+        name: body.name,
+        type: body.type,
+        description: body.description,
+        manufacturer: body.manufacturer,
+        model: body.model,
+        serialNumber: body.serialNumber,
+        location: body.location,
+        parentAssetId: body.parentAssetId,
+        status: body.status,
+        criticality: body.criticality,
         installationDate: body.installationDate
           ? new Date(body.installationDate)
           : undefined,
         warrantyExpiryDate: body.warrantyExpiryDate
           ? new Date(body.warrantyExpiryDate)
           : undefined,
+        specifications: body.specifications,
+        latitude: body.latitude,
+        longitude: body.longitude,
+        tags: body.tags,
+        image: body.image,
+        metadata: body.metadata,
       });
 
       return reply.status(201).send(asset);

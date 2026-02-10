@@ -67,7 +67,11 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         }
 
         const reportRequest = {
-          ...request.body,
+          templateId: request.body.templateId,
+          siteId: request.body.siteId,
+          manualData: request.body.manualData,
+          watermark: request.body.watermark,
+          format: request.body.format,
           startDate: request.body.startDate
             ? new Date(request.body.startDate)
             : undefined,
