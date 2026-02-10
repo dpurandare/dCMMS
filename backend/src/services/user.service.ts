@@ -81,10 +81,23 @@ export class UserService {
     return true;
   }
   /**
-   * Get all users for a tenant
+   * Get all users for a tenant with pagination
    */
-  static async findAll(tenantId: string) {
-    const usersList = await db
+  static async findAll(
+    tenantId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      role?: string;
+    },
+  ) {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 20, 100); // Max 100 per page
+    const offset = (page - 1) * limit;
+
+    // Build query
+    let query = db
       .select({
         id: users.id,
         tenantId: users.tenantId,
@@ -99,10 +112,45 @@ export class UserService {
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(eq(users.tenantId, tenantId))
-      .orderBy(users.createdAt);
+      .where(eq(users.tenantId, tenantId));
 
-    return usersList;
+    // Apply filters
+    // Note: Drizzle doesn't support runtime conditions easily,
+    // so we'll do filtering in memory for now
+    // In production, build dynamic where clauses
+
+    const allUsers = await query.orderBy(users.createdAt);
+
+    // Filter in memory (for simplicity)
+    let filteredUsers = allUsers;
+
+    if (options?.search) {
+      const search = options.search.toLowerCase();
+      filteredUsers = filteredUsers.filter(
+        (u) =>
+          u.username?.toLowerCase().includes(search) ||
+          u.email?.toLowerCase().includes(search) ||
+          u.firstName?.toLowerCase().includes(search) ||
+          u.lastName?.toLowerCase().includes(search),
+      );
+    }
+
+    if (options?.role) {
+      filteredUsers = filteredUsers.filter((u) => u.role === options.role);
+    }
+
+    const total = filteredUsers.length;
+    const paginatedUsers = filteredUsers.slice(offset, offset + limit);
+
+    return {
+      data: paginatedUsers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**
@@ -115,12 +163,12 @@ export class UserService {
     firstName: string;
     lastName: string;
     role:
-      | "super_admin"
-      | "tenant_admin"
-      | "site_manager"
-      | "technician"
-      | "operator"
-      | "viewer";
+    | "super_admin"
+    | "tenant_admin"
+    | "site_manager"
+    | "technician"
+    | "operator"
+    | "viewer";
     password: string;
     phone?: string;
   }) {

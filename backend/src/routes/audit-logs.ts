@@ -49,6 +49,63 @@ export default async function auditLogRoutes(fastify: FastifyInstance) {
   };
 
   // ==========================================
+  // Frontend Audit Log (Authenticated users)
+  // ==========================================
+
+  // Post audit log from frontend
+  fastify.post<{
+    Body: {
+      action: string;
+      resource: string;
+      resourceId?: string;
+      metadata?: Record<string, any>;
+    };
+  }>(
+    "/audit-logs/frontend",
+    {
+      preHandler: (fastify as any).authenticate,
+      schema: {
+        body: z.object({
+          action: z.string(),
+          resource: z.string(),
+          resourceId: z.string().optional(),
+          metadata: z.any().optional(),
+        }),
+        tags: ["Audit"],
+        description: "Log frontend action (authenticated users)",
+      },
+    },
+    async (request, reply) => {
+      try {
+        const user = request.user;
+        const { action, resource, resourceId, metadata } = request.body;
+
+        // Log the action with user context
+        await auditService.log({
+          tenantId: user.tenantId,
+          userId: user.id,
+          action,
+          entityType: resource,
+          entityId: resourceId || "",
+          metadata: JSON.stringify({
+            ...metadata,
+            ipAddress: request.ip || "",
+            userAgent: request.headers["user-agent"] || "",
+            frontend: true,
+          }),
+        });
+
+        return reply.send({ success: true });
+      } catch (error) {
+        fastify.log.error({ error }, "Failed to log frontend audit");
+        return reply.status(500).send({
+          error: "Failed to log audit",
+        });
+      }
+    },
+  );
+
+  // ==========================================
   // Query Audit Logs
   // ==========================================
 

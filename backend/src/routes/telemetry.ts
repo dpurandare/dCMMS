@@ -4,6 +4,9 @@ import { Pool } from "pg";
 import { authorize } from "../middleware/authorize";
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   // Require authentication and RBAC for all routes
   server.addHook("onRequest", server.authenticate);
   server.addHook("onRequest", authorize({ permissions: ["read:telemetry"] }));
@@ -111,7 +114,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const events = request.body as any[];
@@ -230,7 +233,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const query = request.query as TelemetryQuery;
@@ -399,7 +402,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const query = request.query as TelemetryStatsQuery;

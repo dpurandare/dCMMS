@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { PredictiveWOService } from "../services/predictive-wo.service";
 
 const predictiveWORoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+  
   const predictiveWOService = new PredictiveWOService();
 
   // POST /api/v1/predictive-wo/run
@@ -53,7 +56,7 @@ const predictiveWORoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -129,7 +132,7 @@ const predictiveWORoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -185,7 +188,7 @@ const predictiveWORoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

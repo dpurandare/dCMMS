@@ -1,46 +1,29 @@
-import axios from "axios";
+import { apiClient } from "@/lib/api-client";
 import { Dashboard, CreateDashboardDTO, UpdateDashboardDTO } from "../types/dashboard";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return { Authorization: `Bearer ${token}` };
-};
 
 export const dashboardService = {
     async list(): Promise<Dashboard[]> {
-        const response = await axios.get(`${API_URL}/dashboards`, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.get('/dashboards');
         return response.data;
     },
 
     async getById(id: string): Promise<Dashboard> {
-        const response = await axios.get(`${API_URL}/dashboards/${id}`, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.get(`/dashboards/${id}`);
         return response.data;
     },
 
     async create(data: CreateDashboardDTO): Promise<Dashboard> {
-        const response = await axios.post(`${API_URL}/dashboards`, data, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.post('/dashboards', data);
         return response.data;
     },
 
     async update(id: string, data: UpdateDashboardDTO): Promise<Dashboard> {
-        const response = await axios.put(`${API_URL}/dashboards/${id}`, data, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.put(`/dashboards/${id}`, data);
         return response.data;
     },
 
     async delete(id: string): Promise<void> {
-        await axios.delete(`${API_URL}/dashboards/${id}`, {
-            headers: getAuthHeader(),
-        });
+        await apiClient.delete(`/dashboards/${id}`);
     },
 
     async render(id: string, filters?: { siteId?: string; startDate?: Date; endDate?: Date }): Promise<Dashboard> {
@@ -49,10 +32,8 @@ export const dashboardService = {
         if (filters?.startDate) params.startDate = filters.startDate.toISOString();
         if (filters?.endDate) params.endDate = filters.endDate.toISOString();
 
-        const response = await axios.get(`${API_URL}/dashboards/${id}/render`, {
-            headers: getAuthHeader(),
-            params,
-        });
+        const response = await apiClient.get(`/dashboards/${id}/render`, { params });
         return response.data;
     },
 };
+

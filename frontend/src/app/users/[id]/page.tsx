@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,14 @@ import { format } from 'date-fns';
 import { CardSkeleton } from '@/components/ui/card-skeleton';
 
 export default function UserDetailsPage({ params }: { params: { id: string } }) {
+    return (
+        <PermissionGuard permission="users.view" showAccessDenied>
+            <UserDetailsContent params={params} />
+        </PermissionGuard>
+    );
+}
+
+function UserDetailsContent({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -26,8 +35,8 @@ export default function UserDetailsPage({ params }: { params: { id: string } }) 
     const fetchUser = async () => {
         try {
             setIsLoading(true);
-            const data = await api.users.getById(params.id);
-            setUser(data);
+            const response = await api.get(`/users/${params.id}`);
+            setUser(response.data);
         } catch (error) {
             console.error('Failed to fetch user:', error);
             router.push('/users');

@@ -23,6 +23,7 @@ This directory contains the master task list for the dCMMS project, broken down 
 | **11** | [Advanced Forecasting](11_Advanced_Forecasting.md)         | Spec 25                                | ✅ Complete |
 | **12** | [Gap Remediation](12_Gap_Remediation.md)                   | Safety Gates, Permits (Sprint 3 Fixes) | ✅ Complete |
 | **13** | [GenAI Implementation](13_GenAI_Implementation.md)         | Spec 26 (RAG Pipeline)                 | ✅ Complete |
+| **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md)   | Auth, API Client, RBAC                 | ✅ Complete |
 | **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived |
 
 ## Status Legend

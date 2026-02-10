@@ -29,10 +29,10 @@ export interface AuthorizeOptions {
   permissions?: Permission[];
   /** Alternative permissions (user must have ANY) */
   anyPermissions?: Permission[];
-  /** Allow users to access their own resources */
-  allowOwn?: boolean;
   /** Require admin role (super_admin or tenant_admin) */
   adminOnly?: boolean;
+  /** Allow users to access their own resources */
+  allowOwn?: boolean;
   /** Custom authorization function */
   custom?: (request: FastifyRequest, user: AuthorizedUser) => boolean | Promise<boolean>;
 }

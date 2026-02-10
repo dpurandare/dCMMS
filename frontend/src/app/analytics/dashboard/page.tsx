@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { AuthGuard } from "@/components/auth/auth-guard";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { DashboardGrid } from "@/components/analytics/dashboard/dashboard-grid";
 import { dashboardService } from "@/services/dashboard.service";
 import { Dashboard } from "@/types/dashboard";
@@ -12,9 +12,9 @@ import { RefreshCw } from "lucide-react";
 
 export default function AnalyticsDashboardPage() {
     return (
-        <AuthGuard>
+        <PermissionGuard permission="analytics.view" showAccessDenied>
             <DashboardContent />
-        </AuthGuard>
+        </PermissionGuard>
     );
 }
 

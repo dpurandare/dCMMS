@@ -36,6 +36,9 @@ export const permitRoutes = async (app: FastifyInstance) => {
   app.setSerializerCompiler(serializerCompiler);
   const server = app.withTypeProvider<ZodTypeProvider>();
   const authenticate = (app as any).authenticate;
+  
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
 
   server.post(
     "/",
@@ -51,7 +54,7 @@ export const permitRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: [authenticate, authorize({ permissions: ["create:permits"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["create:permits"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -93,7 +96,7 @@ export const permitRoutes = async (app: FastifyInstance) => {
         }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ permissions: ["read:permits"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["read:permits"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -118,7 +121,7 @@ export const permitRoutes = async (app: FastifyInstance) => {
         }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ permissions: ["read:permits"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["read:permits"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -138,7 +141,7 @@ export const permitRoutes = async (app: FastifyInstance) => {
         body: UpdatePermitSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [authenticate, authorize({ permissions: ["update:permits"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:permits"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -172,7 +175,7 @@ export const permitRoutes = async (app: FastifyInstance) => {
           200: z.object({ success: z.boolean() }),
         },
       },
-      preHandler: [authenticate, authorize({ permissions: ["delete:permits"] })],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["delete:permits"] })],
     },
     async (request) => {
       const user = request.user as any;

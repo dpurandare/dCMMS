@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { MLDeploymentService } from "../services/ml-deployment.service";
 
 const mlDeploymentRoutes: FastifyPluginAsync = async (server) => {
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+  
   const deploymentService = new MLDeploymentService();
 
   // POST /api/v1/ml-deployment/deploy
@@ -22,7 +25,7 @@ const mlDeploymentRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -67,7 +70,7 @@ const mlDeploymentRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -104,7 +107,7 @@ const mlDeploymentRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {
@@ -134,7 +137,7 @@ const mlDeploymentRoutes: FastifyPluginAsync = async (server) => {
         tags: ["ML Deployment"],
         security: [{ bearerAuth: [] }],
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       try {

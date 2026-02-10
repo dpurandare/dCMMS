@@ -19,6 +19,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   fastify.addHook("onRequest", fastify.authenticate);
   fastify.addHook("onRequest", authorize({ permissions: ["read:reports"] }));
 
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   interface UserPayload {
     id: string;
     tenantId: string;
@@ -68,6 +71,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           isPublic: z.boolean().optional(),
         }),
       },
+      preHandler: [csrfProtection],
     },
     async (request) => {
       const { tenantId, id: userId } = request.user as UserPayload;
@@ -91,6 +95,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           isPublic: z.boolean().optional(),
         }),
       },
+      preHandler: [csrfProtection],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -116,6 +121,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           id: z.string().uuid(),
         }),
       },
+      preHandler: [csrfProtection],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -141,6 +147,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           })
           .optional(),
       },
+      preHandler: [csrfProtection],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };

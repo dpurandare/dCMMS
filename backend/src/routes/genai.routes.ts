@@ -19,6 +19,9 @@ export const genaiRoutes = async (app: FastifyInstance) => {
 
   const server = app.withTypeProvider<ZodTypeProvider>();
 
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
+
   // Note: multipart is already registered globally in server.ts
 
   server.post(
@@ -39,7 +42,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           500: z.object({ message: z.string() }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -149,18 +152,20 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
       const { query } = request.body;
 
-      // TODO: Fetch user's accessible siteIds from user_sites table
-      // For now, passing undefined means user can access all tenant sites
+      // RBAC: Current implementation uses tenant-level isolation.
+      // All users within a tenant can query documents uploaded to that tenant.
+      // Site-level filtering (userSiteIds parameter) is reserved for future use
+      // when user-to-site assignments are implemented system-wide.
       const result = await GenAIService.query(
         query,
         user.tenantId,
-        undefined,
+        undefined, // userSiteIds - currently undefined for tenant-wide access
       );
       return reply.status(200).send(result as any);
     },
@@ -210,7 +215,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -242,7 +247,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, csrfProtection],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;

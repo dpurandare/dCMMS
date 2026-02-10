@@ -1,11 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return { Authorization: `Bearer ${token}` };
-};
+import { apiClient } from "@/lib/api-client";
 
 export interface Prediction {
     assetId: string;
@@ -23,13 +16,7 @@ export interface Prediction {
 
 export const mlInferenceService = {
     async getPredictions(filters?: { assetId?: string; startDate?: Date; endDate?: Date }): Promise<Prediction[]> {
-        // Since the backend endpoint for 'predict/all' might not support date filters directly in the viewed code,
-        // we'll assume it returns latest predictions or we might need to adjust based on actual API.
-        // The plan said: /api/v1/ml-inference/predict/all
-
-        const response = await axios.get(`${API_URL}/ml-inference/predict/all`, {
-            headers: getAuthHeader(),
-        });
+        const response = await apiClient.get('/ml-inference/predict/all');
         return response.data;
     },
 
@@ -39,10 +26,8 @@ export const mlInferenceService = {
         if (filters?.startDate) params.startDate = filters.startDate.toISOString();
         if (filters?.endDate) params.endDate = filters.endDate.toISOString();
 
-        const response = await axios.get(`${API_URL}/ml-inference/predictions/logs`, {
-            headers: getAuthHeader(),
-            params,
-        });
+        const response = await apiClient.get('/ml-inference/predictions/logs', { params });
         return response.data;
     }
 };
+

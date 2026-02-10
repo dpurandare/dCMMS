@@ -32,6 +32,9 @@ const slackInteractionSchema = z.object({
 
 export default async function integrationRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
+  
+  // Import CSRF protection
+  const { csrfProtection } = await import('../middleware/csrf');
   fastify.setSerializerCompiler(serializerCompiler);
 
   // Require authentication and RBAC for all routes

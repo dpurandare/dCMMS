@@ -1,11 +1,4 @@
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
-
-const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return { Authorization: `Bearer ${token}` };
-};
+import { apiClient } from "@/lib/api-client";
 
 export interface KPIResult {
     mttr: number;
@@ -48,10 +41,7 @@ export const analyticsService = {
         if (filters?.startDate) params.start_date = filters.startDate.toISOString();
         if (filters?.endDate) params.end_date = filters.endDate.toISOString();
 
-        const response = await axios.get(`${API_URL}/analytics/kpis`, {
-            headers: getAuthHeader(),
-            params,
-        });
+        const response = await apiClient.get('/analytics/kpis', { params });
         return response.data;
     },
 
@@ -59,10 +49,8 @@ export const analyticsService = {
         const params: any = { metric, days };
         if (siteId) params.site_id = siteId;
 
-        const response = await axios.get(`${API_URL}/analytics/kpis/trends`, {
-            headers: getAuthHeader(),
-            params,
-        });
+        const response = await apiClient.get('/analytics/kpis/trends', { params });
         return response.data;
     },
 };
+

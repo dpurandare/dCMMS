@@ -12,6 +12,7 @@ import {
 
 // Plugins
 import { registerJwt } from "./plugins/jwt";
+import { registerRedis } from "./plugins/redis";
 
 // Middleware
 import { auditHook } from "./middleware/audit";
@@ -19,6 +20,7 @@ import { auditHook } from "./middleware/audit";
 // Routes
 import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
+import csrfRoutes from "./routes/csrf";
 import workOrderRoutes from "./routes/work-orders";
 import attachmentsRoutes from "./routes/attachments";
 import { dashboardRoutes } from "./routes/dashboards";
@@ -68,6 +70,9 @@ export async function buildServer(): Promise<FastifyInstance> {
   // ==========================================
   // PLUGINS
   // ==========================================
+
+  // Redis connection
+  await registerRedis(server);
 
   // JWT Authentication
   await registerJwt(server);
@@ -165,6 +170,10 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
           {
             name: "auth",
             description: "Authentication and authorization endpoints",
+          },
+          {
+            name: "csrf",
+            description: "CSRF token management - Get CSRF tokens for protected operations",
           },
           {
             name: "work-orders",
@@ -333,6 +342,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
 
   await server.register(healthRoutes, { prefix: "/health" });
   await server.register(authRoutes, { prefix: "/api/v1/auth" });
+  await server.register(csrfRoutes, { prefix: "/api/v1/csrf" });
   await server.register(workOrderRoutes, { prefix: "/api/v1/work-orders" });
   await server.register(attachmentsRoutes, { prefix: "/api/v1/work-orders" });
   await server.register(permitRoutes, { prefix: "/api/v1/permits" });

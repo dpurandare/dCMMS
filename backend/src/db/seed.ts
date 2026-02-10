@@ -7,6 +7,7 @@ import {
   workOrders,
   workOrderTasks,
 } from "./schema";
+import { eq } from "drizzle-orm";
 import { AuthService } from "../services/auth.service";
 
 async function seed() {
@@ -35,6 +36,7 @@ async function seed() {
       // In production, create a default tenant if none exists
       const existingTenants = await db.select().from(tenants).limit(1);
       if (existingTenants.length === 0) {
+        // Original logic: insert a new tenant
         [tenant] = await db
           .insert(tenants)
           .values({

@@ -25,6 +25,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
               accessToken: { type: "string" },
               refreshToken: { type: "string" },
               expiresIn: { type: "number" },
+              csrfToken: { type: "string" },
               user: {
                 type: "object",
                 properties: {
@@ -72,6 +73,11 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           userAgent: request.headers["user-agent"],
         });
 
+        // Generate and store CSRF token
+        const { generateCsrfToken, storeCsrfToken } = await import('../middleware/csrf');
+        const csrfToken = generateCsrfToken();
+        await storeCsrfToken((server as any).redis, user.id, csrfToken);
+
         // If admin and requirePasswordChange, add reminder to response
         let passwordChangeReminder = undefined;
         if (user.role === "tenant_admin" && user.requirePasswordChange) {
@@ -80,6 +86,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         return {
           ...tokens,
+          csrfToken, // Include CSRF token in response
           user: {
             id: user.id,
             tenantId: user.tenantId,
@@ -183,6 +190,10 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         // Revoke all refresh tokens for this user for security
         await RefreshTokenService.revokeAllUserTokens(user.id);
+
+        // Delete CSRF token
+        const { deleteCsrfToken } = await import('../middleware/csrf');
+        await deleteCsrfToken((request.server as any).redis, user.id);
 
         request.log.info(
           { userId: user.id, allDevices },
