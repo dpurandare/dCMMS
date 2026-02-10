@@ -77,7 +77,7 @@ export default function UsersPage() {
     };
 
     const handleToggleStatus = async (user: User) => {
-        if (!can('users.edit')) {
+        if (!can('update:users')) {
             showToast.error('You do not have permission to edit users');
             return;
         }
@@ -146,7 +146,7 @@ export default function UsersPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Users</CardTitle>
-                    {can('users.create') && (
+                    {can('create:users') && (
                         <Button onClick={() => setIsCreateDialogOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
                             New User
@@ -252,13 +252,13 @@ export default function UsersPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        {can('users.edit') && (
+                                                        {can('update:users') && (
                                                             <DropdownMenuItem onClick={() => setEditingUser(user)}>
                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
                                                         )}
-                                                        {can('users.edit') && (
+                                                        {can('update:users') && (
                                                             <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
                                                                 {user.isActive ? (
                                                                     <>
@@ -273,7 +273,7 @@ export default function UsersPage() {
                                                                 )}
                                                             </DropdownMenuItem>
                                                         )}
-                                                        {currentUser?.id !== user.id && can('users.delete') && (
+                                                        {currentUser?.id !== user.id && can('delete:users') && (
                                                             <>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem

@@ -28,20 +28,20 @@ import { useAuthStore } from '@/store/auth-store';
 import { alertsService, Alert, AlertStats } from '@/services/alerts.service';
 import { Bell, CheckCircle, AlertTriangle, Info, XCircle, Filter } from 'lucide-react';
 import { format } from 'date-fns';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
-import { usePermissions } from '@/hooks/usePermissions';
+import { ProtectedSection } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function AlertsPage() {
     return (
-        <PermissionGuard permission="alerts.view" showAccessDenied>
+        <ProtectedSection permissions={['read:alerts']}>
             <AlertsContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 
 function AlertsContent() {
     const { user } = useAuthStore();
-    const { hasPermission } = usePermissions();
+    const { can } = usePermissions();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [stats, setStats] = useState<AlertStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -237,7 +237,7 @@ function AlertsContent() {
                                             {format(new Date(alert.triggeredAt), 'MMM d, HH:mm')}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {alert.status === 'active' && hasPermission('alerts.acknowledge') && (
+                                            {alert.status === 'active' && can('acknowledge:alerts') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -246,7 +246,7 @@ function AlertsContent() {
                                                     Acknowledge
                                                 </Button>
                                             )}
-                                            {alert.status === 'acknowledged' && hasPermission('alerts.resolve') && (
+                                            {alert.status === 'acknowledged' && can('resolve:alerts') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

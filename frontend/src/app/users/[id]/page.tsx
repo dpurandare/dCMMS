@@ -35,8 +35,8 @@ function UserDetailsContent({ params }: { params: { id: string } }) {
     const fetchUser = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get(`/users/${params.id}`);
-            setUser(response.data);
+            const user = await api.users.getById(params.id);
+            setUser(user);
         } catch (error) {
             console.error('Failed to fetch user:', error);
             router.push('/users');

@@ -63,8 +63,9 @@ export const showToast = {
             success: string | ((data: T) => string);
             error: string | ((error: any) => string);
         }
-    ): Promise<T> => {
-        return sonnerToast.promise(promise, messages);
+    ) => {
+        sonnerToast.promise(promise, messages);
+        return promise;
     },
 
     dismiss: (toastId?: string | number) => {

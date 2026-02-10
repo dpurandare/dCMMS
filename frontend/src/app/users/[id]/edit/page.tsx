@@ -83,8 +83,7 @@ function EditUserContent({ params }: { params: { id: string } }) {
     const fetchUser = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get(`/users/${params.id}`);
-            const user = response.data;
+            const user = await api.users.getById(params.id);
             form.reset({
                 firstName: user.firstName,
                 lastName: user.lastName,
@@ -104,16 +103,12 @@ function EditUserContent({ params }: { params: { id: string } }) {
     const onSubmit = async (data: UserFormValues) => {
         try {
             setIsSubmitting(true);
-            await api.put(`/users/${params.id}`, {
+            await api.users.update(params.id, {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 username: data.username,
                 email: data.email,
                 phone: data.phone,
-                // role cannot be updated via updateProfile currently, may need backend change or separate endpoint
-                // For now, let's assume updateProfile handles basic info. 
-                // Logic check: Backend updateProfile only takes {firstName, lastName, email, username, phone}. Role is ignored!
-                // We might need an admin endpoint to update role.
             });
 
             // Audit log
