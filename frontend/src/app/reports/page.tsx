@@ -9,8 +9,8 @@ import { Plus } from "lucide-react";
 import { ReportDefinition, ReportExecutionResult } from "@/types/report";
 import { reportService } from "@/services/report.service";
 import { useAuthStore } from '@/store/auth-store';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
-import { usePermissions } from '@/hooks/usePermissions';
+import { ProtectedSection } from '@/components/auth/protected';
+import { usePermissions } from '@/hooks/use-permissions';
 import {
     Dialog,
     DialogContent,
@@ -22,14 +22,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ReportsPage() {
     return (
-        <PermissionGuard permission="reports.view" showAccessDenied>
+        <ProtectedSection permissions={['read:reports']}>
             <ReportsContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 
 function ReportsContent() {
-    const { hasPermission } = usePermissions();
+    const { can } = usePermissions();
     const [executionResult, setExecutionResult] = useState<ReportExecutionResult | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [executingReportId, setExecutingReportId] = useState<string | null>(null);
@@ -78,7 +78,7 @@ function ReportsContent() {
                             Create and execute custom reports from your data.
                         </p>
                     </div>
-                    {hasPermission('reports.create') && (
+                    {can('create:reports') && (
                         <Button onClick={handleCreate}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Report

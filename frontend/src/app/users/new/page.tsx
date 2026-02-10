@@ -83,13 +83,13 @@ function NewUserContent() {
     const onSubmit = async (data: UserFormValues) => {
         try {
             setIsSubmitting(true);
-            const response = await api.post('/users', {
+            const newUser = await api.users.create({
                 firstName: data.firstName,
                 lastName: data.lastName,
                 username: data.username,
                 email: data.email,
                 phone: data.phone,
-                role: data.role,
+                role: data.role as any,
                 password: data.password,
             });
 
@@ -97,7 +97,7 @@ function NewUserContent() {
             AuditLogger.log(
                 AuditActions.CREATE,
                 AuditResources.USER,
-                response.data?.id,
+                newUser?.id,
                 { username: data.username, email: data.email, role: data.role }
             );
 

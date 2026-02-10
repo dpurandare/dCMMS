@@ -136,7 +136,7 @@ export default function WorkOrdersPage() {
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Work Orders' }]}
         actions={
           <ProtectedButton
-            permissions={['work-orders.create']}
+            permissions={['create:work-orders']}
             onClick={() => router.push('/work-orders/new')}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -319,7 +319,7 @@ export default function WorkOrdersPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        {can('work-orders.edit') && (
+                        {can('update:work-orders') && (
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
@@ -330,7 +330,7 @@ export default function WorkOrdersPage() {
                             Edit
                           </DropdownMenuItem>
                         )}
-                        {can('work-orders.delete') && (
+                        {can('delete:work-orders') && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem

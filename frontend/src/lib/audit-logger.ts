@@ -101,9 +101,9 @@ export class AuditLogger {
 
         try {
             // Dynamic import to avoid circular dependencies
-            const { api } = await import('@/lib/api-client');
+            const { apiClient } = await import('@/lib/api-client');
 
-            await api.post('/audit-logs/frontend', {
+            await apiClient.post('/audit-logs/frontend', {
                 action: log.action,
                 resource: log.resource,
                 resourceId: log.resourceId,

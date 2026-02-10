@@ -124,7 +124,7 @@ export default function AssetsPage() {
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Assets' }]}
         actions={
           <ProtectedButton
-            permissions={['assets.create']}
+            permissions={['create:assets']}
             onClick={() => router.push('/assets/new')}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -277,7 +277,7 @@ export default function AssetsPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        {can('assets.edit') && (
+                        {can('update:assets') && (
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
@@ -288,7 +288,7 @@ export default function AssetsPage() {
                             Edit
                           </DropdownMenuItem>
                         )}
-                        {can('assets.delete') && (
+                        {can('delete:assets') && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
