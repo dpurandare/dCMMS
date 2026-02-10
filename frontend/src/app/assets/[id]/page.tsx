@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
+import type { Asset } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,32 +19,6 @@ import { CardSkeleton } from '@/components/ui/card-skeleton';
 import { Package } from 'lucide-react';
 import { ProtectedButton } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
-
-interface Asset {
-  id: string;
-  assetTag: string;
-  name: string;
-  description: string;
-  type: string;
-  status: string;
-  criticality: string;
-  manufacturer: string;
-  model: string;
-  serialNumber: string;
-  location: string;
-  installationDate: string | null;
-  warrantyExpiryDate: string | null;
-  lastMaintenanceDate: string | null;
-  specifications: any;
-  children: any[];
-  createdAt: string;
-  updatedAt: string;
-  assetType?: string; // Add optional property if needed or fix usage
-  site?: { name: string };
-  installDate?: string;
-  parentAsset?: { name: string };
-  tags?: string[];
-}
 
 export default function AssetDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -180,11 +155,11 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-sm font-medium text-slate-600">Asset Type</dt>
-              <dd className="mt-1 text-sm capitalize text-slate-900">{asset.assetType}</dd>
+              <dd className="mt-1 text-sm capitalize text-slate-900">{asset.type}</dd>
             </div>
             <div>
-              <dt className="text-sm font-medium text-slate-600">Site</dt>
-              <dd className="mt-1 text-sm text-slate-900">{asset.site?.name || 'N/A'}</dd>
+              <dt className="text-sm font-medium text-slate-600">Site ID</dt>
+              <dd className="mt-1 text-sm text-slate-900">{asset.siteId || 'N/A'}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-slate-600">Location</dt>
@@ -208,30 +183,22 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
                 <dd className="mt-1 text-sm text-slate-900">{asset.model}</dd>
               </div>
             )}
-            {asset.installDate && (
+            {asset.parentAssetId && (
               <div>
-                <dt className="text-sm font-medium text-slate-600">Install Date</dt>
-                <dd className="mt-1 text-sm text-slate-900">
-                  {new Date(asset.installDate).toLocaleDateString()}
-                </dd>
-              </div>
-            )}
-            {asset.parentAsset && (
-              <div>
-                <dt className="text-sm font-medium text-slate-600">Parent Asset</dt>
-                <dd className="mt-1 text-sm text-slate-900">{asset.parentAsset.name}</dd>
+                <dt className="text-sm font-medium text-slate-600">Parent Asset ID</dt>
+                <dd className="mt-1 text-sm text-slate-900">{asset.parentAssetId}</dd>
               </div>
             )}
           </dl>
 
           {/* Tags */}
-          {asset.tags && asset.tags.length > 0 && (
+          {asset.tags && (
             <div className="mt-4">
               <dt className="text-sm font-medium text-slate-600">Tags</dt>
               <dd className="mt-2 flex flex-wrap gap-2">
-                {asset.tags.map((tag) => (
-                  <Badge key={tag} variant="outline">
-                    {tag}
+                {asset.tags.split(',').map((tag) => (
+                  <Badge key={tag.trim()} variant="outline">
+                    {tag.trim()}
                   </Badge>
                 ))}
               </dd>

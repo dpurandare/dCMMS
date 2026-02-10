@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
+import type { User } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -22,17 +23,6 @@ import { format } from 'date-fns';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ProtectedButton } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
-
-interface User {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    isActive: boolean;
-    createdAt: string;
-}
 
 export default function UsersPage() {
     const router = useRouter();
@@ -54,7 +44,7 @@ export default function UsersPage() {
         try {
             setIsLoading(true);
             const data = await api.users.list();
-            setUsers(data);
+            setUsers(data.data || []);
         } catch (error) {
             console.error('Failed to fetch users:', error);
         } finally {

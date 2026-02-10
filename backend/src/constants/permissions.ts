@@ -67,7 +67,29 @@ export type Permission =
   | "manage:system"
   | "manage:tenants"
   | "read:audit-logs"
-  | "manage:integrations";
+  | "manage:integrations"
+  // Dashboards
+  | "read:dashboards"
+  | "create:dashboards"
+  | "update:dashboards"
+  | "delete:dashboards"
+  // Forecasts & ML
+  | "read:forecasts"
+  | "read:ml-features"
+  // GenAI
+  | "use:genai"
+  // Notifications (extended)
+  | "read:notifications"
+  | "update:notifications"
+  // Alerts (extended)
+  | "update:alerts"
+  // Permits (extended)
+  | "update:permits"
+  | "delete:permits"
+  // Telemetry
+  | "read:telemetry"
+  // Webhooks
+  | "manage:webhooks";
 
 /**
  * Role-based Permission Matrix
@@ -122,6 +144,20 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage:tenants",
     "read:audit-logs",
     "manage:integrations",
+    "read:dashboards",
+    "create:dashboards",
+    "update:dashboards",
+    "delete:dashboards",
+    "read:forecasts",
+    "read:ml-features",
+    "use:genai",
+    "read:notifications",
+    "update:notifications",
+    "update:alerts",
+    "update:permits",
+    "delete:permits",
+    "read:telemetry",
+    "manage:webhooks",
   ],
 
   tenant_admin: [
@@ -169,6 +205,20 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "approve:permits",
     "close:permits",
     "read:audit-logs",
+    "read:dashboards",
+    "create:dashboards",
+    "update:dashboards",
+    "delete:dashboards",
+    "read:forecasts",
+    "read:ml-features",
+    "use:genai",
+    "read:notifications",
+    "update:notifications",
+    "update:alerts",
+    "update:permits",
+    "delete:permits",
+    "read:telemetry",
+    "manage:webhooks",
   ],
 
   site_manager: [
@@ -200,6 +250,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:permits",
     "approve:permits",
     "close:permits",
+    "read:dashboards",
+    "create:dashboards",
+    "update:dashboards",
+    "read:forecasts",
+    "read:ml-features",
+    "use:genai",
+    "read:notifications",
+    "update:alerts",
+    "update:permits",
+    "read:telemetry",
   ],
 
   technician: [
@@ -213,6 +273,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:alerts",
     "acknowledge:alerts",
     "read:permits",
+    "read:dashboards",
+    "read:notifications",
+    "use:genai",
   ],
 
   operator: [
@@ -226,6 +289,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "acknowledge:alerts",
     "read:reports",
     "read:analytics",
+    "read:dashboards",
+    "read:forecasts",
+    "read:ml-features",
+    "read:notifications",
+    "read:telemetry",
   ],
 
   viewer: [
@@ -238,6 +306,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:reports",
     "read:analytics",
     "read:compliance",
+    "read:dashboards",
+    "read:forecasts",
+    "read:notifications",
+    "read:telemetry",
   ],
 };
 

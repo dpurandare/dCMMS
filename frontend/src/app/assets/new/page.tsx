@@ -17,13 +17,14 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
+import type { AssetStatus } from '@/types/api';
 
 export default function NewAssetPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    assetType: '',
+    type: '',
     status: 'operational',
     siteId: '',
     location: '',
@@ -41,14 +42,17 @@ export default function NewAssetPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.assetType || !formData.siteId) {
+    if (!formData.name || !formData.type || !formData.siteId) {
       alert('Please fill in all required fields');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await api.assets.create(formData);
+      await api.assets.create({
+        ...formData,
+        status: formData.status as AssetStatus,
+      });
       router.push('/assets');
     } catch (err: any) {
       console.error('Failed to create asset:', err);
@@ -107,11 +111,11 @@ export default function NewAssetPage() {
 
               {/* Type */}
               <div className="space-y-2">
-                <Label htmlFor="assetType">
+                <Label htmlFor="type">
                   Asset Type <span className="text-red-500">*</span>
                 </Label>
-                <Select value={formData.assetType} onValueChange={(v) => handleChange('assetType', v)}>
-                  <SelectTrigger id="assetType">
+                <Select value={formData.type} onValueChange={(v) => handleChange('type', v)}>
+                  <SelectTrigger id="type">
                     <SelectValue placeholder="Select asset type" />
                   </SelectTrigger>
                   <SelectContent>

@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
+import type { AssetStatus } from '@/types/api';
 
 export default function EditAssetPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function EditAssetPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    assetType: '',
+    type: '',
     status: '',
     siteId: '',
     location: '',
@@ -51,19 +52,18 @@ export default function EditAssetPage() {
   const fetchAsset = async () => {
     try {
       setIsLoading(true);
-      const data = await api.assets.getById(assetId);
-      const asset = data.data;
+      const asset = await api.assets.getById(assetId);
       setFormData({
         name: asset.name || '',
-        assetType: asset.assetType || '',
+        type: asset.type || '',
         status: asset.status || '',
-        siteId: asset.site?.id || '',
+        siteId: asset.siteId || '',
         location: asset.location || '',
         description: asset.description || '',
         serialNumber: asset.serialNumber || '',
         manufacturer: asset.manufacturer || '',
         model: asset.model || '',
-        parentAssetId: asset.parentAsset?.id || '',
+        parentAssetId: asset.parentAssetId || '',
       });
     } catch (err: any) {
       console.error('Failed to fetch asset:', err);
@@ -85,14 +85,17 @@ export default function EditAssetPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.assetType || !formData.siteId) {
+    if (!formData.name || !formData.type || !formData.siteId) {
       alert('Please fill in all required fields');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await api.assets.update(assetId, formData);
+      await api.assets.update(assetId, {
+        ...formData,
+        status: formData.status as AssetStatus || undefined,
+      });
       router.push(`/assets/${assetId}`);
     } catch (err: any) {
       console.error('Failed to update asset:', err);
@@ -171,11 +174,11 @@ export default function EditAssetPage() {
 
               {/* Type */}
               <div className="space-y-2">
-                <Label htmlFor="assetType">
+                <Label htmlFor="type">
                   Asset Type <span className="text-red-500">*</span>
                 </Label>
-                <Select value={formData.assetType} onValueChange={(v) => handleChange('assetType', v)}>
-                  <SelectTrigger id="assetType">
+                <Select value={formData.type} onValueChange={(v) => handleChange('type', v)}>
+                  <SelectTrigger id="type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

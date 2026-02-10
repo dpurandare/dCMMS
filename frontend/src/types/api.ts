@@ -119,17 +119,22 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   siteId: UUID;
   assetId?: UUID;
-  assignedTo?: UUID;
+  assignedTo?: string;
   createdBy: UUID;
   scheduledStart?: string;
   scheduledEnd?: string;
   actualStart?: string;
   actualEnd?: string;
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: string;
+  actualHours?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  // Nested objects (populated by API joins)
+  asset?: { id: string; name: string };
+  site?: { id: string; name: string };
+  tasks?: WorkOrderTask[];
+  parts?: { id: string; partId: string; name: string; quantity: number; reserved?: boolean; consumed?: boolean }[];
 }
 
 export interface CreateWorkOrderRequest {
@@ -137,12 +142,13 @@ export interface CreateWorkOrderRequest {
   description?: string;
   type: WorkOrderType;
   priority: WorkOrderPriority;
-  siteId: UUID;
+  status?: WorkOrderStatus;
+  siteId?: UUID;
   assetId?: UUID;
-  assignedTo?: UUID;
+  assignedTo?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
-  estimatedHours?: number;
+  estimatedHours?: string;
   metadata?: Record<string, any>;
 }
 
@@ -152,11 +158,13 @@ export interface UpdateWorkOrderRequest {
   type?: WorkOrderType;
   priority?: WorkOrderPriority;
   status?: WorkOrderStatus;
-  assignedTo?: UUID;
+  assetId?: UUID;
+  siteId?: UUID;
+  assignedTo?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: string;
+  actualHours?: string;
   metadata?: Record<string, any>;
 }
 
@@ -236,14 +244,26 @@ export interface Site {
   id: UUID;
   tenantId: UUID;
   siteId: string; // Human-readable ID
+  siteCode?: string;
   name: string;
   description?: string;
+  type?: string;
   location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
   latitude?: string;
   longitude?: string;
   capacity?: number;
   energyType?: string;
   timezone?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  isActive?: boolean;
+  assetCount?: number;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -470,10 +490,14 @@ export type Permission =
   | "read:alerts"
   | "acknowledge:alerts"
   | "resolve:alerts"
+  | "update:alerts"
   | "manage:notifications"
+  | "read:notifications"
+  | "update:notifications"
   | "read:reports"
   | "create:reports"
   | "read:analytics"
+  | "read:dashboards"
   | "read:compliance"
   | "create:compliance"
   | "approve:compliance"
@@ -482,10 +506,17 @@ export type Permission =
   | "read:permits"
   | "approve:permits"
   | "close:permits"
+  | "update:permits"
+  | "delete:permits"
   | "manage:system"
   | "manage:tenants"
   | "read:audit-logs"
-  | "manage:integrations";
+  | "manage:integrations"
+  | "read:ml-features"
+  | "read:forecasts"
+  | "use:genai"
+  | "read:telemetry"
+  | "manage:webhooks";
 
 export interface UserPermissions {
   role: UserRole;

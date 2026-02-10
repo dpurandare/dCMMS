@@ -18,11 +18,8 @@ export interface AuthorizedUser {
   role: UserRole;
 }
 
-declare module "fastify" {
-  interface FastifyRequest {
-    user: AuthorizedUser;
-  }
-}
+// Note: FastifyRequest.user is already typed by @fastify/jwt in src/types/index.d.ts
+// The AuthorizedUser type is used for type assertions after authentication
 
 /**
  * Authorization Options
@@ -34,6 +31,8 @@ export interface AuthorizeOptions {
   anyPermissions?: Permission[];
   /** Allow users to access their own resources */
   allowOwn?: boolean;
+  /** Require admin role (super_admin or tenant_admin) */
+  adminOnly?: boolean;
   /** Custom authorization function */
   custom?: (request: FastifyRequest, user: AuthorizedUser) => boolean | Promise<boolean>;
 }
@@ -67,6 +66,24 @@ export function authorize(options: AuthorizeOptions = {}) {
         error: "Unauthorized",
         message: "Authentication required",
       });
+    }
+
+    // Check if admin access is required
+    if (options.adminOnly) {
+      if (user.role !== "super_admin" && user.role !== "tenant_admin") {
+        request.log.warn(
+          {
+            userId: user.id,
+            role: user.role,
+          },
+          "Admin access denied",
+        );
+        return reply.status(403).send({
+          statusCode: 403,
+          error: "Forbidden",
+          message: "Administrator access required",
+        });
+      }
     }
 
     // Check if user has required permissions (ALL)

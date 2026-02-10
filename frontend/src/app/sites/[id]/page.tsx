@@ -4,31 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
+import type { Site } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Edit, Trash2, MapPin, Phone, Mail } from 'lucide-react';
-
-interface Site {
-  id: string;
-  siteCode: string;
-  name: string;
-  description: string;
-  type: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  timezone: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  isActive: boolean;
-  assetCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function SiteDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();

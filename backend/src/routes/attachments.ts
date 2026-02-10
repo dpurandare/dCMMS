@@ -36,7 +36,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, server.authorize(["create:work-orders"])],
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { workOrderId } = request.params as { workOrderId: string };
@@ -141,7 +141,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, server.authorize(["read:work-orders"])],
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { workOrderId } = request.params as { workOrderId: string };
@@ -212,7 +212,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           required: ["workOrderId", "attachmentId"],
         },
       },
-      preHandler: [server.authenticate, server.authorize(["read:work-orders"])],
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { workOrderId, attachmentId } = request.params as {
@@ -314,10 +314,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [
-        server.authenticate,
-        server.authorize(["delete:work-orders"]),
-      ],
+      preHandler: server.authenticate,
     },
     async (request, reply) => {
       const { workOrderId, attachmentId } = request.params as {

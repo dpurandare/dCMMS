@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
+import type { WorkOrderType, WorkOrderPriority, WorkOrderStatus } from '@/types/api';
 
 interface Task {
   id: string;
@@ -109,25 +110,18 @@ export default function NewWorkOrderPage() {
     try {
       setIsSubmitting(true);
       const submitData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type as WorkOrderType,
+        priority: formData.priority as WorkOrderPriority,
+        status: (saveAsDraft ? 'draft' : 'open') as WorkOrderStatus,
+        assetId: formData.assetId || undefined,
+        siteId: formData.siteId || undefined,
         assignedTo: formData.assignedToId === 'unassigned' || !formData.assignedToId ? undefined : formData.assignedToId,
-        status: saveAsDraft ? 'draft' : 'open',
-        estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : undefined,
-        scheduledStartDate: formData.scheduledStartDate ? new Date(formData.scheduledStartDate).toISOString() : undefined,
-        scheduledEndDate: formData.scheduledEndDate ? new Date(formData.scheduledEndDate).toISOString() : undefined,
-        tasks: tasks.map((t) => ({
-          title: t.title,
-          description: t.description,
-          sequence: t.sequence,
-        })),
-        parts: parts.map((p) => ({
-          partId: p.partId,
-          quantity: p.quantity,
-        })),
+        estimatedHours: formData.estimatedHours || undefined,
+        scheduledStart: formData.scheduledStartDate ? new Date(formData.scheduledStartDate).toISOString() : undefined,
+        scheduledEnd: formData.scheduledEndDate ? new Date(formData.scheduledEndDate).toISOString() : undefined,
       };
-
-      // Remove assignedToId as it's not in the schema
-      delete (submitData as any).assignedToId;
 
       await api.workOrders.create(submitData);
       router.push('/work-orders');

@@ -40,19 +40,7 @@ import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { ProtectedButton } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
-
-interface Asset {
-  id: string;
-  name: string;
-  assetType: string;
-  status: string;
-  site: {
-    id: string;
-    name: string;
-  };
-  location?: string;
-  tags?: string[];
-}
+import type { Asset } from '@/types/api';
 
 export default function AssetsPage() {
   const router = useRouter();
@@ -115,7 +103,7 @@ export default function AssetsPage() {
       asset.id.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
-    const matchesType = typeFilter === 'all' || asset.assetType === typeFilter;
+    const matchesType = typeFilter === 'all' || asset.type === typeFilter;
 
     return matchesSearch && matchesStatus && matchesType;
   });
@@ -266,11 +254,11 @@ export default function AssetsPage() {
                 >
                   <TableCell className="font-mono text-xs">{asset.id}</TableCell>
                   <TableCell className="font-medium">{asset.name}</TableCell>
-                  <TableCell className="capitalize">{asset.assetType}</TableCell>
+                  <TableCell className="capitalize">{asset.type}</TableCell>
                   <TableCell>
                     <AssetStatusBadge status={asset.status as any} />
                   </TableCell>
-                  <TableCell>{asset.site?.name || 'N/A'}</TableCell>
+                  <TableCell>{asset.siteId || 'N/A'}</TableCell>
                   <TableCell className="text-slate-600">{asset.location || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
