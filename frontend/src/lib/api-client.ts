@@ -100,7 +100,7 @@ apiClient.interceptors.response.use(
 
     // Handle other error status codes with user-friendly messages
     if (error.response?.status === 403) {
-      showToast.error(error.response.data?.message || "You don't have permission to perform this action.");
+      showToast.error((error.response.data as any)?.message || "You don't have permission to perform this action.");
     } else if (error.response?.status === 404) {
       // Don't show toast for 404s by default (component can handle it)
       console.warn('404 Not Found:', error.config?.url);

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
+import type { AuditLog } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -27,18 +28,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Download, Filter, Search, Shield, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-
-interface AuditLog {
-    id: string;
-    userId: string;
-    action: string;
-    entityType: string;
-    entityId: string;
-    changes: any;
-    ipAddress: string | null;
-    userAgent: string | null;
-    timestamp: string;
-}
 
 export default function AuditLogsPage() {
     const router = useRouter();
@@ -72,7 +61,7 @@ export default function AuditLogsPage() {
             if (filterEntity !== 'all') params.entityType = filterEntity;
 
             const response = await api.auditLogs.list(params);
-            setLogs(response.logs);
+            setLogs(response.data || []);
         } catch (error) {
             console.error('Failed to fetch audit logs:', error);
         } finally {

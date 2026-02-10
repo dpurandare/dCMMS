@@ -35,7 +35,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/auth-store';
 import { usePermissions } from '@/hooks/use-permissions';
-import type { Permission } from '@/lib/permissions';
+import type { Permission } from '@/types/api';
 
 interface NavItem {
   label: string;

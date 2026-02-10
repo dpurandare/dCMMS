@@ -1,107 +1,13 @@
 /**
- * Permission Constants and RBAC Matrix
- * Based on specs/03_AUTH_AUTHORIZATION.md and specs/09_ROLE_FEATURE_ACCESS_MATRIX.md
+ * RBAC Permission System for Frontend
+ * Matches backend/src/constants/permissions.ts
  */
 
-export type UserRole =
-  | "super_admin"
-  | "tenant_admin"
-  | "site_manager"
-  | "technician"
-  | "operator"
-  | "viewer";
-
-export type Permission =
-  // Work Orders
-  | "create:work-orders"
-  | "read:work-orders"
-  | "update:work-orders"
-  | "delete:work-orders"
-  | "approve:work-orders"
-  | "assign:work-orders"
-  | "close:work-orders"
-  // Assets
-  | "create:assets"
-  | "read:assets"
-  | "update:assets"
-  | "delete:assets"
-  | "manage:assets"
-  // Parts & Inventory
-  | "create:parts"
-  | "read:parts"
-  | "update:parts"
-  | "delete:parts"
-  | "consume:parts"
-  // Sites
-  | "create:sites"
-  | "read:sites"
-  | "update:sites"
-  | "delete:sites"
-  // Users & Access
-  | "create:users"
-  | "read:users"
-  | "update:users"
-  | "delete:users"
-  | "manage:roles"
-  // Alerts & Notifications
-  | "create:alerts"
-  | "read:alerts"
-  | "acknowledge:alerts"
-  | "resolve:alerts"
-  | "manage:notifications"
-  | "read:notifications"
-  | "update:notifications"
-  | "update:alerts"
-  // Reports & Analytics
-  | "read:reports"
-  | "create:reports"
-  | "read:analytics"
-  | "read:dashboards"
-  | "read:telemetry"
-  | "read:forecasts"
-  // Compliance
-  | "read:compliance"
-  | "create:compliance"
-  | "approve:compliance"
-  | "submit:compliance"
-  // Permits & Safety
-  | "create:permits"
-  | "read:permits"
-  | "approve:permits"
-  | "close:permits"
-  | "update:permits"
-  | "delete:permits"
-  // System Admin
-  | "manage:system"
-  | "manage:tenants"
-  | "read:audit-logs"
-  | "manage:integrations"
-  // Dashboards
-  | "read:dashboards"
-  | "create:dashboards"
-  | "update:dashboards"
-  | "delete:dashboards"
-  // Forecasts & ML
-  | "read:forecasts"
-  | "read:ml-features"
-  // GenAI
-  | "use:genai"
-  // Notifications (extended)
-  | "read:notifications"
-  | "update:notifications"
-  // Alerts (extended)
-  | "update:alerts"
-  // Permits (extended)
-  | "update:permits"
-  | "delete:permits"
-  // Telemetry
-  | "read:telemetry"
-  // Webhooks
-  | "manage:webhooks";
+import type { UserRole, Permission } from "@/types/api";
 
 /**
  * Role-based Permission Matrix
- * Defines which permissions each role has
+ * Defines which permissions each role has (matches backend)
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   super_admin: [
@@ -151,23 +57,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "manage:system",
     "manage:tenants",
     "read:audit-logs",
-    "use:genai",
-    "read:ml-features",
     "manage:integrations",
-    "read:dashboards",
-    "create:dashboards",
-    "update:dashboards",
-    "delete:dashboards",
-    "read:forecasts",
-    "read:ml-features",
-    "use:genai",
-    "read:notifications",
-    "update:notifications",
-    "update:alerts",
-    "update:permits",
-    "delete:permits",
-    "read:telemetry",
-    "manage:webhooks",
   ],
 
   tenant_admin: [
@@ -215,20 +105,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "approve:permits",
     "close:permits",
     "read:audit-logs",
-    "read:dashboards",
-    "create:dashboards",
-    "update:dashboards",
-    "delete:dashboards",
-    "read:forecasts",
-    "read:ml-features",
-    "use:genai",
-    "read:notifications",
-    "update:notifications",
-    "update:alerts",
-    "update:permits",
-    "delete:permits",
-    "read:telemetry",
-    "manage:webhooks",
   ],
 
   site_manager: [
@@ -260,22 +136,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:permits",
     "approve:permits",
     "close:permits",
-    "read:dashboards",
-    "create:dashboards",
-    "update:dashboards",
-    "read:forecasts",
-    "read:ml-features",
-    "use:genai",
-    "read:notifications",
-    "update:alerts",
-    "update:permits",
-    "read:telemetry",
   ],
 
   technician: [
     // Technicians execute work orders
     "read:work-orders",
-    "update:work-orders", // Only for assigned WOs
+    "update:work-orders",
     "read:assets",
     "read:parts",
     "consume:parts",
@@ -283,9 +149,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:alerts",
     "acknowledge:alerts",
     "read:permits",
-    "read:dashboards",
-    "read:notifications",
-    "use:genai",
   ],
 
   operator: [
@@ -299,11 +162,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "acknowledge:alerts",
     "read:reports",
     "read:analytics",
-    "read:dashboards",
-    "read:forecasts",
-    "read:ml-features",
-    "read:notifications",
-    "read:telemetry",
   ],
 
   viewer: [
@@ -316,10 +174,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:reports",
     "read:analytics",
     "read:compliance",
-    "read:dashboards",
-    "read:forecasts",
-    "read:notifications",
-    "read:telemetry",
   ],
 };
 
@@ -336,7 +190,7 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
  */
 export function hasAnyPermission(
   role: UserRole,
-  permissions: Permission[],
+  permissions: Permission[]
 ): boolean {
   return permissions.some((permission) => hasPermission(role, permission));
 }
@@ -346,7 +200,7 @@ export function hasAnyPermission(
  */
 export function hasAllPermissions(
   role: UserRole,
-  permissions: Permission[],
+  permissions: Permission[]
 ): boolean {
   return permissions.every((permission) => hasPermission(role, permission));
 }
@@ -356,4 +210,23 @@ export function hasAllPermissions(
  */
 export function getRolePermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] || [];
+}
+
+/**
+ * Check if user is admin (super_admin or tenant_admin)
+ */
+export function isAdmin(role: UserRole): boolean {
+  return role === "super_admin" || role === "tenant_admin";
+}
+
+/**
+ * Check if user can perform action on their own resources
+ */
+export function canAccessOwnResource(role: UserRole, userId: string, resourceUserId: string): boolean {
+  // Admins can access any resource
+  if (isAdmin(role)) {
+    return true;
+  }
+  // Others can only access their own resources
+  return userId === resourceUserId;
 }

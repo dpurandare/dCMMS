@@ -22,7 +22,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
   // Import CSRF protection
   const { csrfProtection } = await import('../middleware/csrf');
 
-  // Note: Multipart is already registered globally in server.ts
+  // Note: multipart is already registered globally in server.ts
 
   server.post(
     "/upload",

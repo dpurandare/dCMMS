@@ -18,11 +18,8 @@ RUN npm ci --only=production
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
-# Copy migrations (needed for db:migrate to work)
+# Copy migrations SQL files (needed for drizzle migrate to work)
 COPY --from=builder /app/drizzle ./drizzle
-
-# Copy migration script
-COPY --from=builder /app/src/db/migrate.ts ./src/db/migrate.ts
 
 # Copy entrypoint script
 COPY scripts/docker-entrypoint.sh ./

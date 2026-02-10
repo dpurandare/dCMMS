@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { db } from "../db";
 import { users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
+import { UserRole } from "../constants/permissions";
 
 const SALT_ROUNDS = 10;
 
@@ -15,7 +16,7 @@ export interface UserPayload {
   tenantId: string;
   email: string;
   username: string;
-  role: string;
+  role: UserRole;
   requirePasswordChange?: boolean;
 }
 

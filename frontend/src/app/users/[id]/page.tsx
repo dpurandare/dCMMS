@@ -7,24 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
+import type { User } from '@/types/api';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { PageHeader } from '@/components/ui/page-header';
-import { ArrowLeft, Edit, Mail, Phone, Calendar, User, Shield } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, Calendar, User as UserIcon, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { CardSkeleton } from '@/components/ui/card-skeleton';
-
-interface UserProfile {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    phone: string | null;
-    isActive: boolean;
-    lastLoginAt: string | null;
-    createdAt: string;
-}
 
 export default function UserDetailsPage({ params }: { params: { id: string } }) {
     return (
@@ -36,7 +24,7 @@ export default function UserDetailsPage({ params }: { params: { id: string } }) 
 
 function UserDetailsContent({ params }: { params: { id: string } }) {
     const router = useRouter();
-    const [user, setUser] = useState<UserProfile | null>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -104,7 +92,7 @@ function UserDetailsContent({ params }: { params: { id: string } }) {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5" />
+                            <UserIcon className="h-5 w-5" />
                             Personal Information
                         </CardTitle>
                     </CardHeader>

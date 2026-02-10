@@ -119,17 +119,22 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   siteId: UUID;
   assetId?: UUID;
-  assignedTo?: UUID;
+  assignedTo?: string;
   createdBy: UUID;
   scheduledStart?: string;
   scheduledEnd?: string;
   actualStart?: string;
   actualEnd?: string;
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: string;
+  actualHours?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  // Nested objects (populated by API joins)
+  asset?: { id: string; name: string };
+  site?: { id: string; name: string };
+  tasks?: WorkOrderTask[];
+  parts?: { id: string; partId: string; name: string; quantity: number; reserved?: boolean; consumed?: boolean }[];
 }
 
 export interface CreateWorkOrderRequest {
@@ -137,12 +142,13 @@ export interface CreateWorkOrderRequest {
   description?: string;
   type: WorkOrderType;
   priority: WorkOrderPriority;
-  siteId: UUID;
+  status?: WorkOrderStatus;
+  siteId?: UUID;
   assetId?: UUID;
-  assignedTo?: UUID;
+  assignedTo?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
-  estimatedHours?: number;
+  estimatedHours?: string;
   metadata?: Record<string, any>;
 }
 
@@ -152,11 +158,13 @@ export interface UpdateWorkOrderRequest {
   type?: WorkOrderType;
   priority?: WorkOrderPriority;
   status?: WorkOrderStatus;
-  assignedTo?: UUID;
+  assetId?: UUID;
+  siteId?: UUID;
+  assignedTo?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
-  estimatedHours?: number;
-  actualHours?: number;
+  estimatedHours?: string;
+  actualHours?: string;
   metadata?: Record<string, any>;
 }
 
@@ -236,14 +244,26 @@ export interface Site {
   id: UUID;
   tenantId: UUID;
   siteId: string; // Human-readable ID
+  siteCode?: string;
   name: string;
   description?: string;
+  type?: string;
   location?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
   latitude?: string;
   longitude?: string;
   capacity?: number;
   energyType?: string;
   timezone?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  isActive?: boolean;
+  assetCount?: number;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -440,73 +460,63 @@ export interface GenAIDocument {
 // ==========================================
 
 export type Permission =
-  // Dashboard
-  | 'dashboard.view'
-
-  // Work Orders
-  | 'work-orders.view'
-  | 'work-orders.create'
-  | 'work-orders.edit'
-  | 'work-orders.delete'
-  | 'work-orders.assign'
-  | 'work-orders.complete'
-
-  // Assets
-  | 'assets.view'
-  | 'assets.create'
-  | 'assets.edit'
-  | 'assets.delete'
-
-  // Alerts
-  | 'alerts.view'
-  | 'alerts.acknowledge'
-  | 'alerts.resolve'
-  | 'alerts.manage'
-
-  // Analytics
-  | 'analytics.view'
-  | 'analytics.advanced'
-
-  // Reports
-  | 'reports.view'
-  | 'reports.create'
-  | 'reports.export'
-
-  // Compliance
-  | 'compliance.view'
-  | 'compliance.create'
-  | 'compliance.submit'
-  | 'compliance.manage'
-
-  // Machine Learning
-  | 'ml.models.view'
-  | 'ml.models.deploy'
-  | 'ml.forecasts.view'
-  | 'ml.anomalies.view'
-
-  // GenAI
-  | 'genai.use'
-  | 'genai.admin'
-
-  // Users & Security
-  | 'users.view'
-  | 'users.create'
-  | 'users.edit'
-  | 'users.delete'
-  | 'users.manage-roles'
-
-  // Settings
-  | 'settings.view'
-  | 'settings.edit'
-  | 'settings.system'
-
-  // Sites
-  | 'sites.view'
-  | 'sites.manage'
-
-  // Audit Logs
-  | 'audit-logs.view';
-
+  | "create:work-orders"
+  | "read:work-orders"
+  | "update:work-orders"
+  | "delete:work-orders"
+  | "approve:work-orders"
+  | "assign:work-orders"
+  | "close:work-orders"
+  | "create:assets"
+  | "read:assets"
+  | "update:assets"
+  | "delete:assets"
+  | "manage:assets"
+  | "create:parts"
+  | "read:parts"
+  | "update:parts"
+  | "delete:parts"
+  | "consume:parts"
+  | "create:sites"
+  | "read:sites"
+  | "update:sites"
+  | "delete:sites"
+  | "create:users"
+  | "read:users"
+  | "update:users"
+  | "delete:users"
+  | "manage:roles"
+  | "create:alerts"
+  | "read:alerts"
+  | "acknowledge:alerts"
+  | "resolve:alerts"
+  | "update:alerts"
+  | "manage:notifications"
+  | "read:notifications"
+  | "update:notifications"
+  | "read:reports"
+  | "create:reports"
+  | "read:analytics"
+  | "read:dashboards"
+  | "read:compliance"
+  | "create:compliance"
+  | "approve:compliance"
+  | "submit:compliance"
+  | "create:permits"
+  | "read:permits"
+  | "approve:permits"
+  | "close:permits"
+  | "update:permits"
+  | "delete:permits"
+  | "manage:system"
+  | "manage:tenants"
+  | "read:audit-logs"
+  | "manage:integrations"
+  | "read:ml-features"
+  | "read:forecasts"
+  | "use:genai"
+  | "read:telemetry"
+  | "manage:webhooks";
 
 export interface UserPermissions {
   role: UserRole;

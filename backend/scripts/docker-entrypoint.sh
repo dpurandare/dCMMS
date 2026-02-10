@@ -23,9 +23,9 @@ done
 
 echo "✅ PostgreSQL is ready"
 
-# Run migrations
+# Run migrations using compiled JavaScript (tsx not available in production)
 echo "🔄 Running database migrations..."
-npm run db:migrate:prod
+node dist/db/migrate.js
 
 if [ $? -ne 0 ]; then
   echo "❌ Migration failed"

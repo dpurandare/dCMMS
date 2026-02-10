@@ -75,45 +75,33 @@ async function seed() {
       return;
     }
     // Non-production: continue with full seed
-    console.log("Loading or creating demo tenant...");
-
-    // Load or create demo tenant for non-production
-    const [existingDemoTenant] = await db
-      .select()
-      .from(tenants)
-      .where(eq(tenants.tenantId, "demo-tenant"))
-      .limit(1);
-
-    if (existingDemoTenant) {
-      tenant = existingDemoTenant;
-      console.log(`  ✓ Using existing tenant: ${tenant.name}`);
-    } else {
+    // Create development tenant
+    const existingTenants = await db.select().from(tenants).limit(1);
+    if (existingTenants.length === 0) {
       [tenant] = await db
         .insert(tenants)
         .values({
-          tenantId: "demo-tenant",
-          name: "Demo Corporation",
-          domain: "demo.dcmms.local",
+          tenantId: "dev-tenant",
+          name: "Development Tenant",
+          domain: "dev.dcmms.com",
           config: JSON.stringify({
-            timezone: "America/New_York",
-            dateFormat: "MM/DD/YYYY",
+            timezone: "UTC",
+            dateFormat: "YYYY-MM-DD",
             currency: "USD",
           }),
         })
         .returning();
       console.log(`  ✓ Created tenant: ${tenant.name}`);
+    } else {
+      tenant = existingTenants[0];
+      console.log(`  ✓ Using existing tenant: ${tenant.name}`);
     }
 
-    if (!tenant) {
-      throw new Error("Failed to load or create tenant");
-    }
-
-    // Hash password for non-production users
-    const defaultPassword = "Password123!";
-    const passwordHash = await AuthService.hashPassword(defaultPassword);
+    // Create password hash for dev users
+    const passwordHash = await AuthService.hashPassword("Password123!");
 
     // Create admin user
-    const [adminUser] = await db
+    await db
       .insert(users)
       .values({
         tenantId: tenant.id,
@@ -123,8 +111,7 @@ async function seed() {
         lastName: "User",
         role: "tenant_admin",
         passwordHash,
-      })
-      .returning();
+      });
 
     const [managerUser] = await db
       .insert(users)
@@ -163,7 +150,11 @@ async function seed() {
         siteId: "NYC-01",
         name: "New York Distribution Center",
         type: "Distribution Center",
-        location: "123 Industrial Parkway, New York, NY 10001, USA",
+        address: "123 Industrial Parkway",
+        city: "New York",
+        state: "NY",
+        postalCode: "10001",
+        country: "USA",
       })
       .returning();
 
@@ -174,7 +165,11 @@ async function seed() {
         siteId: "LA-01",
         name: "Los Angeles Warehouse",
         type: "Warehouse",
-        location: "456 Commerce Street, Los Angeles, CA 90001, USA",
+        address: "456 Commerce Street",
+        city: "Los Angeles",
+        state: "CA",
+        postalCode: "90001",
+        country: "USA",
       })
       .returning();
 
@@ -185,7 +180,11 @@ async function seed() {
         siteId: "CHI-01",
         name: "Chicago Manufacturing Plant",
         type: "Manufacturing",
-        location: "789 Factory Lane, Chicago, IL 60601, USA",
+        address: "789 Factory Lane",
+        city: "Chicago",
+        state: "IL",
+        postalCode: "60601",
+        country: "USA",
       })
       .returning();
 
@@ -207,7 +206,7 @@ async function seed() {
         manufacturer: "Carrier",
         model: "AquaEdge 19DV",
         serialNumber: "HVAC-2023-001",
-        location: "Mechanical Room A",
+        location: JSON.stringify({ area: "Mechanical Room A" }),
         status: "operational",
 
         installationDate: new Date("2022-01-15"),
@@ -233,7 +232,7 @@ async function seed() {
         manufacturer: "Toyota",
         model: "8FGCU25",
         serialNumber: "FL-2023-001",
-        location: "Warehouse Floor",
+        location: JSON.stringify({ area: "Warehouse Floor" }),
         status: "operational",
 
         installationDate: new Date("2023-03-10"),
@@ -258,7 +257,7 @@ async function seed() {
         manufacturer: "Interroll",
         model: "RollerDrive EC5000",
         serialNumber: "CNV-2022-050",
-        location: "Sorting Area",
+        location: JSON.stringify({ area: "Sorting Area" }),
         status: "maintenance",
 
         installationDate: new Date("2021-06-20"),
@@ -284,7 +283,7 @@ async function seed() {
         manufacturer: "Haas",
         model: "UMC-750",
         serialNumber: "CNC-2020-100",
-        location: "Production Floor B",
+        location: JSON.stringify({ area: "Production Floor B" }),
         status: "operational",
 
         installationDate: new Date("2020-09-01"),
@@ -310,7 +309,7 @@ async function seed() {
         manufacturer: "Atlas Copco",
         model: "GA 55",
         serialNumber: "AC-2019-050",
-        location: "Utility Room",
+        location: JSON.stringify({ area: "Utility Room" }),
         status: "operational",
 
         installationDate: new Date("2019-05-15"),

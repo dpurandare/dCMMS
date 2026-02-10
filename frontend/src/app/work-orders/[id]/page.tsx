@@ -17,59 +17,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
+import type { WorkOrder, WorkOrderStatus } from '@/types/api';
 import { useAuthStore } from '@/store/auth-store';
 import { ProtectedButton } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
 import { WorkOrderStateMachine } from '@/lib/work-order-state-machine';
-import type { WorkOrderStatus } from '@/types/api';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  sequence: number;
-}
-
-interface Part {
-  id: string;
-  name: string;
-  quantity: number;
-  reserved: boolean;
-  consumed: boolean;
-}
-
-interface WorkOrder {
-  id: string;
-  workOrderId: string;
-  title: string;
-  description?: string;
-  type: string;
-  priority: string;
-  status: string;
-  assignedTo?: {
-    id: string;
-    name: string;
-  };
-  asset?: {
-    id: string;
-    name: string;
-  };
-  site?: {
-    id: string;
-    name: string;
-  };
-  scheduledStartDate?: string;
-  scheduledEndDate?: string;
-  actualStartDate?: string;
-  actualEndDate?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  tasks?: Task[];
-  parts?: Part[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 export default function WorkOrderDetailsPage() {
   const router = useRouter();
@@ -97,7 +49,7 @@ export default function WorkOrderDetailsPage() {
     try {
       setIsLoading(true);
       const data = await api.workOrders.getById(woId);
-      setWorkOrder(data.data || data);
+      setWorkOrder(data);
     } catch (err: any) {
       console.error('Failed to fetch work order:', err);
       if (err.response?.status === 401) {
@@ -308,7 +260,7 @@ export default function WorkOrderDetailsPage() {
             <div>
               <dt className="text-sm font-medium text-slate-600">Assigned To</dt>
               <dd className="mt-1 text-sm text-slate-900">
-                {workOrder.assignedTo?.name || 'Unassigned'}
+                {workOrder.assignedTo || 'Unassigned'}
               </dd>
             </div>
             <div>
@@ -322,28 +274,28 @@ export default function WorkOrderDetailsPage() {
             <div>
               <dt className="text-sm font-medium text-slate-600">Scheduled Start</dt>
               <dd className="mt-1 text-sm text-slate-900">
-                {formatDate(workOrder.scheduledStartDate)}
+                {formatDate(workOrder.scheduledStart)}
               </dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-slate-600">Scheduled End</dt>
               <dd className="mt-1 text-sm text-slate-900">
-                {formatDate(workOrder.scheduledEndDate)}
+                {formatDate(workOrder.scheduledEnd)}
               </dd>
             </div>
-            {workOrder.actualStartDate && (
+            {workOrder.actualStart && (
               <div>
                 <dt className="text-sm font-medium text-slate-600">Actual Start</dt>
                 <dd className="mt-1 text-sm text-slate-900">
-                  {formatDate(workOrder.actualStartDate)}
+                  {formatDate(workOrder.actualStart)}
                 </dd>
               </div>
             )}
-            {workOrder.actualEndDate && (
+            {workOrder.actualEnd && (
               <div>
                 <dt className="text-sm font-medium text-slate-600">Actual End</dt>
                 <dd className="mt-1 text-sm text-slate-900">
-                  {formatDate(workOrder.actualEndDate)}
+                  {formatDate(workOrder.actualEnd)}
                 </dd>
               </div>
             )}
@@ -408,19 +360,19 @@ export default function WorkOrderDetailsPage() {
                       className="flex items-start gap-3 rounded-lg border p-3 hover:bg-slate-50"
                     >
                       <Checkbox
-                        checked={task.completed}
+                        checked={task.isCompleted}
                         className="mt-1"
                         disabled={workOrder.status === 'completed' || workOrder.status === 'closed'}
                       />
                       <div className="flex-1">
-                        <p className={`text-sm font-medium ${task.completed ? 'line-through text-slate-500' : 'text-slate-900'}`}>
+                        <p className={`text-sm font-medium ${task.isCompleted ? 'line-through text-slate-500' : 'text-slate-900'}`}>
                           {task.title}
                         </p>
                         {task.description && (
                           <p className="mt-1 text-xs text-slate-600">{task.description}</p>
                         )}
                       </div>
-                      {task.completed && (
+                      {task.isCompleted && (
                         <Badge variant="outline" className="bg-green-50 text-green-700">
                           Done
                         </Badge>

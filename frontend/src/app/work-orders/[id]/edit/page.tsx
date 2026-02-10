@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
+import type { WorkOrderType, WorkOrderPriority, WorkOrderStatus } from '@/types/api';
 import { useAuthStore } from '@/store/auth-store';
 
 interface Task {
@@ -73,8 +74,7 @@ export default function EditWorkOrderPage() {
   const fetchWorkOrder = async () => {
     try {
       setIsLoading(true);
-      const data = await api.workOrders.getById(workOrderId);
-      const wo = data.data;
+      const wo = await api.workOrders.getById(workOrderId);
 
       // Populate form data
       setFormData({
@@ -82,11 +82,11 @@ export default function EditWorkOrderPage() {
         description: wo.description || '',
         type: wo.type || 'corrective',
         priority: wo.priority || 'medium',
-        assetId: wo.asset?.id || '',
-        siteId: wo.site?.id || '',
-        assignedToId: wo.assignedTo?.id || '',
-        scheduledStartDate: wo.scheduledStartDate ? wo.scheduledStartDate.split('T')[0] : '',
-        scheduledEndDate: wo.scheduledEndDate ? wo.scheduledEndDate.split('T')[0] : '',
+        assetId: wo.assetId || '',
+        siteId: wo.siteId || '',
+        assignedToId: wo.assignedTo || '',
+        scheduledStartDate: wo.scheduledStart ? String(wo.scheduledStart).split('T')[0] : '',
+        scheduledEndDate: wo.scheduledEnd ? String(wo.scheduledEnd).split('T')[0] : '',
         estimatedHours: wo.estimatedHours?.toString() || '',
         status: wo.status || '',
       });
@@ -177,17 +177,17 @@ export default function EditWorkOrderPage() {
     try {
       setIsSubmitting(true);
       const submitData = {
-        ...formData,
-        estimatedHours: formData.estimatedHours ? parseFloat(formData.estimatedHours) : null,
-        tasks: tasks.map((t) => ({
-          title: t.title,
-          description: t.description,
-          sequence: t.sequence,
-        })),
-        parts: parts.map((p) => ({
-          partId: p.partId,
-          quantity: p.quantity,
-        })),
+        title: formData.title,
+        description: formData.description,
+        type: formData.type as WorkOrderType,
+        priority: formData.priority as WorkOrderPriority,
+        status: formData.status as WorkOrderStatus,
+        assetId: formData.assetId || undefined,
+        siteId: formData.siteId || undefined,
+        assignedTo: formData.assignedToId || undefined,
+        scheduledStart: formData.scheduledStartDate || undefined,
+        scheduledEnd: formData.scheduledEndDate || undefined,
+        estimatedHours: formData.estimatedHours || undefined,
       };
 
       await api.workOrders.update(workOrderId, submitData);

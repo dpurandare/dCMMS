@@ -31,16 +31,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
-
-interface Site {
-  id: string;
-  name: string;
-  location: string;
-  capacity?: number;
-  timezone?: string;
-  assetCount?: number;
-  status?: string;
-}
+import type { Site } from '@/types/api';
 
 export default function SitesPage() {
   const router = useRouter();
@@ -97,7 +88,7 @@ export default function SitesPage() {
     const matchesSearch =
       searchQuery === '' ||
       site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      site.location.toLowerCase().includes(searchQuery.toLowerCase());
+      (site.location || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesSearch;
   });

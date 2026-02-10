@@ -8,7 +8,7 @@ import {
   getRolePermissions,
   isAdmin,
 } from "@/lib/permissions";
-import type { Permission } from "@/types/api";
+import type { Permission, UserRole } from "@/types/api";
 
 /**
  * Hook to check user permissions
@@ -19,22 +19,22 @@ export function usePermissions() {
 
   const can = (permission: Permission): boolean => {
     if (!user?.role) return false;
-    return hasPermission(user.role, permission);
+    return hasPermission(user.role as UserRole, permission);
   };
 
   const canAny = (permissions: Permission[]): boolean => {
     if (!user?.role) return false;
-    return hasAnyPermission(user.role, permissions);
+    return hasAnyPermission(user.role as UserRole, permissions);
   };
 
   const canAll = (permissions: Permission[]): boolean => {
     if (!user?.role) return false;
-    return hasAllPermissions(user.role, permissions);
+    return hasAllPermissions(user.role as UserRole, permissions);
   };
 
-  const permissions = user?.role ? getRolePermissions(user.role) : [];
+  const permissions = user?.role ? getRolePermissions(user.role as UserRole) : [];
 
-  const userIsAdmin = user?.role ? isAdmin(user.role) : false;
+  const userIsAdmin = user?.role ? isAdmin(user.role as UserRole) : false;
 
   return {
     can,

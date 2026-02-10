@@ -38,27 +38,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
+import type { WorkOrder } from '@/types/api';
 import { useAuthStore } from '@/store/auth-store';
 import { ProtectedButton, ProtectedSection } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
-
-interface WorkOrder {
-  id: string;
-  workOrderId: string;
-  title: string;
-  type: string;
-  priority: string;
-  status: string;
-  assignedTo?: {
-    id: string;
-    name: string;
-  };
-  scheduledStartDate?: string;
-  asset?: {
-    id: string;
-    name: string;
-  };
-}
 
 export default function WorkOrdersPage() {
   const router = useRouter();
@@ -315,9 +298,9 @@ export default function WorkOrdersPage() {
                   <TableCell>
                     <WorkOrderStatusBadge status={wo.status as any} />
                   </TableCell>
-                  <TableCell>{wo.assignedTo?.name || 'Unassigned'}</TableCell>
+                  <TableCell>{wo.assignedTo || 'Unassigned'}</TableCell>
                   <TableCell className="text-slate-600">
-                    {formatDate(wo.scheduledStartDate)}
+                    {formatDate(wo.scheduledStart)}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

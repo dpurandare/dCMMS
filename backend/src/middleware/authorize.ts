@@ -18,8 +18,8 @@ export interface AuthorizedUser {
   role: UserRole;
 }
 
-// Note: FastifyRequest.user is already augmented by @fastify/jwt
-// We use type assertions to AuthorizedUser where needed
+// Note: FastifyRequest.user is already typed by @fastify/jwt in src/types/index.d.ts
+// The AuthorizedUser type is used for type assertions after authentication
 
 /**
  * Authorization Options

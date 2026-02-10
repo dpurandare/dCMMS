@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
+import type { User } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,18 +40,6 @@ import { UserFormDialog } from '@/components/users/user-form-dialog';
 import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
 import { showToast } from '@/lib/toast';
 
-interface User {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    isActive: boolean;
-    createdAt: string;
-    lastLoginAt?: string;
-}
-
 export default function UsersPage() {
     const router = useRouter();
     const { isAuthenticated, user: currentUser } = useAuthStore();
@@ -78,7 +67,7 @@ export default function UsersPage() {
         try {
             setIsLoading(true);
             const data = await api.users.list();
-            setUsers(Array.isArray(data) ? data : []);
+            setUsers(data.data || []);
         } catch (error) {
             console.error('Failed to fetch users:', error);
             showToast.error('Failed to load users');
