@@ -378,6 +378,8 @@ services:
       KAFKA_BROKERS: kafka:9092
     ports:
       - "3001:3001"
+    volumes:
+      - ./docs:/app/docs:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -6,6 +8,7 @@ import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import {
+  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
@@ -44,6 +47,54 @@ import usersRoutes from "./routes/users";
 import { genaiRoutes } from "./routes/genai.routes";
 
 export async function buildServer(): Promise<FastifyInstance> {
+  const isProduction = process.env.NODE_ENV === "production";
+  const findNullSchemaPath = (
+    value: unknown,
+    path: string[] = [],
+  ): string[] | null => {
+    if (value === null) {
+      return path;
+    }
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i += 1) {
+        const found = findNullSchemaPath(value[i], [...path, `[${i}]`]);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    }
+    if (typeof value === "object" && value) {
+      for (const [key, entry] of Object.entries(value)) {
+        const found = findNullSchemaPath(entry, [...path, key]);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  };
+  const sanitizeSchema = (value: unknown): unknown => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => sanitizeSchema(item))
+        .filter((item) => item !== undefined);
+    }
+    if (typeof value === "object") {
+      const cleaned: Record<string, unknown> = {};
+      for (const [key, entry] of Object.entries(value)) {
+        const sanitized = sanitizeSchema(entry);
+        if (sanitized !== undefined) {
+          cleaned[key] = sanitized;
+        }
+      }
+      return cleaned;
+    }
+    return value;
+  };
   const server = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || "info",
@@ -63,6 +114,19 @@ export async function buildServer(): Promise<FastifyInstance> {
     trustProxy: true,
   });
 
+  server.addHook("onRoute", (route) => {
+    if (route.schema) {
+      route.schema = sanitizeSchema(route.schema) as typeof route.schema;
+      const path = findNullSchemaPath(route.schema, ["schema"]);
+      if (path) {
+        server.log.warn(
+          { url: route.url, method: route.method, path: path.join(".") },
+          "Route schema contains null",
+        );
+      }
+    }
+  });
+
   // Register Zod validation provider
   // server.setValidatorCompiler(validatorCompiler);
   // server.setSerializerCompiler(serializerCompiler);
@@ -80,6 +144,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   // Security headers
   await server.register(helmet, {
     contentSecurityPolicy: false, // Disable for Swagger UI
+    hsts: isProduction ? undefined : false,
   });
 
   // CORS
@@ -109,8 +174,55 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // Swagger documentation
   if (process.env.SWAGGER_ENABLED !== "false") {
-    await server.register(swagger, {
-      openapi: {
+    // Serve OpenAPI spec from a path outside /docs to avoid swaggerUi encapsulation
+    const swaggerSpecUrl = "/api/openapi.yaml";
+    const swaggerSpecPath =
+      process.env.SWAGGER_SPEC_PATH ||
+      path.resolve(process.cwd(), "../docs/api/openapi.yaml");
+
+    server.get(swaggerSpecUrl, async (_request, reply) => {
+      try {
+        const spec = await fs.promises.readFile(swaggerSpecPath, "utf8");
+        reply.type("text/yaml").send(spec);
+      } catch (err) {
+        server.log.error({ err, path: swaggerSpecPath }, "Failed to read OpenAPI spec");
+        reply.status(404).send({ error: "OpenAPI spec not found" });
+      }
+    });
+
+    if (!isProduction) {
+      // Register minimal swagger config (required by swagger-ui)
+      await server.register(swagger, {
+        openapi: {
+          info: {
+            title: "dCMMS API",
+            version: "1.0.0",
+          },
+        },
+      });
+
+      await server.register(swaggerUi, {
+        routePrefix: "/docs",
+        uiConfig: {
+          docExpansion: "list",
+          deepLinking: true,
+          filter: true,
+          tryItOutEnabled: true,
+          persistAuthorization: true,
+          url: swaggerSpecUrl,
+        },
+        staticCSP: false,
+      });
+    } else {
+      await server.register(swagger, {
+        transform: (input) => {
+          const transformed = jsonSchemaTransform(input);
+          return {
+            ...transformed,
+            schema: sanitizeSchema(transformed.schema),
+          };
+        },
+        openapi: {
         info: {
           title: "dCMMS API",
           description: `
@@ -251,8 +363,9 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
         tryItOutEnabled: true,
         persistAuthorization: true,
       },
-      staticCSP: true,
+      staticCSP: isProduction,
     });
+    }
   }
 
   // ==========================================
