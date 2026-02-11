@@ -158,3 +158,6 @@ venv/
 !mobile/lib/
 # And frontend library code (TypeScript utilities)
 !frontend/src/lib/
+
+# Claude Code
+.claude/

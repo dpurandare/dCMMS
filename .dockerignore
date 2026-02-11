@@ -1,0 +1,51 @@
+# Node modules (will be installed in container)
+**/node_modules
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Test files
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+
+# Frontend (not needed for backend build)
+frontend/.next
+frontend/out
+frontend/.turbo
+
+# ML service (not needed for backend build)
+ml/__pycache__
+ml/.venv
+ml/*.pyc
+
+# Build artifacts
+**/dist
+**/build
+**/.cache
+
+# Environment files (secrets)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs
+**/*.log
+**/logs
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+**/tmp
+**/temp

@@ -176,9 +176,23 @@ export async function buildServer(): Promise<FastifyInstance> {
   if (process.env.SWAGGER_ENABLED !== "false") {
     // Serve OpenAPI spec from a path outside /docs to avoid swaggerUi encapsulation
     const swaggerSpecUrl = "/api/openapi.yaml";
-    const swaggerSpecPath =
-      process.env.SWAGGER_SPEC_PATH ||
-      path.resolve(process.cwd(), "../docs/api/openapi.yaml");
+
+    // Determine OpenAPI spec path based on environment
+    // Docker: /app/docs/api/openapi.yaml (cwd is /app)
+    // Local dev: ../docs/api/openapi.yaml (cwd is backend/)
+    const getSwaggerSpecPath = (): string => {
+      if (process.env.SWAGGER_SPEC_PATH) {
+        return process.env.SWAGGER_SPEC_PATH;
+      }
+      // Try Docker path first (./docs/api/openapi.yaml)
+      const dockerPath = path.resolve(process.cwd(), "docs/api/openapi.yaml");
+      if (fs.existsSync(dockerPath)) {
+        return dockerPath;
+      }
+      // Fall back to local dev path (../docs/api/openapi.yaml)
+      return path.resolve(process.cwd(), "../docs/api/openapi.yaml");
+    };
+    const swaggerSpecPath = getSwaggerSpecPath();
 
     server.get(swaggerSpecUrl, async (_request, reply) => {
       try {
