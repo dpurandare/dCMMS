@@ -48,7 +48,7 @@
     "@google/generative-ai": "^0.24.1",
     "@langchain/textsplitters": "^1.0.1",
     "@types/cron": "^2.0.1",
-    "axios": "^1.6.5",
+    "axios": "^1.13.5",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.66.1",
     "cron": "^4.3.5",
