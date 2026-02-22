@@ -76,7 +76,7 @@ The repository is organized as a monorepo:
 | **Project Documentation** | [docs/](docs/)                                                                   | General project documentation.                 |
 | **Tasks & Status (New)**  | [TasksTracking/](TasksTracking/)                                                 | **Primary Source of Truth** for tasks.         |
 | **Energy Types Guide**    | [docs/guides/ADDING_NEW_ENERGY_TYPES.md](docs/guides/ADDING_NEW_ENERGY_TYPES.md) | Guide for adding support for new energy types. |
-| **Implementation Plan**   | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)                                 | Strategic roadmap.                             |
+| **Implementation Plan**   | [IMPLEMENTATION_PLAN.md](docs/archive/IMPLEMENTATION_PLAN.md)                    | Strategic roadmap (Archived Feb 2026).         |
 
 ## 4. Technology Stack (Implemented)
 

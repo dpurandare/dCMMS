@@ -1,3 +1,5 @@
+> **Archived:** February 2026 — Tasks captured in [TasksTracking/13_GenAI_Implementation.md](../../TasksTracking/13_GenAI_Implementation.md) (DCMMS-GENAI-10, DCMMS-GENAI-11)
+
 # CSRF Token Validation Issue in GenAI API Tests
 
 ## Issue Summary

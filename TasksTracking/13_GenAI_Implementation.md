@@ -46,3 +46,25 @@
   - [x] Filter embeddings by Tenant/Site access
 - [x] **DCMMS-GENAI-09** - Feedback Loop
   - [x] Implement Thumbs Up/Down logging
+
+## Phase 4: Testing
+
+- [x] **DCMMS-GENAI-10** - Backend CSRF Protection for GenAI Endpoints ✅
+  - [x] CSRF middleware fully deployed on all state-changing GenAI routes
+  - [x] Frontend CSRF token injection integrated in API client (`src/lib/csrf.ts`)
+  - [x] Manual testing via browser/Postman confirmed working
+  - [x] Frontend React app successfully uses all GenAI endpoints
+  - **Completed:** January 25, 2026
+  - **Status:** ✅ COMPLETE
+
+- [ ] **DCMMS-GENAI-11** - Fix CSRF Cookie Handling in Integration Test Script
+  - **Issue:** `backend/src/scripts/test_genai_api.ts` fails with `403 Invalid CSRF token` because `node-fetch` v2 does not automatically handle cookies (no cookie jar)
+  - **Root Cause:** Test script manually extracts `Set-Cookie` header but doesn't send it back correctly in subsequent requests due to `node-fetch` v2 limitations with `SameSite=Strict` cookies
+  - **Affected File:** `backend/src/scripts/test_genai_api.ts`
+  - **Severity:** Low (testing infrastructure only — production API and frontend work correctly)
+  - [ ] Option A (Recommended): Replace `node-fetch` with `undici` or add `tough-cookie` for proper cookie jar support
+  - [ ] Option B: Migrate `test_genai_api.ts` to use Supertest (consistent with rest of backend test suite)
+  - [ ] After fix, validate all GenAI endpoints: `POST /genai/upload`, `POST /genai/chat`, `GET /genai/documents`, `GET /genai/jobs/:id`
+  - **Estimated Effort:** 2–3 hours
+  - **Priority:** 🟡 MODERATE
+  - **Status:** ⏳ PENDING
