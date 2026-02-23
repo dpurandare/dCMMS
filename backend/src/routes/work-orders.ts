@@ -77,8 +77,7 @@ const UpdateTaskSchema = z.object({
 
 const AddPartSchema = z.object({
   partId: z.string().uuid(),
-  quantityRequired: z.number().int().positive(),
-  notes: z.string().optional(),
+  quantity: z.number().int().positive(),
 });
 
 const AddLaborSchema = z.object({
@@ -319,8 +318,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
       const { id } = request.params;
       return WorkOrderService.addPart(id, user.tenantId, {
         partId: request.body.partId,
-        quantityRequired: request.body.quantityRequired,
-        notes: request.body.notes,
+        quantity: request.body.quantity,
       });
     },
   );

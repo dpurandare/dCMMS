@@ -428,7 +428,7 @@ export class WorkOrderService {
   static async addPart(
     workOrderId: string,
     tenantId: string,
-    data: { partId: string; quantityRequired: number; notes?: string },
+    data: { partId: string; quantity: number },
   ) {
     const wo = await this.getById(workOrderId, tenantId);
 
