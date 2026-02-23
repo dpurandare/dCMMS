@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,9 +16,9 @@ import { CardSkeleton } from '@/components/ui/card-skeleton';
 
 export default function UserDetailsPage({ params }: { params: { id: string } }) {
     return (
-        <PermissionGuard permission="users.view" showAccessDenied>
+        <ProtectedSection permissions={["read:users"]}>
             <UserDetailsContent params={params} />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 

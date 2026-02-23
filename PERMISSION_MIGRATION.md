@@ -2,8 +2,9 @@
 ## System A (Legacy) → System B (Canonical)
 
 **Created:** 2026-02-23
-**Status:** Pending
-**Branch:** Create `feat/permission-migration` from `main`
+**Completed:** 2026-02-23
+**Status:** Completed
+**Branch:** RunAndFix
 
 ---
 
@@ -102,35 +103,35 @@ import { ProtectedSection } from '@/components/auth/protected';
 
 ---
 
-- [ ] **TASK-1** Migrate `frontend/src/app/compliance-reports/page.tsx`
+- [x] **TASK-1** Migrate `frontend/src/app/compliance-reports/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"compliance.view"` → `"read:compliance"`
 
-- [ ] **TASK-2** Migrate `frontend/src/app/analytics/dashboard/page.tsx`
+- [x] **TASK-2** Migrate `frontend/src/app/analytics/dashboard/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"analytics.view"` → `"read:analytics"`
 
-- [ ] **TASK-3** Migrate `frontend/src/app/ml/models/page.tsx`
+- [x] **TASK-3** Migrate `frontend/src/app/ml/models/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"ml.models.view"` → `"read:ml-features"`
 
-- [ ] **TASK-4** Migrate `frontend/src/app/ml/anomalies/page.tsx`
+- [x] **TASK-4** Migrate `frontend/src/app/ml/anomalies/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"ml.anomalies.view"` → `"read:alerts"`
 
-- [ ] **TASK-5** Migrate `frontend/src/app/ml/forecasts/page.tsx`
+- [x] **TASK-5** Migrate `frontend/src/app/ml/forecasts/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"ml.forecasts.view"` → `"read:forecasts"`
 
-- [ ] **TASK-6** Migrate `frontend/src/app/users/[id]/page.tsx`
+- [x] **TASK-6** Migrate `frontend/src/app/users/[id]/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"users.view"` → `"read:users"`
 
-- [ ] **TASK-7** Migrate `frontend/src/app/users/new/page.tsx`
+- [x] **TASK-7** Migrate `frontend/src/app/users/new/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"users.create"` → `"create:users"`
 
-- [ ] **TASK-8** Migrate `frontend/src/app/users/[id]/edit/page.tsx`
+- [x] **TASK-8** Migrate `frontend/src/app/users/[id]/edit/page.tsx`
   - Replace `PermissionGuard` import with `ProtectedSection`
   - Change permission: `"users.edit"` → `"update:users"`
 
@@ -138,7 +139,7 @@ import { ProtectedSection } from '@/components/auth/protected';
 
 ### Phase 2 — Update Tests (1 file)
 
-- [ ] **TASK-9** Update `frontend/src/__tests__/rbac/permissions.test.ts`
+- [x] **TASK-9** Update `frontend/src/__tests__/rbac/permissions.test.ts`
   - Replace all dot-notation permission strings with colon-notation equivalents (use mapping table above)
   - Update all imports: remove references to `config/permissions.ts` or `hooks/usePermissions.ts`; import from `lib/permissions.ts` and `hooks/use-permissions.ts` instead
   - Verify all test cases still pass after migration
@@ -149,21 +150,21 @@ import { ProtectedSection } from '@/components/auth/protected';
 
 > Only do this after all Tasks 1–9 are complete and tests pass.
 
-- [ ] **TASK-10** Verify no remaining imports of System A
+- [x] **TASK-10** Verify no remaining imports of System A
   - Run: `grep -r "PermissionGuard\|config/permissions\|hooks/usePermissions" frontend/src --include="*.tsx" --include="*.ts"`
   - Result must be zero matches (excluding the System A source files themselves)
 
-- [ ] **TASK-11** Delete `frontend/src/components/auth/PermissionGuard.tsx`
+- [x] **TASK-11** Delete `frontend/src/components/auth/PermissionGuard.tsx`
 
-- [ ] **TASK-12** Delete `frontend/src/hooks/usePermissions.ts`
+- [x] **TASK-12** Delete `frontend/src/hooks/usePermissions.ts`
 
-- [ ] **TASK-13** Delete `frontend/src/config/permissions.ts`
+- [x] **TASK-13** Delete `frontend/src/config/permissions.ts`
 
-- [ ] **TASK-14** Run full TypeScript check
+- [x] **TASK-14** Run full TypeScript check
   - Run: `cd frontend && npx tsc --noEmit`
   - Must produce zero new errors related to permissions
 
-- [ ] **TASK-15** Run the test suite
+- [x] **TASK-15** Run the test suite
   - Run: `cd frontend && npm test`
   - All tests must pass
 
@@ -171,20 +172,20 @@ import { ProtectedSection } from '@/components/auth/protected';
 
 ### Phase 4 — Document Updates
 
-- [ ] **TASK-16** Update `docs/guides/RBAC_PERMISSIONS_GUIDE.md`
+- [x] **TASK-16** Update `docs/guides/RBAC_PERMISSIONS_GUIDE.md`
   - Remove Section 2 ("Why Are There Two Permission Systems?") — the situation it describes no longer exists
   - Remove Step 5 from Section 5 ("Add to System A role maps") — no longer needed
   - Remove the "System A — do not use" example from Section 8
   - Remove System A files from the File Map in Section 9
   - Update the opening paragraph to reflect a single unified system
 
-- [ ] **TASK-17** Update `docs/MANUAL_TESTING_GUIDE.md`
+- [x] **TASK-17** Update `docs/MANUAL_TESTING_GUIDE.md`
   - If any permission names are referenced, update them to colon notation
 
-- [ ] **TASK-18** Update `specs/03_AUTH_AUTHORIZATION.md`
+- [x] **TASK-18** Update `specs/03_AUTH_AUTHORIZATION.md`
   - The spec references permission format — ensure examples use colon notation consistently
 
-- [ ] **TASK-19** Update this file (`PERMISSION_MIGRATION.md`)
+- [x] **TASK-19** Update this file (`PERMISSION_MIGRATION.md`)
   - Mark status as **Completed**
   - Record the completion date
 

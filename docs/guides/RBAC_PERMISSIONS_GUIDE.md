@@ -9,14 +9,13 @@
 ## Table of Contents
 
 1. [Overview](#1-overview)
-2. [Why Are There Two Permission Systems?](#2-why-are-there-two-permission-systems)
-3. [The Authoritative Permission Catalog](#3-the-authoritative-permission-catalog)
-4. [Role Definitions](#4-role-definitions)
-5. [How to Add a New Permission](#5-how-to-add-a-new-permission)
-6. [How to Add a New Role](#6-how-to-add-a-new-role)
-7. [How to Guard a Backend Route](#7-how-to-guard-a-backend-route)
-8. [How to Guard Frontend UI](#8-how-to-guard-frontend-ui)
-9. [Common Mistakes](#9-common-mistakes)
+2. [The Authoritative Permission Catalog](#2-the-authoritative-permission-catalog)
+3. [Role Definitions](#3-role-definitions)
+4. [How to Add a New Permission](#4-how-to-add-a-new-permission)
+5. [How to Add a New Role](#5-how-to-add-a-new-role)
+6. [How to Guard a Backend Route](#6-how-to-guard-a-backend-route)
+7. [How to Guard Frontend UI](#7-how-to-guard-frontend-ui)
+8. [Common Mistakes](#8-common-mistakes)
 
 ---
 
@@ -27,49 +26,11 @@ dCMMS uses Role-Based Access Control (RBAC). A **role** is assigned to each user
 - **Backend:** Every API route's `preHandler` verifies the token's role has the required permission before the handler runs.
 - **Frontend:** Sidebar nav items, page guards, and action buttons check the logged-in user's role before rendering.
 
----
-
-## 2. Why Are There Two Permission Systems?
-
-There are currently **two frontend permission systems**. This is technical debt — they were built at different times with different naming conventions and were never consolidated.
-
-### System A — "Old" (dot notation)
-
-| File | Purpose |
-|------|---------|
-| `frontend/src/hooks/usePermissions.ts` | Hook: `hasPermission('analytics.view')` |
-| `frontend/src/config/permissions.ts` | Role → permission maps |
-| `frontend/src/components/auth/PermissionGuard.tsx` | Wraps page content |
-
-**Permission format:** `feature.action` — e.g. `analytics.view`, `ml.models.view`, `users.create`
-
-**Used by these pages:**
-- `/analytics/dashboard`
-- `/compliance-reports`
-- `/ml/models`, `/ml/forecasts`, `/ml/anomalies`
-- `/users`, `/users/new`, `/users/:id/edit`
-
-### System B — "New" (colon notation)
-
-| File | Purpose |
-|------|---------|
-| `frontend/src/hooks/use-permissions.ts` | Hook: `can('read:analytics')` |
-| `frontend/src/lib/permissions.ts` | Role → permission maps |
-| `frontend/src/components/auth/protected.tsx` | `ProtectedSection`, `ProtectedButton`, `ProtectedLink` |
-| `frontend/src/components/layout/sidebar.tsx` | Nav visibility |
-
-**Permission format:** `action:resource` — e.g. `read:analytics`, `create:work-orders`, `use:genai`
-This format **matches the backend** (`backend/src/constants/permissions.ts`).
-
-### The Plan
-
-System B is the correct, long-term system. It matches the backend and uses TypeScript types from `@/types/api` to catch mistakes at compile time. **All new code should use System B.** System A pages should be migrated to System B opportunistically.
-
-> **Practical impact today:** When you add a permission to a role, you must update **both** `config/permissions.ts` (System A) and `lib/permissions.ts` (System B) until the migration is complete. See [Section 5](#5-how-to-add-a-new-permission).
+The frontend uses a single, unified permission system (colon-notation `action:resource`) that matches the backend exactly. All permission checks go through `frontend/src/hooks/use-permissions.ts` and `frontend/src/lib/permissions.ts`.
 
 ---
 
-## 3. The Authoritative Permission Catalog
+## 2. The Authoritative Permission Catalog
 
 The **backend** is the single source of truth. All valid permission strings are defined in:
 
@@ -196,7 +157,7 @@ These are the active roles in the system (set in the user's JWT at login):
 
 ---
 
-## 5. How to Add a New Permission
+## 4. How to Add a New Permission
 
 Follow all steps. Skipping any step causes silent failures (missing nav items, "Access Denied" pages, or 403 errors).
 
@@ -234,9 +195,9 @@ export type Permission =
   | "your-new:permission";   // ← must exactly match backend
 ```
 
-TypeScript will show an error in step 4/5 if this is missing.
+TypeScript will show an error in step 4 if this is missing.
 
-### Step 4 — Add to System B role maps (sidebar & ProtectedSection)
+### Step 4 — Add to the frontend role maps
 
 **File:** `frontend/src/lib/permissions.ts`
 
@@ -249,34 +210,17 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 };
 ```
 
-### Step 5 — Add to System A role maps (PermissionGuard pages)
+### Step 5 — Guard the backend route
 
-**File:** `frontend/src/config/permissions.ts`
+See [Section 6](#6-how-to-guard-a-backend-route).
 
-> This uses dot-notation aliases — map to the closest equivalent:
+### Step 6 — Guard the frontend UI
 
-```typescript
-export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  tenant_admin: [
-    // ... existing permissions ...
-    'your-feature.action',   // ← add the dot-notation equivalent
-  ],
-};
-```
-
-> This step is only needed while System A pages (analytics, ML pages, users, compliance) still exist. New pages using `ProtectedSection` only need steps 1–4.
-
-### Step 6 — Guard the backend route
-
-See [Section 7](#7-how-to-guard-a-backend-route).
-
-### Step 7 — Guard the frontend UI
-
-See [Section 8](#8-how-to-guard-frontend-ui).
+See [Section 7](#7-how-to-guard-frontend-ui).
 
 ---
 
-## 6. How to Add a New Role
+## 5. How to Add a New Role
 
 ### Step 1 — Add to the UserRole type
 
@@ -301,12 +245,11 @@ your_new_role: [
 ],
 ```
 
-### Step 3 — Mirror in both frontend permission files
+### Step 3 — Mirror in the frontend permission files
 
 Add the same role + permissions to:
 - `frontend/src/types/api.ts` (the `UserRole` type)
 - `frontend/src/lib/permissions.ts` (`ROLE_PERMISSIONS`)
-- `frontend/src/config/permissions.ts` (`ROLE_PERMISSIONS` with dot-notation)
 
 ### Step 4 — Add to the DB enum (if storing in DB)
 
@@ -324,7 +267,7 @@ Then run a DB migration.
 
 ---
 
-## 7. How to Guard a Backend Route
+## 6. How to Guard a Backend Route
 
 Use the `authorize()` middleware in the route's `preHandler` array:
 
@@ -358,13 +301,13 @@ The `authorize` middleware is at `backend/src/middleware/authorize.ts`. It reads
 
 ---
 
-## 8. How to Guard Frontend UI
+## 7. How to Guard Frontend UI
 
 ### Sidebar nav items
 
 **File:** `frontend/src/components/layout/sidebar.tsx`
 
-Add an entry to the relevant nav section with a `permissions` array. Uses System B colon-notation:
+Add an entry to the relevant nav section with a `permissions` array:
 
 ```typescript
 {
@@ -377,7 +320,7 @@ Add an entry to the relevant nav section with a `permissions` array. Uses System
 
 ### Inline content (show/hide a section)
 
-Use `ProtectedSection` from `components/auth/protected.tsx` (System B):
+Use `ProtectedSection` from `components/auth/protected.tsx`:
 
 ```tsx
 import { ProtectedSection } from '@/components/auth/protected';
@@ -389,7 +332,7 @@ import { ProtectedSection } from '@/components/auth/protected';
 
 ### Action buttons
 
-Use `ProtectedButton` (System B):
+Use `ProtectedButton`:
 
 ```tsx
 import { ProtectedButton } from '@/components/auth/protected';
@@ -404,31 +347,19 @@ import { ProtectedButton } from '@/components/auth/protected';
 </ProtectedButton>
 ```
 
-### Full page guard (new pages)
+### Full page guard
 
-Use `ProtectedSection` wrapping the page content (System B):
+Use `ProtectedSection` wrapping the page content:
 
 ```tsx
-<ProtectedSection permissions={["read:my-resource"]} fallback={<AccessDenied />}>
+<ProtectedSection permissions={["read:my-resource"]}>
   <MyPageContent />
 </ProtectedSection>
 ```
 
-### Full page guard (existing pages using System A)
-
-Some existing pages use `PermissionGuard` with dot-notation (System A). Do not use this for new pages — it is being phased out:
-
-```tsx
-// OLD — do not use for new pages
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
-<PermissionGuard permission="analytics.view" showAccessDenied>
-  ...
-</PermissionGuard>
-```
-
 ### Programmatic permission check in component logic
 
-Use the `usePermissions` hook from `hooks/use-permissions.ts` (System B):
+Use the `usePermissions` hook from `hooks/use-permissions.ts`:
 
 ```tsx
 import { usePermissions } from '@/hooks/use-permissions';
@@ -442,17 +373,16 @@ if (can('update:work-orders')) {
 
 ---
 
-## 9. Common Mistakes
+## 8. Common Mistakes
 
 | Mistake | Symptom | Fix |
 |---------|---------|-----|
 | Added permission to backend but not `frontend/src/types/api.ts` | TypeScript error when adding to `lib/permissions.ts` | Add to `types/api.ts` first |
-| Added permission to `lib/permissions.ts` but not `config/permissions.ts` | PermissionGuard pages show "Access Denied" | Add to both files |
-| Added permission to both frontend files but not the backend | Frontend shows the page, but API returns 403 | Add to `backend/src/constants/permissions.ts` |
+| Added permission to `types/api.ts` but not `lib/permissions.ts` | Role doesn't see the permission | Add to `lib/permissions.ts` for each role that needs it |
+| Added permission to frontend files but not the backend | Frontend shows the page, but API returns 403 | Add to `backend/src/constants/permissions.ts` |
 | Role missing from `lib/permissions.ts` entirely | That role sees no nav items and "Access Denied" on all guarded pages | Add the role with its permissions to `lib/permissions.ts` |
-| Used colon permission in `PermissionGuard` | TypeScript error (it expects dot-notation `Permission` type) | Use `ProtectedSection` instead |
-| Used dot permission in `ProtectedSection` | TypeScript error (it expects `Permission` type from `types/api`) | Use `PermissionGuard` or switch to colon-notation |
-| Added route to sidebar but permission not in role | Nav item not visible | Add permission to role in both `lib/permissions.ts` and `config/permissions.ts` |
+| Used dot-notation string in `ProtectedSection` | TypeScript error (it expects `Permission` type from `types/api`) | Switch to colon-notation (e.g. `read:analytics`) |
+| Added route to sidebar but permission not in role | Nav item not visible | Add permission to role in `lib/permissions.ts` |
 
 ---
 
@@ -471,16 +401,12 @@ frontend/
     types/
       api.ts                ← Permission and UserRole types (must match backend)
     lib/
-      permissions.ts        ← System B role maps (sidebar, ProtectedSection)
-    config/
-      permissions.ts        ← System A role maps (PermissionGuard — legacy)
+      permissions.ts        ← Frontend role maps (used by sidebar & ProtectedSection)
     hooks/
-      use-permissions.ts    ← System B hook: can(), canAny(), isAdmin
-      usePermissions.ts     ← System A hook: hasPermission() — legacy
+      use-permissions.ts    ← Hook: can(), canAny(), canAll(), isAdmin
     components/
       auth/
-        protected.tsx       ← System B: ProtectedSection, ProtectedButton, ProtectedLink
-        PermissionGuard.tsx ← System A: PermissionGuard — legacy
+        protected.tsx       ← ProtectedSection, ProtectedButton, ProtectedLink
 
 specs/
   03_AUTH_AUTHORIZATION.md          ← Business-level auth patterns & token flow

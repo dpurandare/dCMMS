@@ -40,7 +40,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth-store';
 import { MoreHorizontal } from 'lucide-react';
 import { API_CONFIG } from '@/config';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 
 interface ComplianceReport {
   reportId: string;
@@ -56,9 +56,9 @@ interface ComplianceReport {
 
 export default function ComplianceReportsPage() {
   return (
-    <PermissionGuard permission="compliance.view" showAccessDenied>
+    <ProtectedSection permissions={["read:compliance"]}>
       <ComplianceReportsContent />
-    </PermissionGuard>
+    </ProtectedSection>
   );
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,9 @@ import { Input } from '@/components/ui/input';
 
 export default function ModelRegistryPage() {
     return (
-        <PermissionGuard permission="ml.models.view" showAccessDenied>
+        <ProtectedSection permissions={["read:ml-features"]}>
             <ModelRegistryContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 
