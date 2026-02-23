@@ -62,14 +62,13 @@ docker-compose up postgres redis
 
 ## 2. Test Accounts
 
+The following accounts are pre-seeded in the database and ready to use immediately.
+
 | Role | Email | Password | Permissions |
 |------|-------|----------|-------------|
-| Super Admin | admin@dcmms.io | (use seeded password) | Full access |
-| Tenant Admin | tenantadmin@test.com | (create during testing) | Tenant-level admin |
-| Site Manager | sitemanager@test.com | (create during testing) | Site-level management |
-| Technician | tech@test.com | (create during testing) | Work order execution |
-| Operator | operator@test.com | (create during testing) | Read-only + basic ops |
-| Viewer | viewer@test.com | (create during testing) | Read-only |
+| Admin | admin@example.com | Password123! | Full access — all features, audit logs, user management |
+| Manager | manager@example.com | Password123! | Work orders, assets, sites, reports, compliance |
+| Technician | technician@example.com | Password123! | View & update assigned work orders |
 
 ---
 
