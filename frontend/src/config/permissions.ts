@@ -84,6 +84,44 @@ export type Permission =
  */
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     /**
+     * tenant_admin - Backend role name for Admin (full system access)
+     * Alias for 'admin' — seeded users have this role from the backend.
+     */
+    tenant_admin: [
+        'dashboard.view',
+        'work-orders.view', 'work-orders.create', 'work-orders.edit', 'work-orders.delete', 'work-orders.assign', 'work-orders.complete',
+        'assets.view', 'assets.create', 'assets.edit', 'assets.delete',
+        'alerts.view', 'alerts.acknowledge', 'alerts.resolve', 'alerts.manage',
+        'analytics.view', 'analytics.advanced',
+        'reports.view', 'reports.create', 'reports.export',
+        'compliance.view', 'compliance.create', 'compliance.submit', 'compliance.manage',
+        'ml.models.view', 'ml.models.deploy', 'ml.forecasts.view', 'ml.anomalies.view',
+        'genai.use', 'genai.admin',
+        'users.view', 'users.create', 'users.edit', 'users.delete', 'users.manage-roles',
+        'settings.view', 'settings.edit', 'settings.system',
+        'sites.view', 'sites.manage',
+        'audit-logs.view',
+    ],
+
+    /**
+     * site_manager - Backend role name for Manager (operational management)
+     * Alias for 'manager' — seeded users have this role from the backend.
+     */
+    site_manager: [
+        'dashboard.view',
+        'work-orders.view', 'work-orders.create', 'work-orders.edit', 'work-orders.assign', 'work-orders.complete',
+        'assets.view', 'assets.edit',
+        'alerts.view', 'alerts.acknowledge', 'alerts.resolve', 'alerts.manage',
+        'analytics.view', 'analytics.advanced',
+        'reports.view', 'reports.create', 'reports.export',
+        'compliance.view', 'compliance.create',
+        'ml.forecasts.view', 'ml.anomalies.view',
+        'genai.use',
+        'settings.view',
+        'sites.view',
+    ],
+
+    /**
      * Admin - Full system access
      */
     admin: [

@@ -99,7 +99,7 @@ export function usePermissions(): PermissionCheck {
      * Check if the user is an admin
      */
     const isAdmin = (): boolean => {
-        return user?.role === 'admin';
+        return user?.role === 'admin' || user?.role === 'tenant_admin';
     };
 
     /**

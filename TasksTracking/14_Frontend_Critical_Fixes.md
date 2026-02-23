@@ -193,6 +193,59 @@
 
 ---
 
+## 4b. Manual Testing Findings (February 2026)
+
+### Bugs Found During Manual Testing
+
+- [x] **FE-BUG-01** - RBAC: tenant_admin/site_manager roles missing from config/permissions.ts ✅ FIXED
+  - **Symptom:** Analytics, Compliance, and ML Anomaly pages showed "Access Denied" for admin user
+  - **Root cause:** Two permission systems exist in the frontend. `PermissionGuard` uses the OLD system
+    (`config/permissions.ts`) which only has role names `admin`, `manager`, etc. The backend seeds users
+    with role `tenant_admin` and `site_manager`, which had no entry in the OLD system → empty permissions.
+  - **Fix:** Added `tenant_admin` (≡ admin) and `site_manager` (≡ manager) to `ROLE_PERMISSIONS` in
+    `config/permissions.ts`. Also updated `isAdmin()` in `usePermissions.ts` to recognise `tenant_admin`.
+  - **Files:** `src/config/permissions.ts`, `src/hooks/usePermissions.ts`
+  - **Status:** ✅ FIXED — February 23, 2026
+
+- [x] **FE-BUG-02** - Backend: Assets endpoint returns 500 (ResponseValidationError) ✅ FIXED
+  - **Symptom:** Assets page shows "Error: Request failed with status code 500"
+  - **Root cause:** Schema drift — `location` and `metadata` columns are `jsonb` in the actual PostgreSQL
+    database, but the Drizzle schema declares them as `text()`. Drizzle returns JSONB as JavaScript objects.
+    The Zod response schema declared them as `z.string()`, causing `ResponseValidationError` on every asset.
+  - **Fix:** Changed `location`, `metadata`, and `tags` in `AssetSchema` in `assets.ts` from `z.string()`
+    to `z.unknown()` so the serializer accepts both string and object values.
+  - **Note:** The Drizzle schema (`text()` vs `jsonb()`) remains misaligned — tracked as FE-BUG-04 below.
+  - **Files:** `backend/src/routes/assets.ts`
+  - **Status:** ✅ FIXED — February 23, 2026
+
+- [ ] **FE-BUG-03** - Documentation page shows "Something went wrong" (ErrorBoundary caught)
+  - **Symptom:** Clicking "Documentation" in the sidebar renders the root ErrorBoundary with
+    "We're sorry, but something unexpected happened."
+  - **Root cause:** Unknown — requires browser console inspection to identify the exact thrown error.
+    The `docs/page.tsx` component is simple static content (no API calls). Suspected causes:
+    1. A component in `DashboardLayout` → `TopBar` or `Sidebar` tree throws on this specific route
+    2. A missing context provider for a hook used in the page subtree
+    3. A hydration mismatch in a child component
+  - **To investigate:** Open browser DevTools console when navigating to `/docs`. The ErrorBoundary
+    renders "Error details" in development mode — expand it to see the exact error and stack trace.
+  - **Files:** `src/app/docs/page.tsx`, `src/components/layout/top-bar.tsx`
+  - **Priority:** 🟡 MODERATE
+  - **Status:** ⏳ PENDING investigation
+
+- [ ] **FE-BUG-04** - Drizzle schema drift: assets `location` and `metadata` defined as text() but are jsonb in DB
+  - **Root cause:** The actual PostgreSQL `assets` table has `location jsonb` and `metadata jsonb` columns,
+    but `backend/src/db/schema.ts` declares them as `text("location")` and `text("metadata")`. This means
+    Drizzle inserts JSON strings (via `JSON.stringify`) but the DB treats them as JSONB objects. The mismatch
+    causes type confusion at the ORM layer.
+  - **Fix needed:** Update `backend/src/db/schema.ts` to use `jsonb("location")` and `jsonb("metadata")`.
+    Also update all insert/update paths in `asset.service.ts` that currently call `JSON.stringify()` on these
+    fields before persisting (Drizzle-ORM handles serialisation automatically for `jsonb()` columns).
+  - **Files:** `backend/src/db/schema.ts`, `backend/src/services/asset.service.ts`
+  - **Priority:** 🟡 MODERATE
+  - **Status:** ⏳ PENDING
+
+---
+
 ## 5. Error Handling & UX
 
 ### 5.1 Enhanced Error Handling
