@@ -52,7 +52,7 @@ config:
 # Database
 database:
   - '**/migrations/**/*'
-  - '**/seeds/**/*
+  - '**/seeds/**/*'
   - scripts/init-db.sql
   - scripts/init-timescaledb.sql
 
