@@ -7,11 +7,7 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import {
-  jsonSchemaTransform,
-  serializerCompiler,
-  validatorCompiler,
-} from "fastify-type-provider-zod";
+import { jsonSchemaTransform } from "fastify-type-provider-zod";
 
 // Plugins
 import { registerJwt } from "./plugins/jwt";
@@ -48,6 +44,14 @@ import { genaiRoutes } from "./routes/genai.routes";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const isProduction = process.env.NODE_ENV === "production";
+
+  // Detect Zod schemas - they have _def and a parse method
+  const isZodSchema = (value: unknown): boolean =>
+    typeof value === "object" &&
+    value !== null &&
+    "_def" in value &&
+    typeof (value as Record<string, unknown>).parse === "function";
+
   const findNullSchemaPath = (
     value: unknown,
     path: string[] = [],
@@ -64,7 +68,8 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
       return null;
     }
-    if (typeof value === "object" && value) {
+    // Skip Zod schemas — their internal _def graph should not be traversed
+    if (typeof value === "object" && value && !isZodSchema(value)) {
       for (const [key, entry] of Object.entries(value)) {
         const found = findNullSchemaPath(entry, [...path, key]);
         if (found) {
@@ -74,9 +79,14 @@ export async function buildServer(): Promise<FastifyInstance> {
     }
     return null;
   };
+
   const sanitizeSchema = (value: unknown): unknown => {
     if (value === null || value === undefined) {
       return undefined;
+    }
+    // Preserve Zod schemas intact — destructuring them strips .parse()
+    if (isZodSchema(value)) {
+      return value;
     }
     if (Array.isArray(value)) {
       return value
@@ -126,10 +136,6 @@ export async function buildServer(): Promise<FastifyInstance> {
       }
     }
   });
-
-  // Register Zod validation provider
-  // server.setValidatorCompiler(validatorCompiler);
-  // server.setSerializerCompiler(serializerCompiler);
 
   // ==========================================
   // PLUGINS
@@ -206,7 +212,9 @@ export async function buildServer(): Promise<FastifyInstance> {
 
     if (!isProduction) {
       // Register minimal swagger config (required by swagger-ui)
+      // transform is required even in dev so @fastify/swagger doesn't mutate Zod schemas
       await server.register(swagger, {
+        transform: jsonSchemaTransform,
         openapi: {
           info: {
             title: "dCMMS API",

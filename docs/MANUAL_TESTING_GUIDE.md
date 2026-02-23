@@ -31,11 +31,11 @@
 
 ### 1.1 Environment URLs
 
-| Environment | Frontend URL | Backend API URL |
-|-------------|--------------|-----------------|
-| Local Dev | http://localhost:3001 | http://localhost:3000/api/v1 |
-| Staging | TBD | TBD |
-| Production | TBD | TBD |
+| Environment | Frontend URL | Backend API URL | API Docs |
+|-------------|--------------|-----------------|----------|
+| Local Dev | http://localhost:3000 | http://localhost:3001/api/v1 | http://localhost:3001/docs |
+| Staging | TBD | TBD | TBD |
+| Production | TBD | TBD | TBD |
 
 ### 1.2 Starting Local Environment
 
@@ -54,8 +54,8 @@ docker-compose up postgres redis
 
 ### 1.3 Verify Services Running
 
-- [ ] Backend health check: `curl http://localhost:3000/health` returns `{"status":"ok"}`
-- [ ] Frontend loads: http://localhost:3001 shows login page
+- [ ] Backend health check: `curl http://localhost:3001/health` returns `{"status":"ok"}`
+- [ ] Frontend loads: http://localhost:3000 shows login page
 - [ ] Database connected: Backend logs show "Database connected"
 
 ---

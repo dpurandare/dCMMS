@@ -2,8 +2,9 @@
 
 ## Environment Setup
 
-- **Use deploy script**: Always use `./scripts/deploy.sh` to start the full stack. Do NOT run `docker-compose` or `docker compose` commands directly.
-- The deploy script handles all infrastructure (PostgreSQL, Redis, Kafka, etc.) and applications.
+- **Local development (recommended for testing/dev)**: Use `./scripts/dev.sh`. Runs infrastructure in Docker, backend and frontend locally. Enables fast iteration without Docker rebuilds.
+- **Full stack Docker deployment**: Use `./scripts/deploy.sh` for full containerised deployments. Do NOT run `docker-compose` or `docker compose` commands directly.
+- The dev script handles infrastructure (PostgreSQL, Redis, Kafka, etc.) in Docker and starts the apps locally with hot-reload.
 
 ## Development URLs
 
@@ -14,10 +15,13 @@
 ## Key Commands
 
 ```bash
-# Full stack deployment (recommended)
+# Local dev (recommended for testing) — infra in Docker, apps run locally
+./scripts/dev.sh
+
+# Full stack Docker deployment (all services in containers)
 ./scripts/deploy.sh
 
-# Individual service development
+# Individual service (if infra already running)
 cd backend && npm run dev
 cd frontend && npm run dev
 ```
