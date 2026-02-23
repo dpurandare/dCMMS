@@ -163,7 +163,11 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
             </div>
             <div>
               <dt className="text-sm font-medium text-slate-600">Location</dt>
-              <dd className="mt-1 text-sm text-slate-900">{asset.location || 'N/A'}</dd>
+              <dd className="mt-1 text-sm text-slate-900">
+                {typeof asset.location === 'object' && asset.location !== null
+                  ? (asset.location as any).area ?? JSON.stringify(asset.location)
+                  : (asset.location as string) || 'N/A'}
+              </dd>
             </div>
             {asset.serialNumber && (
               <div>
@@ -196,9 +200,9 @@ export default function AssetDetailPage({ params }: { params: { id: string } }) 
             <div className="mt-4">
               <dt className="text-sm font-medium text-slate-600">Tags</dt>
               <dd className="mt-2 flex flex-wrap gap-2">
-                {asset.tags.split(',').map((tag) => (
-                  <Badge key={tag.trim()} variant="outline">
-                    {tag.trim()}
+                {(Array.isArray(asset.tags) ? asset.tags : String(asset.tags).split(',')).map((tag) => (
+                  <Badge key={String(tag).trim()} variant="outline">
+                    {String(tag).trim()}
                   </Badge>
                 ))}
               </dd>

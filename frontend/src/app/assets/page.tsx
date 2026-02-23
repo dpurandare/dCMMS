@@ -259,7 +259,11 @@ export default function AssetsPage() {
                     <AssetStatusBadge status={asset.status as any} />
                   </TableCell>
                   <TableCell>{asset.siteId || 'N/A'}</TableCell>
-                  <TableCell className="text-slate-600">{asset.location || 'N/A'}</TableCell>
+                  <TableCell className="text-slate-600">
+                    {typeof asset.location === 'object' && asset.location !== null
+                      ? (asset.location as any).area ?? JSON.stringify(asset.location)
+                      : (asset.location as string) || 'N/A'}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +10,9 @@ import { AlertTriangle, CheckCircle, Activity } from 'lucide-react';
 
 export default function AnomaliesPage() {
     return (
-        <PermissionGuard permission="ml.anomalies.view" showAccessDenied>
+        <ProtectedSection permissions={["read:alerts"]}>
             <AnomaliesContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 

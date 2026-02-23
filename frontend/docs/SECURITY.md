@@ -1,7 +1,7 @@
 # Frontend Security
 
-**Last Updated**: 2026-01-08  
-**Version**: 1.0
+**Last Updated**: 2026-02-23
+**Version**: 1.1
 
 ---
 
@@ -167,25 +167,36 @@ AuditLogger.log(
 ### Implementation
 
 Complete RBAC system with:
-- **60+ granular permissions**
-- **7 user roles** (Admin, Manager, Supervisor, Technician, Viewer, Analyst, Compliance Officer)
-- **Route-level protection** (PermissionGuard)
-- **Feature-level protection** (button visibility)
+- **50+ granular permissions** (colon-notation: `action:resource`)
+- **6 user roles** (`super_admin`, `tenant_admin`, `site_manager`, `technician`, `operator`, `viewer`)
+- **Route-level protection** (`ProtectedSection`)
+- **Feature-level protection** (button and section visibility)
 
 ### Permission Checks
 
 ```typescript
-import { usePermissions } from '@/hooks/usePermissions';
+// Wrap a section — hidden if no permission
+import { ProtectedSection } from '@/components/auth/protected';
 
-const { hasPermission } = usePermissions();
-
-// Hide button if no permission
-{hasPermission('work-orders.create') && (
+<ProtectedSection permissions={["create:work-orders"]}>
   <Button>Create Work Order</Button>
-)}
+</ProtectedSection>
+
+// Disable a button — grayed out with tooltip if no permission
+import { ProtectedButton } from '@/components/auth/protected';
+
+<ProtectedButton permissions={["delete:assets"]} disabledTooltip="No permission to delete">
+  Delete Asset
+</ProtectedButton>
+
+// Programmatic check in component logic
+import { usePermissions } from '@/hooks/use-permissions';
+
+const { can } = usePermissions();
+{can('create:work-orders') && <Button>Create Work Order</Button>}
 ```
 
-**Details**: See `src/config/permissions.ts`
+**Details**: See `src/lib/permissions.ts`
 
 ---
 

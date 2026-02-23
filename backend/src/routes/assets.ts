@@ -31,13 +31,13 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
     manufacturer: z.string().nullable().optional(),
     model: z.string().nullable().optional(),
     serialNumber: z.string().nullable().optional(),
-    location: z.string().nullable().optional(),
+    location: z.unknown().nullable().optional(), // jsonb in DB — may be object or string
     latitude: z.string().nullable().optional(), // Decimal as string from DB
     longitude: z.string().nullable().optional(),
     status: z.string(),
-    tags: z.string().nullable().optional(), // JSON string
+    tags: z.unknown().nullable().optional(), // text/jsonb in DB
     image: z.string().nullable().optional(),
-    metadata: z.string().nullable().optional(), // JSON string
+    metadata: z.unknown().nullable().optional(), // jsonb in DB — may be object or string
     createdAt: z.date(),
     updatedAt: z.date(),
     children: z.array(z.any()).optional(), // Recursive definition hard in Zod, keeping Any for now

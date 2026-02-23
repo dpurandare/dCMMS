@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 import { AuditLogger, AuditActions, AuditResources } from '@/lib/audit-logger';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,9 +56,9 @@ type UserFormValues = z.infer<typeof userSchema>;
 
 export default function NewUserPage() {
     return (
-        <PermissionGuard permission="users.create" showAccessDenied>
+        <ProtectedSection permissions={["create:users"]}>
             <NewUserContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 

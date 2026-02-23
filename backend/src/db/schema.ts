@@ -329,12 +329,9 @@ export const parts = pgTable("parts", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   category: varchar("category", { length: 100 }),
-  quantity: integer("quantity").notNull().default(0),
-  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }).default("0"),
-  location: varchar("location", { length: 100 }),
-  minimumStockLevel: integer("minimum_stock_level").default(0),
-  isActive: boolean("is_active").notNull().default(true),
-  metadata: text("metadata").default("{}"),
+  unitPrice: decimal("unit_price", { precision: 12, scale: 2 }),
+  reorderLevel: integer("reorder_level").default(0),
+  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -347,11 +344,9 @@ export const workOrderParts = pgTable("work_order_parts", {
   partId: uuid("part_id")
     .notNull()
     .references(() => parts.id, { onDelete: "restrict" }),
-  quantityRequired: integer("quantity_required").notNull().default(1),
-  quantityUsed: integer("quantity_used").default(0),
-  notes: text("notes"),
+  quantity: integer("quantity").notNull().default(1),
+  costPerUnit: decimal("cost_per_unit", { precision: 12, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const workOrderLabor = pgTable("work_order_labor", {

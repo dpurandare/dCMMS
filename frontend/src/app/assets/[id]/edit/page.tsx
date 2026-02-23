@@ -58,7 +58,9 @@ export default function EditAssetPage() {
         type: asset.type || '',
         status: asset.status || '',
         siteId: asset.siteId || '',
-        location: asset.location || '',
+        location: typeof asset.location === 'object' && asset.location !== null
+          ? (asset.location as any).area ?? JSON.stringify(asset.location)
+          : (asset.location as string) || '',
         description: asset.description || '',
         serialNumber: asset.serialNumber || '',
         manufacturer: asset.manufacturer || '',

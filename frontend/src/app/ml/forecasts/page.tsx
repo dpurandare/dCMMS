@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ProtectedSection } from '@/components/auth/protected';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartWidget } from '@/components/analytics/dashboard/widgets/chart-widget';
@@ -14,9 +14,9 @@ const DEMO_SITE_ID = "123e4567-e89b-12d3-a456-426614174000";
 
 export default function ForecastsPage() {
     return (
-        <PermissionGuard permission="ml.forecasts.view" showAccessDenied>
+        <ProtectedSection permissions={["read:forecasts"]}>
             <ForecastsContent />
-        </PermissionGuard>
+        </ProtectedSection>
     );
 }
 
