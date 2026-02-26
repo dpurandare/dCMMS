@@ -206,7 +206,7 @@ async function seed() {
         manufacturer: "Carrier",
         model: "AquaEdge 19DV",
         serialNumber: "HVAC-2023-001",
-        location: JSON.stringify({ area: "Mechanical Room A" }),
+        location: { area: "Mechanical Room A" },
         status: "operational",
 
         installationDate: new Date("2022-01-15"),
@@ -232,7 +232,7 @@ async function seed() {
         manufacturer: "Toyota",
         model: "8FGCU25",
         serialNumber: "FL-2023-001",
-        location: JSON.stringify({ area: "Warehouse Floor" }),
+        location: { area: "Warehouse Floor" },
         status: "operational",
 
         installationDate: new Date("2023-03-10"),
@@ -257,7 +257,7 @@ async function seed() {
         manufacturer: "Interroll",
         model: "RollerDrive EC5000",
         serialNumber: "CNV-2022-050",
-        location: JSON.stringify({ area: "Sorting Area" }),
+        location: { area: "Sorting Area" },
         status: "maintenance",
 
         installationDate: new Date("2021-06-20"),
@@ -283,7 +283,7 @@ async function seed() {
         manufacturer: "Haas",
         model: "UMC-750",
         serialNumber: "CNC-2020-100",
-        location: JSON.stringify({ area: "Production Floor B" }),
+        location: { area: "Production Floor B" },
         status: "operational",
 
         installationDate: new Date("2020-09-01"),
@@ -309,7 +309,7 @@ async function seed() {
         manufacturer: "Atlas Copco",
         model: "GA 55",
         serialNumber: "AC-2019-050",
-        location: JSON.stringify({ area: "Utility Room" }),
+        location: { area: "Utility Room" },
         status: "operational",
 
         installationDate: new Date("2019-05-15"),

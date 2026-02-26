@@ -1,7 +1,4 @@
 
-import Shepherd from 'shepherd.js';
-import 'shepherd.js/dist/css/shepherd.css';
-
 // Define the First Login Tour
 export const firstLoginTour = {
     defaultStepOptions: {
