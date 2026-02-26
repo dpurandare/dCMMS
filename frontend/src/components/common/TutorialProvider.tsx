@@ -2,7 +2,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import Shepherd from 'shepherd.js';
 import 'shepherd.js/dist/css/shepherd.css';
 import { firstLoginTour, createWorkOrderTour } from '@/tutorial/tours';
 import { usePathname } from 'next/navigation';
@@ -24,7 +23,7 @@ export const TutorialProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         'create-wo': createWorkOrderTour,
     };
 
-    const startTour = (tourId: string) => {
+    const startTour = async (tourId: string) => {
         if (activeTour) {
             activeTour.cancel();
         }
@@ -34,6 +33,9 @@ export const TutorialProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.warn(`Tour ${tourId} not found`);
             return;
         }
+
+        // Dynamically import shepherd.js so it only loads in the browser
+        const Shepherd = (await import('shepherd.js')).default;
 
         const tour = new Shepherd.Tour({
             ...config,
@@ -45,8 +47,6 @@ export const TutorialProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Add steps from config
         config.steps.forEach((step: any) => {
-            // We act on the buttons to bind the Next/Back actions if they are strings/defaults
-            // For simplicity in this implementation, we assume steps are well-formed or we enhance them here
             const enhancedButtons = step.buttons?.map((btn: any) => {
                 if (btn.text === 'Next' && !btn.action) {
                     return { ...btn, action: tour.next };
@@ -81,18 +81,15 @@ export const TutorialProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         tour.on('cancel', cleanup);
     };
 
-    // Example: Check for first login trigger (could be from user metadata or localstorage)
     useEffect(() => {
-        // This is a simplified check. In real app, check user profile "hasSeenWelcomeTour"
         const hasSeenWelcome = localStorage.getItem('dcmms_seen_welcome_tour');
-        // Only trigger on dashboard
         if (!hasSeenWelcome && pathname === '/dashboard') {
-            // Small delay to let UI load
             setTimeout(() => {
                 startTour('first-login');
                 localStorage.setItem('dcmms_seen_welcome_tour', 'true');
             }, 1000);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname]);
 
     return (
@@ -105,7 +102,13 @@ export const TutorialProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 export const useTutorial = () => {
     const context = useContext(TutorialContext);
     if (context === undefined) {
-        throw new Error('useTutorial must be used within a TutorialProvider');
+        // Return a no-op fallback instead of throwing so that components using
+        // useTutorial() do not crash the entire app if the provider is absent
+        // (e.g. during certain Next.js App Router streaming/hydration edge cases).
+        return {
+            startTour: (_tourId: string) => {},
+            activeTour: null,
+        } as TutorialContextType;
     }
     return context;
 };

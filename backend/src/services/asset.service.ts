@@ -27,7 +27,7 @@ export interface CreateAssetData {
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
-  location?: string;
+  location?: Record<string, any> | string;
   parentAssetId?: string;
   status?: "operational" | "down" | "maintenance" | "retired";
   criticality?: "critical" | "high" | "medium" | "low";
@@ -38,7 +38,7 @@ export interface CreateAssetData {
   longitude?: number;
   tags?: string[];
   image?: string;
-  metadata?: any;
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateAssetData {
@@ -48,7 +48,7 @@ export interface UpdateAssetData {
   manufacturer?: string;
   model?: string;
   serialNumber?: string;
-  location?: string;
+  location?: Record<string, any> | string;
   status?: "operational" | "down" | "maintenance" | "retired";
   criticality?: "critical" | "high" | "medium" | "low";
   installationDate?: Date;
@@ -59,7 +59,7 @@ export interface UpdateAssetData {
   longitude?: number;
   tags?: string[];
   image?: string;
-  metadata?: any;
+  metadata?: Record<string, any>;
   parentAssetId?: string;
 }
 
@@ -205,9 +205,9 @@ export class AssetService {
         status: (data.status || "operational") as any,
         latitude: data.latitude ? data.latitude.toString() : undefined,
         longitude: data.longitude ? data.longitude.toString() : undefined,
-        tags: data.tags ? JSON.stringify(data.tags) : "[]",
+        tags: data.tags ? JSON.stringify(data.tags) : "[]", // tags is text column — keep stringify
         image: data.image,
-        metadata: data.metadata ? JSON.stringify(data.metadata) : "{}",
+        metadata: data.metadata ?? {}, // jsonb column — Drizzle handles serialization
         // criticality: data.criticality || 'medium',
       })
       .returning()) as any[];
@@ -250,9 +250,9 @@ export class AssetService {
         updatedAt: new Date(),
         ...(data.latitude && { latitude: data.latitude.toString() }),
         ...(data.longitude && { longitude: data.longitude.toString() }),
-        ...(data.tags && { tags: JSON.stringify(data.tags) }),
+        ...(data.tags && { tags: JSON.stringify(data.tags) }), // tags is text — keep stringify
         ...(data.image && { image: data.image }),
-        ...(data.metadata && { metadata: JSON.stringify(data.metadata) }),
+        ...(data.metadata && { metadata: data.metadata }), // jsonb — Drizzle handles serialization
       } as any)
       .where(and(eq(assets.id, id), eq(assets.tenantId, tenantId)))
       .returning()) as any[];

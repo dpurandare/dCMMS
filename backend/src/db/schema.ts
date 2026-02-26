@@ -240,12 +240,12 @@ export const assets = pgTable("assets", {
   warrantyExpiryDate: timestamp("warranty_expiry_date"),
   status: assetStatusEnum("status").notNull().default("operational"),
   specifications: text("specifications").default("{}"),
-  location: text("location"),
+  location: jsonb("location"),
   latitude: decimal("latitude", { precision: 10, scale: 7 }),
   longitude: decimal("longitude", { precision: 10, scale: 7 }),
-  tags: text("tags").default("[]"), // JSON array of strings
+  tags: text("tags").default("[]"), // JSON array of strings stored as text
   image: text("image"),
-  metadata: text("metadata").default("{}"),
+  metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

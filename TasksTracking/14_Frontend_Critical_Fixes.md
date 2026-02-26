@@ -218,31 +218,42 @@
   - **Files:** `backend/src/routes/assets.ts`
   - **Status:** ✅ FIXED — February 23, 2026
 
-- [ ] **FE-BUG-03** - Documentation page shows "Something went wrong" (ErrorBoundary caught)
+- [x] **FE-BUG-03** - Documentation page shows "Something went wrong" (ErrorBoundary caught) ✅ FIXED
   - **Symptom:** Clicking "Documentation" in the sidebar renders the root ErrorBoundary with
     "We're sorry, but something unexpected happened."
-  - **Root cause:** Unknown — requires browser console inspection to identify the exact thrown error.
-    The `docs/page.tsx` component is simple static content (no API calls). Suspected causes:
-    1. A component in `DashboardLayout` → `TopBar` or `Sidebar` tree throws on this specific route
-    2. A missing context provider for a hook used in the page subtree
-    3. A hydration mismatch in a child component
-  - **To investigate:** Open browser DevTools console when navigating to `/docs`. The ErrorBoundary
-    renders "Error details" in development mode — expand it to see the exact error and stack trace.
-  - **Files:** `src/app/docs/page.tsx`, `src/components/layout/top-bar.tsx`
-  - **Priority:** 🟡 MODERATE
-  - **Status:** ⏳ PENDING investigation
+  - **Root cause (identified):** Three issues combined:
+    1. `shepherd.js` was statically imported at module level in `TutorialProvider.tsx` — a browser-only
+       library that should be dynamically imported to avoid any SSR/bundler edge cases.
+    2. `tours.ts` imported `Shepherd` and its CSS unnecessarily (dead imports, never used).
+    3. `useTutorial()` threw a hard error when called without a provider context, which React's
+       ErrorBoundary caught and displayed as "Something went wrong".
+    4. `ThemeProvider` (from `next-themes`) was never mounted in `layout.tsx`, meaning `ThemeToggle`
+       used `useTheme()` without a provider.
+  - **Fix:**
+    - Removed dead `Shepherd` and CSS imports from `tours.ts`
+    - Changed `TutorialProvider.tsx` to use `await import('shepherd.js')` inside `startTour()` (dynamic)
+    - Changed `useTutorial()` to return a no-op fallback instead of throwing when context is absent
+    - Added `ThemeProvider` to `app/layout.tsx` with `attribute="class" defaultTheme="light"`
+  - **Files:** `src/app/layout.tsx`, `src/components/common/TutorialProvider.tsx`, `src/tutorial/tours.ts`
+  - **Status:** ✅ FIXED — February 26, 2026
 
-- [ ] **FE-BUG-04** - Drizzle schema drift: assets `location` and `metadata` defined as text() but are jsonb in DB
+- [x] **FE-BUG-04** - Drizzle schema drift: assets `location` and `metadata` defined as text() but are jsonb in DB ✅ FIXED
   - **Root cause:** The actual PostgreSQL `assets` table has `location jsonb` and `metadata jsonb` columns,
-    but `backend/src/db/schema.ts` declares them as `text("location")` and `text("metadata")`. This means
-    Drizzle inserts JSON strings (via `JSON.stringify`) but the DB treats them as JSONB objects. The mismatch
-    causes type confusion at the ORM layer.
-  - **Fix needed:** Update `backend/src/db/schema.ts` to use `jsonb("location")` and `jsonb("metadata")`.
-    Also update all insert/update paths in `asset.service.ts` that currently call `JSON.stringify()` on these
-    fields before persisting (Drizzle-ORM handles serialisation automatically for `jsonb()` columns).
-  - **Files:** `backend/src/db/schema.ts`, `backend/src/services/asset.service.ts`
-  - **Priority:** 🟡 MODERATE
-  - **Status:** ⏳ PENDING
+    but `backend/src/db/schema.ts` declared them as `text("location")` and `text("metadata")`. Drizzle
+    returned JSONB as JavaScript objects while the Zod schema expected strings. The `tags` column remains
+    `text` (per migration 0004) — only `location` and `metadata` drifted to jsonb.
+  - **Fix applied:**
+    - Updated `backend/src/db/schema.ts`: changed `location` to `jsonb("location")` and `metadata` to
+      `jsonb("metadata").default({})`. `tags` and `specifications` remain `text`.
+    - Updated `backend/src/services/asset.service.ts`: removed `JSON.stringify()` calls for `metadata`
+      in `create()` and `update()`. `tags` keeps `JSON.stringify` (still a text column).
+    - Updated type signatures: `location` and `metadata` now typed as `Record<string, any>` instead of `string`.
+    - Updated `backend/src/db/seed.ts`: pass location as object `{ area: "..." }` instead of `JSON.stringify`.
+    - Created `backend/drizzle/0011_fix_asset_jsonb_columns.sql`: idempotent migration that ALTERs columns
+      from text to jsonb only if they are still text (safe to run on any DB state).
+  - **Files:** `backend/src/db/schema.ts`, `backend/src/services/asset.service.ts`,
+    `backend/src/db/seed.ts`, `backend/drizzle/0011_fix_asset_jsonb_columns.sql`
+  - **Status:** ✅ FIXED — February 26, 2026
 
 ---
 
