@@ -57,7 +57,7 @@
     "fastify": "^4.26.0",
     "fastify-type-provider-zod": "^1.1.9",
     "handlebars": "^4.7.8",
-    "ioredis": "^5.8.2",
+    "ioredis": "^5.9.3",
     "kafkajs": "^2.2.4",
     "node-cron": "^3.0.3",
     "pdf-lib": "^1.17.1",
