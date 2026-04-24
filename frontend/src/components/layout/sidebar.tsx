@@ -21,6 +21,7 @@ import {
   Brain,
   TrendingUp,
   AlertTriangle,
+  Users,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +50,7 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Work Orders', href: '/work-orders', icon: Wrench, permissions: ['read:work-orders'] },
+  { label: 'Crews', href: '/crews', icon: Users, permissions: ['read:users'] },
   { label: 'Assets', href: '/assets', icon: Package, permissions: ['read:assets'] },
   { label: 'Alerts', href: '/alerts', icon: Bell, permissions: ['read:alerts'] },
   { label: 'Analytics', href: '/analytics/dashboard', icon: BarChart3, permissions: ['read:analytics'] },

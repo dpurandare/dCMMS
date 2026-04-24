@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { mlInferenceService, Prediction } from '@/services/ml-inference.service';
 import { AlertTriangle, CheckCircle, Activity } from 'lucide-react';
+import { TableSkeleton } from '@/components/common';
 
 export default function AnomaliesPage() {
     return (
@@ -94,23 +95,22 @@ function AnomaliesContent() {
                         <CardTitle>Detected Anomalies</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="p-4 text-left font-medium">Asset ID</th>
-                                        <th className="p-4 text-left font-medium">Timestamp</th>
-                                        <th className="p-4 text-left font-medium">Severity</th>
-                                        <th className="p-4 text-left font-medium">Description</th>
-                                        <th className="p-4 text-right font-medium">Score</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={5} className="p-4 text-center">Loading...</td>
+                        {loading ? (
+                            <TableSkeleton rows={5} columns={5} />
+                        ) : (
+                            <div className="rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="p-4 text-left font-medium">Asset ID</th>
+                                            <th className="p-4 text-left font-medium">Timestamp</th>
+                                            <th className="p-4 text-left font-medium">Severity</th>
+                                            <th className="p-4 text-left font-medium">Description</th>
+                                            <th className="p-4 text-right font-medium">Score</th>
                                         </tr>
-                                    ) : predictions.length === 0 ? (
+                                    </thead>
+                                    <tbody>
+                                        {predictions.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="p-4 text-center text-muted-foreground">
                                                 No anomalies detected
@@ -138,9 +138,10 @@ function AnomaliesContent() {
                                             );
                                         })
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

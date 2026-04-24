@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { api } from '@/lib/api-client';
 import { showToast } from '@/lib/toast';
 import { User, UserRole } from '@/types/api';
+import { ROLE_PERMISSIONS } from '@/lib/permissions';
 import { Loader2 } from 'lucide-react';
 
 interface UserFormDialogProps {
@@ -268,13 +269,26 @@ export function UserFormDialog({ open, onClose, user, onSuccess }: UserFormDialo
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="manager">Manager</SelectItem>
+                                    <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                                    <SelectItem value="site_manager">Site Manager</SelectItem>
                                     <SelectItem value="technician">Technician</SelectItem>
                                     <SelectItem value="operator">Operator</SelectItem>
                                     <SelectItem value="viewer">Viewer</SelectItem>
                                 </SelectContent>
                             </Select>
+
+                            {formData.role && ROLE_PERMISSIONS[formData.role] && (
+                                <div className="mt-2 rounded-md bg-slate-50 p-3 border text-xs text-slate-600">
+                                    <p className="font-semibold mb-1 text-slate-900 border-b pb-1">Role Permissions</p>
+                                    <div className="flex flex-wrap gap-1 mt-2 max-h-32 overflow-y-auto">
+                                        {ROLE_PERMISSIONS[formData.role].map(perm => (
+                                            <span key={perm} className="bg-white border px-1.5 py-0.5 rounded-sm">
+                                                {perm}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Active Status */}

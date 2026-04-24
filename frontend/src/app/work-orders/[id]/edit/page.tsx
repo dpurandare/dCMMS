@@ -52,6 +52,7 @@ export default function EditWorkOrderPage() {
     assetId: '',
     siteId: '',
     assignedToId: '',
+    assignedCrewId: '',
     scheduledStartDate: '',
     scheduledEndDate: '',
     estimatedHours: '',
@@ -85,6 +86,7 @@ export default function EditWorkOrderPage() {
         assetId: wo.assetId || '',
         siteId: wo.siteId || '',
         assignedToId: wo.assignedTo || '',
+        assignedCrewId: wo.assignedCrewId || '',
         scheduledStartDate: wo.scheduledStart ? String(wo.scheduledStart).split('T')[0] : '',
         scheduledEndDate: wo.scheduledEnd ? String(wo.scheduledEnd).split('T')[0] : '',
         estimatedHours: wo.estimatedHours?.toString() || '',
@@ -184,7 +186,8 @@ export default function EditWorkOrderPage() {
         status: formData.status as WorkOrderStatus,
         assetId: formData.assetId || undefined,
         siteId: formData.siteId || undefined,
-        assignedTo: formData.assignedToId || undefined,
+        assignedTo: formData.assignedToId === 'unassigned' || !formData.assignedToId ? undefined : formData.assignedToId,
+        assignedCrewId: formData.assignedCrewId === 'unassigned' || !formData.assignedCrewId ? undefined : formData.assignedCrewId,
         scheduledStart: formData.scheduledStartDate || undefined,
         scheduledEnd: formData.scheduledEndDate || undefined,
         estimatedHours: formData.estimatedHours || undefined,
@@ -367,18 +370,33 @@ export default function EditWorkOrderPage() {
                   <p className="text-xs text-slate-500">Automatically filled based on selected asset</p>
                 </div>
 
-                {/* Assigned To */}
+                {/* Assigned To User */}
                 <div className="space-y-2">
-                  <Label htmlFor="assignedToId">Assign To</Label>
+                  <Label htmlFor="assignedToId">Assign To User</Label>
                   <Select value={formData.assignedToId} onValueChange={(v) => handleChange('assignedToId', v)}>
                     <SelectTrigger id="assignedToId">
                       <SelectValue placeholder="Select a technician" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
                       <SelectItem value="user-001">John Smith</SelectItem>
                       <SelectItem value="user-002">Jane Doe</SelectItem>
                       <SelectItem value="user-003">Mike Johnson</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Assigned To Crew */}
+                <div className="space-y-2">
+                  <Label htmlFor="assignedCrewId">Assign To Crew</Label>
+                  <Select value={formData.assignedCrewId} onValueChange={(v) => handleChange('assignedCrewId', v)}>
+                    <SelectTrigger id="assignedCrewId">
+                      <SelectValue placeholder="Select a crew" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="c1d2e3f4-g5h6-7j8k-9l0m-n1o2p3q4r5s6">Alpha Team</SelectItem>
+                      <SelectItem value="a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6">Beta Team</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

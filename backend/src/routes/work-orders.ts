@@ -38,6 +38,7 @@ const CreateWorkOrderSchema = z.object({
   siteId: z.string().uuid(),
   assetId: z.string().uuid().optional(),
   assignedTo: z.string().uuid().optional(),
+  assignedCrewId: z.string().uuid().optional(),
   scheduledStart: z.string().datetime().optional(),
   scheduledEnd: z.string().datetime().optional(),
   estimatedHours: z.number().optional(),
@@ -51,6 +52,7 @@ const UpdateWorkOrderSchema = z.object({
   priority: WorkOrderPrioritySchema.optional(),
   status: WorkOrderStatusSchema.optional(),
   assignedTo: z.string().uuid().optional(),
+  assignedCrewId: z.string().uuid().optional(),
   scheduledStart: z.string().datetime().optional(),
   scheduledEnd: z.string().datetime().optional(),
   estimatedHours: z.number().optional(),
@@ -124,6 +126,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         siteId: request.body.siteId,
         assetId: request.body.assetId,
         assignedTo: request.body.assignedTo,
+        assignedCrewId: request.body.assignedCrewId,
         scheduledStart: request.body.scheduledStart
           ? new Date(request.body.scheduledStart)
           : undefined,
@@ -152,6 +155,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
           type: z.string().optional(),
           siteId: z.string().uuid().optional(),
           assignedTo: z.string().uuid().optional(),
+          assignedCrewId: z.string().uuid().optional(),
           assetId: z.string().uuid().optional(),
           search: z.string().optional(),
           sortBy: z.string().optional(),

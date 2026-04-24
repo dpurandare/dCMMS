@@ -86,6 +86,32 @@ export interface RefreshTokenResponse {
 }
 
 // ==========================================
+// CREWS (TEAMS)
+// ==========================================
+
+export interface CrewMember {
+  id: UUID;
+  crewId: UUID;
+  userId: UUID;
+  isLeader: boolean;
+  createdAt: string;
+  user?: User;
+}
+
+export interface Crew {
+  id: UUID;
+  tenantId: UUID;
+  name: string;
+  description?: string;
+  siteId?: UUID;
+  isActive: boolean;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+  members?: CrewMember[];
+}
+
+// ==========================================
 // WORK ORDERS
 // ==========================================
 
@@ -120,6 +146,7 @@ export interface WorkOrder {
   siteId: UUID;
   assetId?: UUID;
   assignedTo?: string;
+  assignedCrewId?: UUID;
   createdBy: UUID;
   scheduledStart?: string;
   scheduledEnd?: string;
@@ -133,6 +160,8 @@ export interface WorkOrder {
   // Nested objects (populated by API joins)
   asset?: { id: string; name: string };
   site?: { id: string; name: string };
+  assignedUser?: User;
+  assignedCrew?: Crew;
   tasks?: WorkOrderTask[];
   parts?: { id: string; partId: string; name: string; quantity: number; reserved?: boolean; consumed?: boolean }[];
 }
@@ -146,6 +175,7 @@ export interface CreateWorkOrderRequest {
   siteId?: UUID;
   assetId?: UUID;
   assignedTo?: string;
+  assignedCrewId?: UUID;
   scheduledStart?: string;
   scheduledEnd?: string;
   estimatedHours?: string;
@@ -161,6 +191,7 @@ export interface UpdateWorkOrderRequest {
   assetId?: UUID;
   siteId?: UUID;
   assignedTo?: string;
+  assignedCrewId?: UUID;
   scheduledStart?: string;
   scheduledEnd?: string;
   estimatedHours?: string;

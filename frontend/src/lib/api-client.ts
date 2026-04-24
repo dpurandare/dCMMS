@@ -15,6 +15,7 @@ import type {
   Site,
   AuditLog,
   AuditLogFilters,
+  Crew,
 } from '@/types/api';
 
 // API client configuration
@@ -239,6 +240,42 @@ export const api = {
     },
     delete: async (id: string): Promise<{ success: boolean }> => {
       const response = await apiClient.delete<{ success: boolean }>(`/users/${id}`);
+      return response.data;
+    },
+  },
+
+  // Crews endpoints
+  crews: {
+    list: async (params?: PaginationParams & { search?: string, siteId?: string }): Promise<PaginatedResponse<Crew>> => {
+      const response = await apiClient.get<PaginatedResponse<Crew>>('/crews', { params });
+      return response.data;
+    },
+    getById: async (id: string): Promise<Crew> => {
+      const response = await apiClient.get<Crew>(`/crews/${id}`);
+      return response.data;
+    },
+    create: async (data: Partial<Crew>): Promise<Crew> => {
+      const response = await apiClient.post<Crew>('/crews', data);
+      return response.data;
+    },
+    update: async (id: string, data: Partial<Crew>): Promise<Crew> => {
+      const response = await apiClient.patch<Crew>(`/crews/${id}`, data);
+      return response.data;
+    },
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/crews/${id}`);
+      return response.data;
+    },
+    addMember: async (crewId: string, userId: string, isLeader: boolean = false): Promise<any> => {
+      const response = await apiClient.post(`/crews/${crewId}/members`, { userId, isLeader });
+      return response.data;
+    },
+    removeMember: async (crewId: string, userId: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete<{ success: boolean }>(`/crews/${crewId}/members/${userId}`);
+      return response.data;
+    },
+    setMemberRole: async (crewId: string, userId: string, isLeader: boolean): Promise<any> => {
+      const response = await apiClient.patch(`/crews/${crewId}/members/${userId}`, { isLeader });
       return response.data;
     },
   },

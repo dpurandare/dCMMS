@@ -145,27 +145,26 @@
   - **File:** `src/components/layout/sidebar.tsx`
   - **Status:** ✅ COMPLETE
 
-- [/] **FE-012** - Protect Routes with PermissionGuard
+- [x] **FE-012** - Protect Routes with PermissionGuard ✅ COMPLETED
   - [x] Add PermissionGuard to Work Orders page ✅
   - [x] Add PermissionGuard to Assets page ✅
   - [x] Add PermissionGuard to Alerts page ✅
   - [x] Add PermissionGuard to Reports page ✅
   - [x] Add PermissionGuard to Compliance pages ✅
-  - [ ] Add PermissionGuard to Analytics pages
-  - [ ] Add PermissionGuard to ML pages (3 pages: models, forecasts, anomalies)
-  - [ ] Add PermissionGuard to User Management (when implemented)
+  - [x] Add PermissionGuard to Analytics pages ✅
+  - [x] Add PermissionGuard to ML pages (3 pages: models, forecasts, anomalies) ✅
+  - [x] Add PermissionGuard to User Management ✅
   - **Priority:** 🔴 CRITICAL
-  - **Estimated:** 2-3 hours
-  - **Status:** 🔄 IN PROGRESS (62% complete - 5 of 8 pages protected)
+  - **Status:** ✅ COMPLETE
 
-- [ ] **FE-013** - Implement Feature-Level Permissions
-  - [ ] Add permission checks for Create buttons
-  - [ ] Add permission checks for Edit actions
-  - [ ] Add permission checks for Delete actions
-  - [ ] Hide action buttons user lacks permission for
-  - [ ] Show disabled state for unavailable actions
+- [x] **FE-013** - Implement Feature-Level Permissions ✅ COMPLETED
+  - [x] Add permission checks for Create buttons ✅
+  - [x] Add permission checks for Edit actions ✅
+  - [x] Add permission checks for Delete actions ✅
+  - [x] Hide action buttons user lacks permission for ✅
+  - [x] Show disabled state for unavailable actions ✅
   - **Priority:** 🟡 HIGH
-  - **Estimated:** 3-4 hours
+  - **Status:** ✅ COMPLETE
 
 ---
 
@@ -361,29 +360,29 @@
 
 ### 8.1 User Management UI
 
-- [ ] **FE-024** - Implement Users List Page
-  - [ ] Create `/users` page
-  - [ ] List all users with filtering
-  - [ ] Show user roles and status
-  - [ ] Add search and pagination
+- [x] **FE-024** - Implement Users List Page ✅ COMPLETED
+  - [x] Create `/users` page ✅
+  - [x] List all users with filtering ✅
+  - [x] Show user roles and status ✅
+  - [x] Add search and pagination ✅
   - **Priority:** 🟢 FUTURE
-  - **Estimated:** 4-6 hours
+  - **Status:** ✅ COMPLETE
 
-- [ ] **FE-025** - Implement User CRUD Operations
-  - [ ] Create user form
-  - [ ] Edit user form
-  - [ ] Delete user with confirmation
-  - [ ] Activate/deactivate users
+- [x] **FE-025** - Implement User CRUD Operations ✅ COMPLETED
+  - [x] Create user form ✅
+  - [x] Edit user form ✅
+  - [x] Delete user with confirmation ✅
+  - [x] Activate/deactivate users ✅
   - **Priority:** 🟢 FUTURE
-  - **Estimated:** 4-6 hours
+  - **Status:** ✅ COMPLETE
 
-- [ ] **FE-026** - Role Assignment UI
-  - [ ] Create role selector component
-  - [ ] Show permissions for selected role
-  - [ ] Allow role changes (admin only)
-  - [ ] Add audit logging for role changes
+- [x] **FE-026** - Role Assignment UI ✅ COMPLETED
+  - [x] Create role selector component ✅
+  - [x] Show permissions for selected role ✅
+  - [x] Allow role changes (admin only) ✅
+  - [x] Add audit logging for role changes ✅
   - **Priority:** 🟢 FUTURE
-  - **Estimated:** 3-4 hours
+  - **Status:** ✅ COMPLETE
 
 ---
 

@@ -47,6 +47,7 @@ export default function NewWorkOrderPage() {
     assetId: '',
     siteId: '',
     assignedToId: '',
+    assignedCrewId: '',
     scheduledStartDate: '',
     scheduledEndDate: '',
     estimatedHours: '',
@@ -118,6 +119,7 @@ export default function NewWorkOrderPage() {
         assetId: formData.assetId || undefined,
         siteId: formData.siteId || undefined,
         assignedTo: formData.assignedToId === 'unassigned' || !formData.assignedToId ? undefined : formData.assignedToId,
+        assignedCrewId: formData.assignedCrewId === 'unassigned' || !formData.assignedCrewId ? undefined : formData.assignedCrewId,
         estimatedHours: formData.estimatedHours || undefined,
         scheduledStart: formData.scheduledStartDate ? new Date(formData.scheduledStartDate).toISOString() : undefined,
         scheduledEnd: formData.scheduledEndDate ? new Date(formData.scheduledEndDate).toISOString() : undefined,
@@ -279,9 +281,9 @@ export default function NewWorkOrderPage() {
                   <p className="text-xs text-slate-500">Automatically filled based on selected asset</p>
                 </div>
 
-                {/* Assigned To */}
+                {/* Assigned To User */}
                 <div className="space-y-2">
-                  <Label htmlFor="assignedToId">Assign To</Label>
+                  <Label htmlFor="assignedToId">Assign To User</Label>
                   <Select value={formData.assignedToId} onValueChange={(v) => handleChange('assignedToId', v)}>
                     <SelectTrigger id="assignedToId">
                       <SelectValue placeholder="Select a technician" />
@@ -291,6 +293,21 @@ export default function NewWorkOrderPage() {
                       <SelectItem value="3147f7c7-f258-46c6-a241-939372fc90d7">John Smith</SelectItem>
                       <SelectItem value="22ed914e-c406-4b8a-837f-8c1e2f876429">Jane Doe</SelectItem>
                       <SelectItem value="6bc1b177-294b-44c8-8996-3c82e6476e94">Mike Johnson</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Assigned To Crew */}
+                <div className="space-y-2">
+                  <Label htmlFor="assignedCrewId">Assign To Crew</Label>
+                  <Select value={formData.assignedCrewId} onValueChange={(v) => handleChange('assignedCrewId', v)}>
+                    <SelectTrigger id="assignedCrewId">
+                      <SelectValue placeholder="Select a crew" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      <SelectItem value="c1d2e3f4-g5h6-7j8k-9l0m-n1o2p3q4r5s6">Alpha Team</SelectItem>
+                      <SelectItem value="a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6">Beta Team</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
