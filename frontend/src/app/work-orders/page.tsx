@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wrench, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import { Wrench, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Users, User as UserIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import {
   PageHeader,
@@ -298,7 +298,21 @@ export default function WorkOrdersPage() {
                   <TableCell>
                     <WorkOrderStatusBadge status={wo.status as any} />
                   </TableCell>
-                  <TableCell>{wo.assignedTo || 'Unassigned'}</TableCell>
+                  <TableCell>
+                    {wo.assignedCrew ? (
+                      <span className="flex items-center gap-1 font-medium text-slate-700">
+                        <Users className="h-4 w-4" />
+                        {wo.assignedCrew.name}
+                      </span>
+                    ) : wo.assignedUser ? (
+                      <span className="flex items-center gap-1">
+                        <UserIcon className="h-4 w-4" />
+                        {wo.assignedUser.firstName} {wo.assignedUser.lastName}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-medium">Unassigned</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-slate-600">
                     {formatDate(wo.scheduledStart)}
                   </TableCell>

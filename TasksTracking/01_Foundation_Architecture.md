@@ -16,7 +16,7 @@
   - [x] ERD for core modules (Assets, WO, Users)
 - [x] **DCMMS-001D** - Critical User Flow Design
 
-  - [ ] **DCMMS-NEW** - Production admin user is seeded if no users exist; admin is shown a mandatory password change reminder on first login in production.
+  - [x] **DCMMS-NEW** - Production admin user is seeded if no users exist; admin is shown a mandatory password change reminder on first login in production. ✅
   - [x] Sequence diagrams for Login, WO, Sync, Telemetry
 - [x] **DCMMS-001E** - Mobile Architecture Design
   - [x] Offline sync strategy validation

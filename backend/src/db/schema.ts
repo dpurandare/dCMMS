@@ -250,6 +250,34 @@ export const assets = pgTable("assets", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const crews = pgTable("crews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  siteId: uuid("site_id").references(() => sites.id, {
+    onDelete: "set null",
+  }),
+  isActive: boolean("is_active").notNull().default(true),
+  metadata: text("metadata").default("{}"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const crewMembers = pgTable("crew_members", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  crewId: uuid("crew_id")
+    .notNull()
+    .references(() => crews.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  isLeader: boolean("is_leader").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const workOrders = pgTable("work_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
@@ -268,6 +296,9 @@ export const workOrders = pgTable("work_orders", {
   priority: workOrderPriorityEnum("priority").notNull().default("medium"),
   status: workOrderStatusEnum("status").notNull().default("draft"),
   assignedTo: uuid("assigned_to").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  assignedCrewId: uuid("assigned_crew_id").references(() => crews.id, {
     onDelete: "set null",
   }),
   createdBy: uuid("created_by")
@@ -1050,9 +1081,33 @@ export const workOrdersRelations = relations(workOrders, ({ one, many }) => ({
     references: [users.id],
     relationName: "createdBy",
   }),
+  assignedCrew: one(crews, {
+    fields: [workOrders.assignedCrewId],
+    references: [crews.id],
+  }),
   tasks: many(workOrderTasks),
   parts: many(workOrderParts),
   labor: many(workOrderLabor),
+}));
+
+export const crewsRelations = relations(crews, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [crews.tenantId],
+    references: [tenants.id],
+  }),
+  members: many(crewMembers),
+  workOrders: many(workOrders),
+}));
+
+export const crewMembersRelations = relations(crewMembers, ({ one }) => ({
+  crew: one(crews, {
+    fields: [crewMembers.crewId],
+    references: [crews.id],
+  }),
+  user: one(users, {
+    fields: [crewMembers.userId],
+    references: [users.id],
+  }),
 }));
 
 export const workOrderTasksRelations = relations(workOrderTasks, ({ one }) => ({

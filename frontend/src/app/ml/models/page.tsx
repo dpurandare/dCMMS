@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { modelGovernanceService, Model, ModelStage } from '@/services/model-governance.service';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { TableSkeleton } from '@/components/common';
 
 export default function ModelRegistryPage() {
     return (
@@ -117,24 +118,23 @@ function ModelRegistryContent() {
                         <CardTitle>Registered Models</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="p-4 text-left font-medium">Model Name</th>
-                                        <th className="p-4 text-left font-medium">Version</th>
-                                        <th className="p-4 text-left font-medium">Stage</th>
-                                        <th className="p-4 text-left font-medium">Owner</th>
-                                        <th className="p-4 text-left font-medium">Last Updated</th>
-                                        <th className="p-4 text-right font-medium">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={6} className="p-4 text-center">Loading...</td>
+                        {loading ? (
+                            <TableSkeleton rows={5} columns={6} />
+                        ) : (
+                            <div className="rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="p-4 text-left font-medium">Model Name</th>
+                                            <th className="p-4 text-left font-medium">Version</th>
+                                            <th className="p-4 text-left font-medium">Stage</th>
+                                            <th className="p-4 text-left font-medium">Owner</th>
+                                            <th className="p-4 text-left font-medium">Last Updated</th>
+                                            <th className="p-4 text-right font-medium">Actions</th>
                                         </tr>
-                                    ) : filteredModels.length === 0 ? (
+                                    </thead>
+                                    <tbody>
+                                        {filteredModels.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="p-4 text-center text-muted-foreground">
                                                 No models found
@@ -158,9 +158,10 @@ function ModelRegistryContent() {
                                             </tr>
                                         ))
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

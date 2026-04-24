@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1764760289589,
-      "tag": "0000_tranquil_umar",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1764823082678,
-      "tag": "0001_omniscient_lord_hawal",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1765513504878,
-      "tag": "0002_rapid_stranger",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1765525026758,
-      "tag": "0003_loving_shockwave",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1765527085947,
-      "tag": "0004_medical_diamondback",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1765538107948,
-      "tag": "0005_dapper_mandroid",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1765538419573,
-      "tag": "0006_premium_zaladane",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1765958553346,
-      "tag": "0007_silky_sinister_six",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1734968269200,
-      "tag": "0008_add_genai_rbac",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1769340015674,
-      "tag": "0009_clumsy_toad",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1770664771205,
-      "tag": "0010_absurd_maddog",
+      "when": 1776670018708,
+      "tag": "0000_abnormal_omega_flight",
       "breakpoints": true
     }
   ]

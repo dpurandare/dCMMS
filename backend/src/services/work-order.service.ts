@@ -30,6 +30,7 @@ export interface CreateWorkOrderData {
   siteId: string;
   assetId?: string;
   assignedTo?: string;
+  assignedCrewId?: string;
   createdBy: string;
   scheduledStart?: Date;
   scheduledEnd?: Date;
@@ -49,6 +50,7 @@ export interface UpdateWorkOrderData {
   priority?: "critical" | "high" | "medium" | "low";
   status?: WorkOrderStatus;
   assignedTo?: string;
+  assignedCrewId?: string;
   scheduledStart?: Date;
   scheduledEnd?: Date;
   actualStart?: Date;
@@ -64,6 +66,7 @@ export interface WorkOrderFilters {
   type?: string;
   siteId?: string;
   assignedTo?: string;
+  assignedCrewId?: string;
   assetId?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -147,6 +150,9 @@ export class WorkOrderService {
     if (filters.assignedTo) {
       conditions.push(eq(workOrders.assignedTo, filters.assignedTo));
     }
+    if (filters.assignedCrewId) {
+      conditions.push(eq(workOrders.assignedCrewId, filters.assignedCrewId));
+    }
     if (filters.assetId) {
       conditions.push(eq(workOrders.assetId, filters.assetId));
     }
@@ -193,6 +199,7 @@ export class WorkOrderService {
         site: true,
         asset: true,
         assignedUser: true,
+        assignedCrew: true,
       },
     });
 
@@ -214,6 +221,7 @@ export class WorkOrderService {
         site: true,
         asset: true,
         assignedUser: true,
+        assignedCrew: true,
         createdByUser: true,
         tasks: {
           orderBy: asc(workOrderTasks.taskOrder),

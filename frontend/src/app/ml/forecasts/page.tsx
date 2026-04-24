@@ -8,6 +8,7 @@ import { ChartWidget } from '@/components/analytics/dashboard/widgets/chart-widg
 import { forecastService, Forecast } from '@/services/forecast.service';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { TableSkeleton } from '@/components/common';
 
 // Mock site ID for now - in real app this would come from context or selection
 const DEMO_SITE_ID = "123e4567-e89b-12d3-a456-426614174000";
@@ -106,19 +107,22 @@ function ForecastsContent() {
                         <CardTitle>Forecast Details</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="p-4 text-left font-medium">Timestamp</th>
-                                        <th className="p-4 text-left font-medium">Model</th>
-                                        <th className="p-4 text-right font-medium">Predicted (MW)</th>
-                                        <th className="p-4 text-right font-medium">Actual (MW)</th>
-                                        <th className="p-4 text-right font-medium">Variance</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {forecasts.length === 0 ? (
+                        {loading ? (
+                            <TableSkeleton rows={5} columns={5} />
+                        ) : (
+                            <div className="rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="p-4 text-left font-medium">Timestamp</th>
+                                            <th className="p-4 text-left font-medium">Model</th>
+                                            <th className="p-4 text-right font-medium">Predicted (MW)</th>
+                                            <th className="p-4 text-right font-medium">Actual (MW)</th>
+                                            <th className="p-4 text-right font-medium">Variance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {forecasts.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="p-4 text-center text-muted-foreground">
                                                 No forecast data available
@@ -141,9 +145,10 @@ function ForecastsContent() {
                                             );
                                         })
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

@@ -34,13 +34,22 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, MoreVertical, Search, UserCheck, UserX, Trash2, Edit, User as UserIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { format } from 'date-fns';
-import { ProtectedButton } from '@/components/auth/protected';
+import { ProtectedButton, ProtectedSection } from '@/components/auth/protected';
 import { usePermissions } from '@/hooks/use-permissions';
 import { UserFormDialog } from '@/components/users/user-form-dialog';
 import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
 import { showToast } from '@/lib/toast';
+import { TableSkeleton } from '@/components/common';
 
 export default function UsersPage() {
+    return (
+        <ProtectedSection permissions={["read:users"]}>
+            <UsersPageContent />
+        </ProtectedSection>
+    );
+}
+
+function UsersPageContent() {
     const router = useRouter();
     const { isAuthenticated, user: currentUser } = useAuthStore();
     const { can } = usePermissions();
@@ -192,7 +201,7 @@ export default function UsersPage() {
 
                     {/* Users Table */}
                     {isLoading ? (
-                        <div className="flex justify-center p-8">Loading users...</div>
+                        <TableSkeleton rows={5} columns={6} />
                     ) : (
                         <Table>
                             <TableHeader>

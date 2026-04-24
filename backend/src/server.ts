@@ -41,6 +41,7 @@ import mlFeatureRoutes from "./routes/ml-features";
 import forecastRoutes from "./routes/forecasts";
 import usersRoutes from "./routes/users";
 import { genaiRoutes } from "./routes/genai.routes";
+import crewRoutes from "./routes/crews";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const isProduction = process.env.NODE_ENV === "production";
@@ -499,6 +500,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(dashboardRoutes, { prefix: "/api/v1/dashboards" });
   await server.register(usersRoutes, { prefix: "/api/v1/users" });
   await server.register(genaiRoutes, { prefix: "/api/v1/genai" });
+  await server.register(crewRoutes, { prefix: "/api/v1/crews" });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

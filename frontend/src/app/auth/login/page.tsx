@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { showToast } from '@/lib/toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,8 +68,13 @@ export default function LoginPage() {
       // Store auth data
       login(response.accessToken, response.refreshToken, response.user);
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      if (response.passwordChangeReminder) {
+        showToast.error(response.passwordChangeReminder);
+        router.push('/settings');
+      } else {
+        // Redirect to dashboard
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
 

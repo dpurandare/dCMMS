@@ -68,12 +68,13 @@
   - **Completed:** January 1, 2026
   - **Files:** file-storage.service.ts, attachments.ts routes, server.ts, schema.ts
 
-- [ ] **DCMMS-WO-003** - Implement Crew/Team Management
-  - [ ] Create crews table per spec
-  - [ ] Implement CrewService with CRUD operations
-  - [ ] Add crew assignment to work orders
-  - [ ] Add crew routes /api/v1/crews
-  - [ ] Update WO assignment to support crew vs individual
-  - **Issue:** Spec defines crews but not in database
-  - **Impact:** Team-based work assignment not possible
-  - **Effort:** 1 week
+- [x] **DCMMS-WO-003** - Implement Crew/Team Management ✅ COMPLETED
+  - [x] Create crews table per spec
+  - [x] Implement CrewService with CRUD operations
+  - [x] Add crew assignment to work orders
+  - [x] Add crew routes /api/v1/crews
+  - [x] Update WO assignment to support crew vs individual
+  - [x] Create frontend crews list and detail pages
+  - **Status:** Crew management fully implemented full-stack
+  - **Completed:** April 2026
+  - **Files:** schema.ts, crew.service.ts, crews.ts, app/crews/*
