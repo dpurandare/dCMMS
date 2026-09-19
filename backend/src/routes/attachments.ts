@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 
 const attachmentsRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
+  const { csrfProtection } = await import("../middleware/csrf");
 
   // POST /api/v1/work-orders/:workOrderId/attachments
   server.post(
@@ -53,8 +53,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrders.id, workOrderId),
-              eq(workOrders.tenantId, user.tenantId)
-            )
+              eq(workOrders.tenantId, user.tenantId),
+            ),
           )
           .limit(1);
 
@@ -80,7 +80,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
         // Upload file using storage service
         const uploadResult = await FileStorageService.uploadFile(
           data,
-          `work-orders/${workOrderId}`
+          `work-orders/${workOrderId}`,
         );
 
         // Save attachment metadata to database
@@ -100,14 +100,25 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
         return reply.status(201).send(attachment);
       } catch (error) {
         request.log.error({ err: error }, "File upload error");
-        return reply.status(500).send({
-          statusCode: 500,
-          error: "Internal Server Error",
-          message:
-            error instanceof Error ? error.message : "Failed to upload file",
+        // Validation rejections (bad type, size, content-signature
+        // mismatch — REV-040) are client errors, not server faults.
+        const message =
+          error instanceof Error ? error.message : "Failed to upload file";
+        const isValidationError =
+          error instanceof Error &&
+          (message.includes("File type not allowed") ||
+            message.includes("File content") ||
+            message.includes("File size exceeds") ||
+            (error as { code?: string }).code === "FST_REQ_FILE_TOO_LARGE" ||
+            message.toLowerCase().includes("file too large"));
+        const statusCode = isValidationError ? 400 : 500;
+        return reply.status(statusCode).send({
+          statusCode,
+          error: isValidationError ? "Bad Request" : "Internal Server Error",
+          message,
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/work-orders/:workOrderId/attachments
@@ -158,8 +169,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrders.id, workOrderId),
-              eq(workOrders.tenantId, user.tenantId)
-            )
+              eq(workOrders.tenantId, user.tenantId),
+            ),
           )
           .limit(1);
 
@@ -195,7 +206,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           message: "Failed to list attachments",
         });
       }
-    }
+    },
   );
 
   // GET /api/v1/work-orders/:workOrderId/attachments/:attachmentId
@@ -232,8 +243,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrderAttachments.id, attachmentId),
-              eq(workOrderAttachments.workOrderId, workOrderId)
-            )
+              eq(workOrderAttachments.workOrderId, workOrderId),
+            ),
           )
           .limit(1);
 
@@ -252,8 +263,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrders.id, workOrderId),
-              eq(workOrders.tenantId, user.tenantId)
-            )
+              eq(workOrders.tenantId, user.tenantId),
+            ),
           )
           .limit(1);
 
@@ -268,14 +279,14 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
         // Get file stream
         const fileStream = FileStorageService.getFileStream(
           attachment.storageKey,
-          `work-orders/${workOrderId}`
+          `work-orders/${workOrderId}`,
         );
 
         // Set headers for file download
         reply.header("Content-Type", attachment.mimeType);
         reply.header(
           "Content-Disposition",
-          `attachment; filename="${attachment.fileName}"`
+          `attachment; filename="${attachment.fileName}"`,
         );
         reply.header("Content-Length", attachment.fileSize);
 
@@ -289,7 +300,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
             error instanceof Error ? error.message : "Failed to download file",
         });
       }
-    }
+    },
   );
 
   // DELETE /api/v1/work-orders/:workOrderId/attachments/:attachmentId
@@ -334,8 +345,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrderAttachments.id, attachmentId),
-              eq(workOrderAttachments.workOrderId, workOrderId)
-            )
+              eq(workOrderAttachments.workOrderId, workOrderId),
+            ),
           )
           .limit(1);
 
@@ -354,8 +365,8 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           .where(
             and(
               eq(workOrders.id, workOrderId),
-              eq(workOrders.tenantId, user.tenantId)
-            )
+              eq(workOrders.tenantId, user.tenantId),
+            ),
           )
           .limit(1);
 
@@ -370,7 +381,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
         // Delete file from storage
         await FileStorageService.deleteFile(
           attachment.storageKey,
-          `work-orders/${workOrderId}`
+          `work-orders/${workOrderId}`,
         );
 
         // Delete attachment record from database
@@ -390,7 +401,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
             error instanceof Error ? error.message : "Failed to delete file",
         });
       }
-    }
+    },
   );
 };
 

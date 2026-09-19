@@ -133,66 +133,21 @@ export class PushNotificationService {
     _clickAction?: string,
     _imageUrl?: string,
   ): Promise<PushDeliveryStatus> {
-    try {
-      // TODO: Implement FCM integration
-      // const admin = require('firebase-admin');
-      //
-      // // Initialize Firebase Admin SDK if not already initialized
-      // if (!admin.apps.length) {
-      //   admin.initializeApp({
-      //     credential: admin.credential.cert({
-      //       projectId: process.env.FCM_PROJECT_ID,
-      //       clientEmail: process.env.FCM_CLIENT_EMAIL,
-      //       privateKey: process.env.FCM_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      //     }),
-      //   });
-      // }
-      //
-      // const message = {
-      //   notification: {
-      //     title,
-      //     body,
-      //     imageUrl,
-      //   },
-      //   data: data || {},
-      //   android: {
-      //     notification: {
-      //       sound: sound || 'default',
-      //       clickAction,
-      //     },
-      //   },
-      //   apns: {
-      //     payload: {
-      //       aps: {
-      //         badge,
-      //         sound: sound || 'default',
-      //       },
-      //     },
-      //   },
-      //   tokens: tokens.map((t) => t.token),
-      // };
-      //
-      // const response = await admin.messaging().sendMulticast(message);
-
-      this.fastify.log.info(
-        { tokenCount: tokens.length, title, body },
-        "[FCM] Push notification would be sent here",
-      );
-
-      // Simulate response
-      const successCount = tokens.length;
-      const failureCount = 0;
-
-      return {
-        messageId: `fcm-${Date.now()}`,
-        status: "sent",
-        successCount,
-        failureCount,
-      };
-    } catch (error) {
-      this.fastify.log.error({ error }, "FCM error");
-      throw new Error(`FCM error: ${(error as Error).message}`);
-    }
+    // Not implemented (REV-027b/REV-028). This used to report a fabricated
+    // "sent" status with a fake successCount equal to the full token count
+    // — silently lying about delivery to every device, with nothing ever
+    // sent, no matter how many tokens were registered.
+    this.fastify.log.error(
+      { tokenCount: tokens.length, title },
+      "[FCM] Not implemented — the mobile app's documented push feature has no working server side",
+    );
+    return {
+      messageId: "",
+      status: "failed",
+      error: "FCM integration is not implemented (see REV-028)",
+      successCount: 0,
+      failureCount: tokens.length,
+    };
   }
 
   /**
@@ -380,15 +335,15 @@ export class PushNotificationService {
       };
     }
 
-    // TODO: Implement FCM silent notification
-    // Silent notifications don't show in notification tray
-    // They trigger background app refresh
-
+    // Not implemented (REV-027b/REV-028) — same FCM gap as sendViaFCM above.
+    // Silent notifications don't show in the notification tray; they'd
+    // trigger background app refresh, but nothing is actually sent.
     return {
-      messageId: `silent-${Date.now()}`,
-      status: "sent",
-      successCount: tokens.length,
-      failureCount: 0,
+      messageId: "",
+      status: "failed",
+      error: "FCM integration is not implemented (see REV-028)",
+      successCount: 0,
+      failureCount: tokens.length,
     };
   }
 }
