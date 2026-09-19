@@ -11,6 +11,10 @@ on:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
+      # The workflow itself, so a change to CI is validated by CI. Without this
+      # the push trigger tested it and the pull_request trigger did not, so a
+      # broken job could be merged without ever running (REV-014).
+      - '.github/workflows/backend-ci.yml'
 
 env:
   NODE_VERSION: '20.x'
