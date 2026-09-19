@@ -145,9 +145,11 @@ export function Sidebar() {
                     variant={item.badgeVariant || 'default'}
                     className={cn(
                       'min-w-[20px] px-2 py-0 text-xs',
+                      // bg-*-500 + white text failed WCAG AA contrast
+                      // (3.59:1 / ~3.7:1 against a required 4.5:1) — REV-036.
                       item.badgeVariant === 'destructive'
-                        ? 'bg-red-500 hover:bg-red-600'
-                        : 'bg-blue-500 hover:bg-blue-600'
+                        ? 'bg-red-700 hover:bg-red-800'
+                        : 'bg-blue-700 hover:bg-blue-800'
                     )}
                   >
                     {item.badge}

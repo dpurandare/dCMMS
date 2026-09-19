@@ -98,7 +98,7 @@ export function TopBar({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 border-0 bg-transparent p-0 text-sm placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
-            <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-slate-300 bg-white px-1.5 font-mono text-xs text-slate-400">
+            <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-slate-300 bg-white px-1.5 font-mono text-xs text-slate-600">
               ⌘K
             </kbd>
           </div>
@@ -121,7 +121,7 @@ export function TopBar({
         {/* Help Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10">
+            <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="Help">
               <HelpCircle className="h-5 w-5 text-slate-600" />
             </Button>
           </DropdownMenuTrigger>

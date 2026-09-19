@@ -94,23 +94,27 @@ const assetStatusConfig: Record<
   },
 };
 
+// Solid-background + white-text combinations here previously failed WCAG AA
+// contrast (REV-036) — e.g. bg-yellow-500/white was 1.91:1 against a
+// required 4.5:1. Switched to the same light-bg/dark-text pattern already
+// used by workOrderStatusConfig/assetStatusConfig above, which passes.
 const priorityConfig: Record<Priority, { label: string; className: string }> =
   {
     critical: {
       label: 'Critical',
-      className: 'bg-red-500 text-white hover:bg-red-500',
+      className: 'bg-red-100 text-red-700 hover:bg-red-100',
     },
     high: {
       label: 'High',
-      className: 'bg-orange-500 text-white hover:bg-orange-500',
+      className: 'bg-orange-100 text-orange-700 hover:bg-orange-100',
     },
     medium: {
       label: 'Medium',
-      className: 'bg-yellow-500 text-white hover:bg-yellow-500',
+      className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100',
     },
     low: {
       label: 'Low',
-      className: 'bg-slate-400 text-white hover:bg-slate-400',
+      className: 'bg-slate-100 text-slate-600 hover:bg-slate-100',
     },
   };
 
