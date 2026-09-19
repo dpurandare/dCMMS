@@ -183,19 +183,39 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     | :---- | :----- | :------ | :--- |
     | backend `build` (strict `tsc`) | **1 error** | `@fastify/swagger` transform typing, `server.ts:240` | fixed under REV-005 |
     | backend `type-check` | **1 error** | same error | fixed under REV-005 |
-    | backend `lint` | **1,604 problems** (1,045 errors, 559 warnings) | 1,042 `prettier/prettier` (auto-fixable), 470 `no-explicit-any`, 89 `no-unused-vars`, 3 other | REV-021 |
-    | backend `format:check` | **55 files** unformatted | same prettier cluster | REV-021 |
-    | backend `test` | **could not run** — `globalSetup` needs the test database | infra, not code | REV-022 |
-    | frontend `type-check` | **6 errors** | 3× `TS2554` in `src/__tests__/auth/auth-flow.test.tsx`, 3× `TS2339` in `tests/e2e/asset-hierarchy.spec.ts` | REV-021 |
+    | backend `lint` | **1,604 problems** (1,045 errors, 559 warnings) | 1,042 `prettier/prettier` (auto-fixable), 470 `no-explicit-any`, 89 `no-unused-vars`, 3 other | REV-004a (formatting), REV-032 (`any`) |
+    | backend `format:check` | **55 files** unformatted | same prettier cluster | REV-004a |
+    | backend `test` | **could not run** — `globalSetup` needs the test database | infra, not code | REV-038 |
+    | frontend `type-check` | **6 errors** | 3× `TS2554` in `src/__tests__/auth/auth-flow.test.tsx`, 3× `TS2339` in `tests/e2e/asset-hierarchy.spec.ts` | REV-004b |
     | frontend `lint` | **6 errors, 11 warnings** | 6 `react/no-unescaped-entities`, 11 `react-hooks/exhaustive-deps` | fixed under REV-006 |
-    | frontend `format:check` | **141 files** unformatted | prettier was never a frontend dependency | REV-021 |
-    | frontend `test` | **9 of 12 suites failed**, 4 of 49 tests failed | suite-level import/mock failures | REV-022 |
+    | frontend `format:check` | **141 files** unformatted | prettier was never a frontend dependency | REV-004a |
+    | frontend `test` | **9 of 12 suites failed**, 4 of 49 tests failed | suite-level import/mock failures | REV-038 |
 
   - **Two findings worth separating from the raw counts:**
     1. **The strict-build burn-down is 1 error, not hundreds.** `tsconfig.prod.json` was hiding exactly one type error. The review predicted a large backlog here; it was wrong, and this is the cheapest good news in the whole report.
-    2. **1,042 of the backend's 1,045 lint errors are prettier formatting**, every one auto-fixable. The genuine backend lint debt is 3 errors plus 470 `any` warnings. `npm run lint:fix` would clear the 1,042 in one commit — deliberately **not** done here, because it would bury the REV-001/002 diff.
-  - **Also noted:** `backend/tsconfig.json` excludes `tests`, `**/*.test.ts` and `src/__tests__`, so no backend test file is type-checked by `build` or `type-check`. Add to REV-021.
+    2. **1,042 of the backend's 1,045 lint errors are prettier formatting**, every one auto-fixable. The genuine backend lint debt is 3 errors plus 470 `any` warnings. `npm run lint:fix` would clear the 1,042 in one commit — deliberately **not** done here, because it would bury the REV-001/002 diff. Filed as REV-004a.
+  - **Also noted:** `backend/tsconfig.json` excludes `tests`, `**/*.test.ts` and `src/__tests__`, so no backend test file is type-checked by `build` or `type-check`. Filed as REV-004b.
   - **Status:** ✅ COMPLETE
+
+- [ ] **REV-004a** - Apply formatting and enforce it 🟡 **P2**
+  - [ ] `npm --prefix backend run format` (55 files) and `npm --prefix frontend run format` (141 files)
+  - [ ] Land as a **formatting-only commit** with no logic change, so it stays reviewable and `git blame` damage is confined to one revision
+  - [ ] Confirm `format:check` then passes in both projects, making the existing CI step meaningful
+  - **Priority:** 🟡 P2 — cosmetic, but it is 1,042 of the backend's 1,045 lint errors and it masks the real ones
+  - **Estimated:** 1 hour
+  - **Split from:** REV-004
+  - **Verify:** `npm --prefix backend run format:check && npm --prefix frontend run format:check` → both exit 0.
+  - **Status:** 🔴 Not Started
+
+- [ ] **REV-004b** - Type-check the test files 🟡 **P2**
+  - [ ] `backend/tsconfig.json` excludes `tests`, `**/*.test.ts` and `src/__tests__` — no backend test file is type-checked by `build` or `type-check`
+  - [ ] Add a `tsconfig.test.json` that includes them, and wire it into the `type-check` script
+  - [ ] Fix the 6 frontend type errors the current `type-check` already surfaces: 3× `TS2554` in `src/__tests__/auth/auth-flow.test.tsx`, 3× `TS2339` in `tests/e2e/asset-hierarchy.spec.ts`
+  - **Priority:** 🟡 P2
+  - **Estimated:** 3 hours
+  - **Split from:** REV-004
+  - **Verify:** `type-check` covers test files in both projects and exits 0.
+  - **Status:** 🔴 Not Started
 
 - [x] **REV-005** - Make the backend build capable of failing 🔴 **P0**
   - [x] Remove `|| true` from the `build` script in `backend/package.json`
