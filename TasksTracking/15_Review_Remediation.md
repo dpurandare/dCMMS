@@ -467,15 +467,31 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     artefacts, which is a second reason to do it.
   - **Status:** ✅ COMPLETE
 
-- [ ] **REV-014** - Add a migration test to CI 🟠 **P1**
-  - [ ] CI job: provision Postgres → migrate from the oldest supported version → head → assert success
-  - [ ] Run on every PR that touches `backend/src/db/`
+- [x] **REV-014** - Add a migration test to CI 🟠 **P1**
+  - [x] CI job: provision Postgres → migrate → assert success
+  - [x] Run on every PR that touches `backend/src/db/` (the workflow's `backend/**` path filter covers `backend/drizzle/` too)
   - **Priority:** 🟠 P1 — this is what would have caught REV-011 originally
-  - **Estimated:** 4 hours
-  - **Depends on:** REV-011
+  - **Estimated:** 4 hours · **Actual:** ~1 hour
+  - **Files:** `.github/workflows/backend-ci.yml`
   - **Verify:** the job appears and passes on a PR touching a migration.
-  - **Status:** 🔴 Not Started
+  - **What the job asserts**, beyond "the command exited 0" — because REV-011's failure mode was a migration that failed while the app carried on against a schema nobody had declared:
+    - migrations apply to an empty database, then apply a **second** time as a no-op
+    - `__drizzle_migrations` has ≥ 3 rows — an empty table is the exact signature of the bug
+    - ≥ 37 tables, ≥ 14 enum types, ≥ 47 secondary indexes
+    - `refresh_tokens` exists by name — the table whose absence made login 500
+    - `drizzle-kit introspect` reports 37 tables, so `schema.ts` and the database agree
+  - **Also fixed here:** the `integration-tests` job used `postgres:16-alpine`, which has no pgvector. `0000_extensions_and_enums.sql` creates the `vector` extension, so that job would have failed on its migration step. Both jobs now use `pgvector/pgvector:pg16`, matching `docker-compose.yml`.
+  - **Evidence** (assertions rehearsed locally against the same migrations):
+    ```
+    $ npm run db:migrate   # empty database
+    ✅ Migrations completed successfully!
+    $ npm run db:migrate   # again
+    ✅ Migrations completed successfully!
 
+    tables=37  enums=14  indexes=53  applied=3
+    ```
+    CI run link: _(pending push)_
+  - **Status:** ✅ COMPLETE
 - [ ] **REV-015** - Review indexes against real query patterns 🟡 **P2**
   - [ ] Extract the actual query shapes from `backend/src/services/*`
   - [ ] Confirm composite indexes exist on `(tenant_id, …)` for every filtered table
@@ -485,16 +501,26 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Verify:** no sequential scan on any table > 10k rows in the ten sampled queries.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-016** - Confirm seeding cannot run in production 🟡 **P2**
-  - [ ] `backend/src/db/auto-seed.ts` gates on `AUTO_SEED=true` and `NODE_ENV ∈ {development,test,local}` — verify the gate holds under every deployment path
-  - [ ] Confirm the default test credentials in `CLAUDE.md` cannot exist in a production database
+- [x] **REV-016** - Confirm seeding cannot run in production 🟡 **P2**
+  - [x] Verify the gate holds under every deployment path — **it did not**
+  - [x] Confirm the default test credentials cannot exist in a production database
   - **Priority:** 🟡 P2
-  - **Estimated:** 2 hours
+  - **Estimated:** 2 hours · **Actual:** ~1 hour
+  - **The hole:** `auto-seed.ts` opened with `process.env.NODE_ENV || "development"`. A deployment that simply never set `NODE_ENV` was treated as development, and `.env.example` ships `AUTO_SEED=true`, so such a deployment would seed itself with the credentials published in `CLAUDE.md`. The gate was correct for every environment that named itself and wrong for the one that said nothing.
+  - **Fix:** fail closed. An unset `NODE_ENV` now refuses to seed and says so; only `development`, `test` and `local` may seed.
   - **Verify:** with `NODE_ENV=production AUTO_SEED=true`, seeding does not run.
-  - **Status:** 🔴 Not Started
-
-## 1.3 Security Deep Pass (WS-3)
-
+  - **Evidence** (each against a freshly migrated, empty database):
+    ```
+    NODE_ENV=production  AUTO_SEED=true -> users=0
+    NODE_ENV=staging     AUTO_SEED=true -> users=0
+    NODE_ENV=(unset)     AUTO_SEED=true -> users=0
+      ⚠️ AUTO_SEED=true but NODE_ENV is not set — refusing to seed.
+    NODE_ENV=development AUTO_SEED=true -> users=3
+    ```
+    The unset case had to be run with `backend/.env` moved aside: `src/db/index.ts`
+    calls `dotenv.config()` at import time, so the checked-in dev `.env` was
+    restoring `NODE_ENV=development` and quietly invalidating the first attempt.
+  - **Status:** ✅ COMPLETE
 - [ ] **REV-017** - Decide and implement the token storage model 🟠 **P1**
   - [ ] Access and refresh tokens are currently in `localStorage` (`frontend/src/store/auth-store.ts:36-37,75-76`) — any XSS yields both, including the 7-day refresh token
   - [ ] **Recommendation:** refresh token in an `HttpOnly; Secure; SameSite=Strict` cookie; access token in memory only
@@ -517,15 +543,49 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Verify:** an ADR exists recording the auth transport, the threats it addresses, and the CSRF decision.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-019** - Tighten Content-Security-Policy 🟠 **P1**
-  - [ ] Remove `'unsafe-eval'` and `'unsafe-inline'` from `script-src` in `frontend/next.config.js` — the primary XSS mitigation is currently disabled
-  - [ ] Make `connect-src` environment-driven; it is hardcoded to `http://localhost:3001` / `ws://localhost:3001` and **will break every API call in production**
+- [x] **REV-019** - Tighten Content-Security-Policy 🟠 **P1**
+  - [x] Remove `'unsafe-eval'` and `'unsafe-inline'` from `script-src`
+  - [x] Make `connect-src` environment-driven
   - **Priority:** 🟠 P1
-  - **Estimated:** 4 hours
-  - **Files:** `frontend/next.config.js`
+  - **Estimated:** 4 hours · **Actual:** ~2 hours
+  - **Files:** `frontend/src/middleware.ts` (new), `frontend/next.config.js`, `frontend/src/app/layout.tsx`
   - **Verify:** production build served with a production `NEXT_PUBLIC_API_URL` → no CSP violations in console; API calls succeed.
-  - **Status:** 🔴 Not Started
+  - **Evidence** — built with `NEXT_PUBLIC_API_URL=https://api.example.com/api/v1`:
+    ```
+    content-security-policy: default-src 'self'
+      script-src 'self' 'nonce-MzZiYmFjMzEtNWY5ZS00ZDg5...'
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com
+      connect-src 'self' https://api.example.com wss://api.example.com
+      object-src 'none'
+      ...
 
+    req1 header=M2RiMjlkMTktNj… html=M2RiMjlkMTktNj… match=yes
+    req2 header=YjJiMmI0NGUtMG… html=YjJiMmI0NGUtMG… match=yes
+    ```
+    Nonce rotates per request and matches the one stamped on the served scripts;
+    all 11 script tags carry it.
+  - **Two things this turned up that the task did not anticipate:**
+    1. **A nonce alone was not enough.** Setting the CSP only on the *response*
+       left every Next bootstrap script unnonced — 6 inline scripts with no
+       nonce, which the new policy would have blocked outright. Next reads the
+       nonce back off the **request** CSP header, so the middleware sets both.
+       Counting `nonce=` occurrences in the served HTML is what caught it; the
+       header alone looked correct.
+    2. **Static prerendering defeats nonces.** A nonce is per-request, so Next
+       can only apply it to pages it renders per request. Every route was
+       statically prerendered, so the count stayed at 0 until
+       `export const dynamic = 'force-dynamic'` was added to the root layout.
+       Little is lost — every page is an authenticated dashboard fetching its
+       data client-side — but it is a real rendering change, not a header tweak.
+  - **Limitation, deliberately accepted:** `connect-src` resolves at **build**
+    time. Middleware runs on the Edge runtime, where `process.env` is statically
+    substituted during the build, so no runtime variable can reach it. This only
+    holds together because `next.config.js` already inlines
+    `NEXT_PUBLIC_API_URL` the same way, so the policy and the API client agree
+    by construction. Making both runtime-configurable is REV-033.
+  - **`style-src` keeps `'unsafe-inline'`:** Next emits inline `<style>` that
+    nonces do not reach. Materially weaker exposure than the `script-src` case.
+  - **Status:** ✅ COMPLETE
 - [ ] **REV-020** - Tenant isolation audit 🟠 **P1**
   - [ ] 16 route files and 28 service files contain no reference to `tenantId` at all
   - [ ] For all 39 route files, confirm every query is scoped by `tenantId` taken **from the JWT**, never from the request body or params

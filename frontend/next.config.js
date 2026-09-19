@@ -8,7 +8,8 @@ const nextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
   },
 
-  // Security Headers
+  // Security headers. Content-Security-Policy is NOT here — it needs a
+  // per-request nonce, so it is set in src/middleware.ts (REV-019).
   async headers() {
     return [
       {
@@ -41,20 +42,6 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: https: blob:",
-              "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' http://localhost:3001 ws://localhost:3001",
-              "frame-ancestors 'self'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join('; ')
           },
         ],
       },
