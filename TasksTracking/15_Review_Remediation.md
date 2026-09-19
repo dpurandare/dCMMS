@@ -694,14 +694,63 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Verify:** `grep -rn "middleware/rbac\|config/permissions" backend/src` → no matches. Permission-parity test passes.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-022** - Add login throttling and account lockout 🟡 **P2**
-  - [ ] `backend/src/routes/auth.ts` login has no lockout, no per-account throttle, no failed-attempt tracking
-  - [ ] The only limit is the global 100 req/min (`server.ts:170`) — not a credential-stuffing defence
-  - [ ] Add per-account failed-attempt counting with exponential backoff, and audit-log lockout events
+- [x] **REV-022** - Add login throttling and account lockout 🟡 **P2**
+  - [x] Add per-account failed-attempt counting with exponential backoff, and audit-log lockout events
   - **Priority:** 🟡 P2
-  - **Estimated:** 1 day
+  - **Estimated:** 1 day · **Actual:** ~2 hours
+  - **Files:** `backend/src/services/login-throttle.service.ts` (new), `backend/src/routes/auth.ts`
   - **Verify:** 10 failed logins for one account → subsequent attempts rejected; a different account is unaffected.
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    attempt : status : Retry-After
+     1:401   2:401   3:401   4:401   5:401
+     6:429 (2s)  7:429 (4s)  8:429 (8s)  9:429 (16s)
+    10:429 (900s) 11:429 (900s) 12:429 (900s) 13:429 (900s)
+
+    manager (correct pw) during admin lockout: 200
+    admin after counter reset:                 200
+    ```
+    Five free attempts, then doubling backoff, then a 15-minute lockout at the
+    threshold. Counting is per account, so one attacker cannot lock out an
+    unrelated user. The throttle is checked *before* the password comparison, so
+    a locked account costs an attacker nothing to keep hammering.
+  - **First implementation was wrong, and the live test is what showed it.**
+    Rejected attempts did not increment the counter, so the count froze at 5,
+    the backoff never escalated past 1 second and the lockout threshold was
+    unreachable — attempts 6–12 all returned `Retry-After: 1`. An attacker
+    pausing one second between tries would have been throttled in name only.
+    Rejected attempts now count too.
+  - **Redis is the store, not the gate:** if Redis is unavailable, logins proceed
+    unthrottled rather than the product becoming unusable. A deliberate
+    tradeoff, worth revisiting if Redis becomes a hard dependency.
+  - **Status:** ✅ COMPLETE
+
+- [x] **REV-022a** - `npm test` was destroying the developer's database 🔴 **P0**
+  - [x] Found while verifying REV-022: after a test run, the dev database had **0 tables**; `dcmms_test` had 37.
+  - **Cause:** jest's `globalTeardown` calls `npm run db:reset:test`, which ran
+    `tsx src/db/reset-test.ts` with **no `DATABASE_URL` override** — unlike its
+    sibling `db:migrate:test`, which has one. `src/db/index.ts` loads `.env`, so
+    the script connected to the *development* database and ran
+    `DROP SCHEMA public CASCADE`.
+  - [x] npm script now passes `TEST_DATABASE_URL`, matching `db:migrate:test`
+  - [x] `reset-test.ts` now refuses to run unless the database name looks like a
+        test database, and refuses outright under `NODE_ENV=production`. The
+        script drops a schema; a forgotten environment variable must not be able
+        to aim it at the wrong database again.
+  - **Verify:** pointing it at the dev database is refused; pointing it at `dcmms_test` succeeds.
+  - **Evidence:**
+    ```
+    $ DATABASE_URL=…/dcmms npx tsx src/db/reset-test.ts
+    ❌ Refusing to reset "dcmms": it is not a test database.
+    exit=1
+
+    $ DATABASE_URL=…/dcmms_test npx tsx src/db/reset-test.ts
+    ✅ Test database reset successfully!
+    ```
+  - **Why this went unnoticed:** the backend test suite has never been runnable
+    (REV-020 fixed the connection details), so the teardown had never actually
+    executed against a working `.env`.
+  - **Status:** ✅ COMPLETE
 
 - [x] **REV-023** - Triage all dependency vulnerabilities 🟠 **P1** ⚠️ **PARTIAL**
   - [x] Backend: **60 → 13** (4 critical → 1, 21 high → 3). Frontend: **28 → 8** (1 critical → 1, 21 high → 7).

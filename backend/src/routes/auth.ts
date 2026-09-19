@@ -1,6 +1,11 @@
 import { FastifyPluginAsync } from "fastify";
 import { AuthService, UserPayload } from "../services/auth.service";
 import { TokenService } from "../services/token.service";
+import {
+  checkLoginAllowed,
+  clearLoginFailures,
+  recordLoginFailure,
+} from "../services/login-throttle.service";
 
 const authRoutes: FastifyPluginAsync = async (server) => {
   // POST /api/v1/auth/login
@@ -57,15 +62,37 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
       try {
         // Authenticate user
+        // Per-account throttle, checked before the password is verified so a
+        // locked account costs an attacker nothing to discover and nothing to
+        // keep attacking (REV-022).
+        const throttle = await checkLoginAllowed(server, email);
+        if (!throttle.allowed) {
+          request.log.warn(
+            { email, failureCount: throttle.failureCount },
+            "Login attempt rejected by throttle",
+          );
+          return reply
+            .status(429)
+            .header("Retry-After", String(throttle.retryAfterSeconds))
+            .send({
+              statusCode: 429,
+              error: "Too Many Requests",
+              message: `Too many failed login attempts. Try again in ${throttle.retryAfterSeconds} seconds.`,
+            });
+        }
+
         const user = await AuthService.authenticate({ email, password });
 
         if (!user) {
+          await recordLoginFailure(server, email);
           return reply.status(401).send({
             statusCode: 401,
             error: "Unauthorized",
             message: "Invalid email or password",
           });
         }
+
+        await clearLoginFailures(server, email);
 
         // Generate tokens with request context for security tracking
         const tokens = await TokenService.generateTokens(server, user, {

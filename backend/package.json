@@ -22,7 +22,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:migrate:test": "DATABASE_URL=$TEST_DATABASE_URL tsx src/db/migrate.ts",
-    "db:reset:test": "tsx src/db/reset-test.ts",
+    "db:reset:test": "DATABASE_URL=$TEST_DATABASE_URL tsx src/db/reset-test.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push:pg",
     "db:seed": "tsx src/db/seed.ts"
