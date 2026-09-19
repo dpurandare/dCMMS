@@ -6,9 +6,11 @@ module.exports = {
   // Test environment
   testEnvironment: 'node',
 
-  // Roots
-  // Roots
-  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/test'],
+  // Roots. `test/` (singular) was a duplicate legacy tree — REV-037
+  // consolidated its 7 real e2e specs into `tests/e2e/` and deleted the
+  // rest (a dead Mocha-style spec referencing services removed under
+  // REV-025, plus its own README).
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
 
   // TypeScript transformation
   transform: {
