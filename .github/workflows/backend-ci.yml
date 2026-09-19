@@ -235,9 +235,12 @@ jobs:
         working-directory: backend
         run: |
           set -euo pipefail
-          npx drizzle-kit introspect:pg --driver=pg \
-            --connectionString="$DATABASE_URL" --out=/tmp/introspect | tee /tmp/introspect.log
-          grep -q "37  tables fetched" /tmp/introspect.log \
+          # drizzle-kit 0.31 flags: `introspect --dialect/--url`, not the 0.20
+          # `introspect:pg --driver/--connectionString` form (REV-023 upgrade).
+          npx drizzle-kit introspect --dialect=postgresql \
+            --url="$DATABASE_URL" --out=/tmp/introspect | tee /tmp/introspect.log
+          # Tolerate drizzle-kit's spacing, which differs between versions.
+          grep -qE "37 +tables fetched" /tmp/introspect.log \
             || { echo "::error::introspection did not find the expected 37 tables"; exit 1; }
 
   # ==========================================

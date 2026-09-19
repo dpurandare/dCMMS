@@ -156,7 +156,7 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - [x] Same in `frontend-ci.yml`, `mobile-ci.yml`, `code-quality.yml` (code-quality's weekly `schedule` restored too)
   - [x] Add the missing `format:check` and `type-check` scripts to `frontend/package.json` — also added `prettier@3.2.5` as a devDependency, which the frontend did not have at all
   - [x] Let the pipeline fail loudly — no CI failure was fixed under this task
-  - [ ] **Verify still outstanding:** needs a pushed PR. Blocked on the push/PR decision, not on code.
+  - [x] **Verified 2026-09-19** on [PR #154](https://github.com/dpurandare/dCMMS/pull/154): all four workflows triggered on `pull_request` and reported results.
   - **Priority:** 🔴 P0 — no CI has gated any of the last 301 commits
   - **Estimated:** 3 hours · **Actual:** ~1 hour
   - **Files:** `.github/workflows/*.yml`, `frontend/package.json`, `frontend/package-lock.json`
@@ -169,9 +169,19 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     .github/workflows/frontend-ci.yml  -> ['pull_request', 'push', 'workflow_dispatch']
     .github/workflows/mobile-ci.yml    -> ['pull_request', 'push', 'workflow_dispatch']
     ```
-    PR run link: _(pending push)_
+    PR #154 — all four workflows ran. They failed loudly, which is the point:
+
+    | Workflow | Result |
+    | :------- | :----- |
+    | Backend CI/CD | Migrations, Lint & Format, Unit Tests, Integration Tests, Security Scan — all ❌ |
+    | Frontend CI/CD | Lint & Format, Unit Tests, Build, E2E, a11y, Lighthouse, Security — all ❌ |
+    | Code Quality & Security | CodeQL javascript ✅, CodeQL typescript ✅; the other 7 ❌ |
+    | PR Automation | ❌ |
+
+    Two CodeQL jobs are the only green checks on the first gated PR in the
+    project's history. That is the honest starting line.
   - **Note:** `frontend-ci.yml` also calls three scripts that still do not exist — `test:unit`, `analyze`, `test:a11y`. Left alone deliberately: they are CI failures for REV-004 to record, not silent fixes.
-  - **Status:** ⚠️ PARTIAL — code complete; PR-run evidence pending
+  - **Status:** ✅ COMPLETE
 
 - [x] **REV-004** - Record the CI failure baseline 🟠 **P1**
   - [x] Capture the full lint / type-check / test failure list from REV-003
@@ -573,7 +583,13 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
 
     tables=37  enums=14  indexes=53  applied=3
     ```
-    CI run link: _(pending push)_
+    On PR #154 the job ran and its migration steps passed; the final step failed
+    on **my own error** — it was written with drizzle-kit 0.20 syntax
+    (`introspect:pg --driver/--connectionString`) before REV-023 upgraded to
+    0.31, where the command is `introspect --dialect/--url` and the output
+    spacing differs. Fixed, and the assertion now tolerates either spacing.
+    A CI job that fails on its own tooling teaches nothing, so it was worth
+    fixing properly rather than loosening the check.
   - **Status:** ✅ COMPLETE
 - [ ] **REV-015** - Review indexes against real query patterns 🟡 **P2** 🛑 **DEFERRED**
   - [ ] Extract the actual query shapes from `backend/src/services/*`
