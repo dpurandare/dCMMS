@@ -320,38 +320,152 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
 
 ## 1.2 Database & Migrations (WS-4) — blocks Phase 2
 
-- [ ] **REV-011** - Reconcile the two migration systems 🔴 **P0**
-  - [ ] **Decision required:** adopt Drizzle-generated migrations and port `008`–`022` into it, **or** adopt plain SQL and write a runner. Record the decision as an ADR.
-  - [ ] `backend/src/db/migrate.ts` runs the Drizzle migrator against `./drizzle`, which holds exactly one squashed migration (`0000_abnormal_omega_flight.sql`, 37 tables — confirmed by `drizzle/meta/_journal.json`)
-  - [ ] The 16 hand-written files in `backend/src/db/migrations/` (numbered 008–022) are executed by **nothing** — not `scripts/dev.sh:114`, not `backend/scripts/docker-entrypoint.sh`
-  - [ ] Port or delete each of the 16 files; none may remain unreferenced
-  - [ ] Resolve the duplicate `020` prefix (`020_add_chat_feedback.sql`, `020_fix_genai_vector_dimensions.sql`)
-  - [ ] Renumber from `001`; the sequence currently starts at `008` with no 001–007
-  - **Priority:** 🔴 P0 — the project has **no incremental upgrade path**; the only deployment strategy is drop-and-recreate
-  - **Estimated:** 3 days
-  - **Files:** `backend/src/db/migrate.ts`, `backend/drizzle/`, `backend/src/db/migrations/`
+- [x] **REV-011** - Reconcile the two migration systems 🔴 **P0**
+  - [x] **Decision taken 2026-09-19 (Deepak):** drizzle-kit owns the schema; the 16 hand-written files are deleted. Recorded as [`ADR-004`](../docs/architecture/adrs/ADR-004-migration-strategy.md).
+  - [x] Port or delete each of the 16 files; none may remain unreferenced
+  - [x] Resolve the duplicate `020` prefix — resolved by deletion
+  - [x] Renumber from `001` — the sequence is now `0000`/`0001`/`0002` with a real `0000`
+  - **Priority:** 🔴 P0
+  - **Estimated:** 3 days · **Actual:** ~4 hours
+  - **Files:** `backend/drizzle/` (rebuilt), `scripts/init-db.sql` (emptied), `backend/src/db/migrations/` (deleted), `docs/architecture/adrs/ADR-004-migration-strategy.md`
   - **Verify:** `ls backend/src/db/migrations` → empty or every file referenced by the runner. Migrating a DB created from the previous release to head succeeds.
+
+  ### The review understated this one. The migration had never succeeded, ever.
+
+  There were **three** schema systems, not two. The third — `scripts/init-db.sql`,
+  mounted at the Postgres container's `docker-entrypoint-initdb.d` — created 10
+  tables, ~40 indexes, 7 enums, 8 triggers and a hardcoded `super_admin`.
+
+  Running the migration against a live stack gave:
+
+  ```
+  $ npm --prefix backend run db:migrate
+  ❌ Migration failed: error: type "vector(768)" does not exist
+
+  $ psql -c "select count(*) from drizzle.__drizzle_migrations;"
+   0
+  $ psql -c "\dt"   → 10 tables (all from init-db.sql)
+  ```
+
+  `schema.ts:1490` declares the pgvector column via `customType` returning
+  `"vector(768)"`; drizzle-kit quotes custom type names, so Postgres looks for a
+  type literally named `vector(768)`. Every run failed and rolled back.
+
+  **27 of the 37 tables the ORM expects did not exist in any database this
+  project could produce.** Including `refresh_tokens`, which made login return 500
+  on a freshly provisioned stack:
+
+  ```
+  $ curl -X POST localhost:3000/api/v1/auth/login -d '{"email":"admin@example.com",...}'
+  {"statusCode":500,"error":"Internal Server Error","message":"An error occurred during login"}
+  # backend log: relation "refresh_tokens" does not exist
+  ```
+
+  A knock-on: `auto-seed` skips when rows exist and `init-db.sql` always inserted
+  a user, so the `CLAUDE.md` credentials were never created either.
+
+  - **Evidence — after the fix, from an empty database:**
+    ```
+    $ dropdb dcmms && createdb dcmms && npm --prefix backend run db:migrate
+    ✅ Migrations completed successfully!
+
+    tables: 37 · secondary indexes: 53 · enum types: 14 · triggers: 30
+    applied migrations: 3
+
+    $ ls backend/src/db/migrations
+    (directory removed)
+
+    $ curl -X POST localhost:3000/api/v1/auth/login ...
+    {"accessToken":"eyJhbGciOiJIUzI1NiIs..."}
+    ```
+    Login succeeds. As far as this review can tell, that is the first time the
+    application has worked end to end on a freshly provisioned database.
+
+  - **Accepted limitation:** migrating a database created by the *old*
+    `init-db.sql` still fails —
+    `column "assigned_crew_id" referenced in foreign key constraint does not exist`
+    — because the baseline's `CREATE TABLE IF NOT EXISTS` skips tables that
+    already exist. Accepted in ADR-004: no database has ever held the intended
+    schema, so there is nothing to preserve. Dev databases must be recreated
+    once. From `0003` onward every migration must apply to the previous head,
+    and REV-014 is the CI job that proves it.
+  - **Status:** ✅ COMPLETE
+
+- [ ] **REV-011a** - Upgrade drizzle-orm so `vector` is a native type 🟠 **P1**
+  - [ ] `drizzle-orm@0.30.10` has no native `vector`; it arrived in 0.31. Until then `schema.ts` keeps the `customType` workaround and **`drizzle-kit generate` will keep emitting `"vector(768)"` quoted**, which is the exact bug that made every migration fail
+  - [ ] Upgrade `drizzle-orm` and `drizzle-kit`, switch `schema.ts:1490` to the native type, regenerate and diff
+  - [ ] The upgrade also clears the `drizzle-orm` SQL-injection advisory tracked in REV-023
+  - **Priority:** 🟠 P1 — a footgun that has already cost this project every one of its migrations
+  - **Estimated:** 4 hours
+  - **Split from:** REV-011
+  - **Verify:** `drizzle-kit generate` on an unchanged schema produces an empty migration, and the vector column needs no hand-editing.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-012** - Re-apply the migrations that never ran 🟠 **P1**
-  - [ ] `022_fix_asset_jsonb_columns.sql` — shipped as the fix for FE-BUG-04 in commit `5e89c2f`, never executed. The bug is still live in any database not recreated from `0000`.
-  - [ ] Audit `008`–`021` for the same problem — each may contain an unapplied fix
-  - [ ] Confirm each is idempotent before re-running (`022` already uses a `DO` block — good practice, follow it)
-  - **Priority:** 🟠 P1
+- [ ] **REV-011b** - Declare indexes in `schema.ts` 🟡 **P2**
+  - [ ] `schema.ts` declares **zero** indexes, which is why the generated baseline had only primary keys
+  - [ ] `0002_indexes_and_triggers.sql` restores 47 of them from the dead migration files, but generation and reality will drift again the moment someone regenerates
+  - [ ] Move them into `index()` / `uniqueIndex()` declarations in `schema.ts`
+  - **Priority:** 🟡 P2
   - **Estimated:** 1 day
-  - **Depends on:** REV-011
+  - **Depends on:** REV-015 (review them before enshrining them)
+  - **Split from:** REV-011
+  - **Verify:** `drizzle-kit generate` reproduces every index in `0002` from `schema.ts` alone.
+  - **Status:** 🔴 Not Started
+
+- [x] **REV-012** - Re-apply the migrations that never ran 🟠 **P1**
+  - [x] `022_fix_asset_jsonb_columns.sql` — the premise turned out to be wrong in an interesting way. The fix was never *needed* in any database the project could produce, because the drizzle baseline already declares both columns as `jsonb`. The text-typed version only ever existed in `scripts/init-db.sql`. So the bug was real, but its source was the third schema system, not an unapplied migration.
+  - [x] Audit `008`–`021` for the same problem — done as part of REV-011. 20 of the 21 tables they create were already in the baseline; the exception was `chat_feedback`, which is used by no code and is deliberately dropped (ADR-004).
+  - [x] Confirm each is idempotent before re-running — moot: nothing is re-run. Everything portable is now in `0002`, with `IF NOT EXISTS` on indexes and `DROP TRIGGER IF EXISTS` before each trigger, so the migration is safe to re-apply.
+  - **Priority:** 🟠 P1
+  - **Estimated:** 1 day · **Actual:** folded into REV-011
+  - **Depends on:** REV-011 ✅
   - **Verify:** on a DB provisioned before the fix, `\d assets` shows `location` and `metadata` as `jsonb`.
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ psql -d dcmms -c "select column_name, data_type from information_schema.columns
+                        where table_name='assets' and column_name in ('location','metadata');"
+     location | jsonb
+     metadata | jsonb
 
-- [ ] **REV-013** - Verify `schema.ts` matches a migrated database 🟠 **P1**
-  - [ ] Migrate a clean DB to head; diff the live schema against `backend/src/db/schema.ts` column by column
-  - [ ] Silent drift has already occurred once (the `assets` jsonb columns) — assume more exists
-  - [ ] File a task per divergence
+    $ psql -d dcmms -c "... format_type for document_embeddings.embedding"
+     embedding | vector | vector(768)      -- the 020_fix intent, from the baseline
+    ```
+  - **Status:** ✅ COMPLETE
+
+- [x] **REV-013** - Verify `schema.ts` matches a migrated database 🟠 **P1**
+  - [x] Migrate a clean DB to head; diff the live schema against `schema.ts` column by column
+  - [x] File a task per divergence — **no real divergence was found**
   - **Priority:** 🟠 P1
-  - **Estimated:** 1 day
-  - **Depends on:** REV-011
+  - **Estimated:** 1 day · **Actual:** ~1 hour
+  - **Depends on:** REV-011 ✅
   - **Verify:** `drizzle-kit` introspection of the live DB produces no diff against `schema.ts`.
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ npx drizzle-kit introspect:pg --driver=pg --connectionString=...
+    [✓] 37  tables fetched
+    [✓] 548 columns fetched
+    [✓] 14  enums fetched
+    [✓] 47  indexes fetched
+    [✓] 73  foreign keys fetched
+    ```
+    No table, column or enum is missing or extra. `drizzle-kit push:pg --strict`
+    does report 38 foreign-key drop/add pairs and 11 `SET DEFAULT` statements,
+    but both are tool artefacts, not drift:
+    - the FK churn is Postgres truncating constraint names at 63 characters
+      (`compliance_generated_reports_template_id_compliance_report_temp`), so
+      drizzle-kit cannot match its own generated name against the stored one;
+    - the 11 defaults are already present. Checked directly:
+      `permits.status` → `'draft'::character varying`. drizzle-kit 0.20 does not
+      treat the `::character varying` cast as equal to its expected `'draft'`.
+
+    I initially read those 11 as genuine drift and added a `0003_column_defaults`
+    migration for them. Checking the baseline showed it already carried every one
+    of those defaults, so the migration was a no-op and was removed rather than
+    shipped. The residual `push` diff is noise and should not be treated as a
+    schema-drift signal; REV-014's migration job is the reliable check.
+  - **Note for REV-011a:** upgrading drizzle-kit past 0.20 should quieten both
+    artefacts, which is a second reason to do it.
+  - **Status:** ✅ COMPLETE
 
 - [ ] **REV-014** - Add a migration test to CI 🟠 **P1**
   - [ ] CI job: provision Postgres → migrate from the oldest supported version → head → assert success

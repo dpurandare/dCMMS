@@ -5,8 +5,22 @@
     {
       "idx": 0,
       "version": "5",
+      "when": 1776670018706,
+      "tag": "0000_extensions_and_enums",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1776670018707,
+      "tag": "0001_baseline_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
       "when": 1776670018708,
-      "tag": "0000_abnormal_omega_flight",
+      "tag": "0002_indexes_and_triggers",
       "breakpoints": true
     }
   ]
