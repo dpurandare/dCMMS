@@ -22,11 +22,11 @@
 
 <div align="center">
 
-**A production-ready, AI-powered Computerized Maintenance Management System for non-conventional energy power plants**
+**An AI-powered Computerized Maintenance Management System for non-conventional energy power plants — under active review, not production ready**
 
 [![Release](https://img.shields.io/badge/Release-2.0%20(v0.3.0)-blue)](https://github.com/yourusername/dCMMS/releases)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/yourusername/dCMMS)
-[![Sprint Progress](https://img.shields.io/badge/Sprint%2020-100%25%20Complete-green)](./SPRINT_STATUS_TRACKER.md)
+[![Status](https://img.shields.io/badge/Status-Under%20Review-orange)](./TasksTracking/15_Review_Remediation.md)
+[![Verified](https://img.shields.io/badge/Verified%20working-11%2F202%20tasks-red)](./docs/review/feature-inventory.md)
 [![License](https://img.shields.io/badge/License-Proprietary-red)](./LICENSE)
 
 [Features](#key-features) •
@@ -57,7 +57,7 @@
 
 ## Overview
 
-**dCMMS** is a comprehensive, production-ready Computerized Maintenance Management System (CMMS) designed specifically for utility-scale non-conventional energy power plants. Built with enterprise-grade reliability, AI-powered predictive maintenance, and compliance automation, dCMMS enables proactive operations management for non-conventional energy O&M teams.
+**dCMMS** is a Computerized Maintenance Management System (CMMS) designed specifically for utility-scale non-conventional energy power plants. Built with enterprise-grade reliability, AI-powered predictive maintenance, and compliance automation, dCMMS enables proactive operations management for non-conventional energy O&M teams.
 
 ## User Seeding (Production & Dev/Test)
 
@@ -66,11 +66,11 @@
 
 ### What Makes dCMMS Different?
 
-- 🤖 **ML-Powered Predictive Maintenance**: Detect equipment failures before they happen with 92-96% accuracy
+- 🤖 **ML-Powered Predictive Maintenance**: anomaly detection and health scoring (accuracy unmeasured; most ML routes are not wired — see the feature inventory)
 - 📊 **Compliance Automation**: Generate CEA/MNRE quarterly reports in 30 minutes (vs 8-10 hours manually)
-- ⚡ **High-Performance**: 72,000 telemetry events/second, API p95 <200ms
+- ⚡ **Telemetry ingestion**: REST → Kafka. The consumer that would persist events is not implemented; throughput is unmeasured
 - 📱 **Offline-First Mobile**: Field technicians work seamlessly without connectivity
-- 🔒 **Enterprise Security**: 93/100 security score, SOC 2 Type II ready
+- 🔒 **Security**: under active remediation — see [accepted-risks.md](./docs/review/accepted-risks.md)
 - ☁️ **Cloud-Agnostic**: Deploy on AWS, Azure, or GCP with Terraform IaC
 
 ### Industry Focus
@@ -89,9 +89,9 @@ Designed for utility-scale non-conventional energy plants (50+ MW), with specifi
 ### 🚀 Release 2 Highlights (v0.3.0 - Current)
 
 #### ML-Powered Predictive Maintenance
-- **Anomaly Detection**: Real-time equipment anomaly detection with 92-96% accuracy
+- **Anomaly Detection**: implemented; accuracy unmeasured
 - **Predictive Maintenance**: Health scoring and Remaining Useful Life (RUL) estimation
-- **Energy Forecasting**: 7-day generation forecasts with 96.8% accuracy (Solar & Wind)
+- **Energy Forecasting**: 7-day generation forecasts (Solar & Wind); accuracy unmeasured
 - **Automatic Work Order Creation**: ML-recommended maintenance with human-in-the-loop approval
 - **Wind Energy Support**: Specialized asset models, power curve analysis, and telemetry for wind turbines
 - **Deep Learning Models**: LSTM and Transformer architectures for high-precision generation forecasting (Sprint 20)
@@ -114,7 +114,7 @@ Designed for utility-scale non-conventional energy plants (50+ MW), with specifi
 
 #### Production Readiness
 - **Performance**: API p95 <200ms, 72K events/sec telemetry, 200+ concurrent users
-- **Security**: 93/100 security score, 0 critical vulnerabilities, MFA, encryption
+- **Security**: JWT auth, RBAC, tenant scoping. See the accepted-risks register for what is open
 - **Disaster Recovery**: RTO <4h, RPO <24h, automated backups with PITR
 - **Incident Response**: 4-tier classification, comprehensive runbooks, on-call rotation
 
@@ -128,7 +128,7 @@ Designed for utility-scale non-conventional energy plants (50+ MW), with specifi
 - **Mobile-First**: Offline-capable Flutter mobile app for field technicians
 
 #### Real-Time Telemetry & Monitoring
-- **High-Speed Ingestion**: 72,000 events/second (MQTT + Kafka + Flink + QuestDB)
+- **High-Speed Ingestion**: 72,000 events/second (MQTT + Kafka + Flink + QuestDB) — *target architecture; the MQTT consumer, Flink job and Kafka consumer are not implemented*
 - **Real-Time Dashboards**: Live generation, availability, and equipment health
 - **Alarm Management**: Configurable thresholds with multi-channel notifications
 - **Historical Trend Analysis**: Time-series data with 30-day high-resolution retention
@@ -248,58 +248,47 @@ For detailed architecture diagrams, see [`media/ARCHITECTURE_DIAGRAMS_V2.md`](./
 
 ## Project Status
 
-### 🎉 Release 2 (v0.3.0) - PRODUCTION READY
+**Not production ready.** Status below is measured, not self-reported — see
+[`docs/review/feature-inventory.md`](./docs/review/feature-inventory.md) for the
+method and the per-task detail.
 
-**Sprint 18 Complete:** 78/81 story points (96%)
+### Measured, 2026-09-19
 
-#### Implementation Progress
+| | |
+| :-- | :-- |
+| Tasks in `TasksTracking/01`–`14` | **202** |
+| Marked complete by the team | **181** |
+| **Demonstrably working** | **11** |
+| Backend route files registered in `server.ts` | **23 of 39** — 16 are never imported |
+| Live `GET` endpoints probed | 42 → 29 × 200, 6 × 403, 5 × 500, 2 × 400 |
+| Dependency vulnerabilities | 21 open (2 critical, 10 high) — down from 88; see [accepted-risks.md](./docs/review/accepted-risks.md) |
 
-| Sprint         | Focus Area                         | Tasks   | Status     |
-| -------------- | ---------------------------------- | ------- | ---------- |
-| **Sprint 0**   | Foundation Setup                   | 9       | ✅ 100%     |
-| **Sprint 1-4** | MVP Backend & Frontend             | 16      | ✅ 100%     |
-| **Sprint 5**   | MVP Integration & Testing          | 4       | ✅ 100%     |
-| **Sprint 6**   | Telemetry Pipeline                 | 8       | ✅ 100%     |
-| **Sprint 7**   | Telemetry Optimization             | 6       | ✅ 100%     |
-| **Sprint 8**   | Alerting & Notifications           | 8       | ✅ 100%     |
-| **Sprint 9**   | Multi-Channel Notifications        | 8       | ✅ 100%     |
-| **Sprint 10**  | Analytics & Reporting              | 4       | ✅ 100%     |
-| **Sprint 11**  | Compliance & Audit                 | 4       | ✅ 100%     |
-| **Sprint 12**  | ML Infrastructure                  | 6       | ✅ 100%     |
-| **Sprint 13**  | Feature Engineering & Training     | 6       | ✅ 100%     |
-| **Sprint 14**  | Model Serving & Explainability     | 4       | ✅ 100%     |
-| **Sprint 15**  | Predictive Maintenance Integration | 5       | ✅ 100%     |
-| **Sprint 16**  | Cost & Budget Management           | 4       | ✅ 100%     |
-| **Sprint 17**  | ML Model Cards & Documentation     | 2       | ✅ 100%     |
-| **Sprint 18**  | Release 2 Production Readiness     | 13      | ✅ 100%     |
-| **Sprint 19**  | Forecasting & Wind Energy          | 8       | ✅ 100%     |
-| **Sprint 20**  | Advanced Intelligence & Mobile     | 6       | ✅ 100%     |
-| **Total**      | **20 Sprints**                     | **113** | **✅ 100%** |
+Module-by-module status: [`TasksTracking/README.md`](./TasksTracking/README.md).
 
-**Deferred:** DCMMS-145 (Cloud Provider Selection - 3 pts) - AWS selected by default
+### What was wrong with the previous table
 
-#### Release Status Summary
+It reported "20 Sprints · 113 tasks · ✅ 100%" and "APPROVED FOR PRODUCTION
+DEPLOYMENT". Alongside it stood these claims, none of which was supported:
 
-✅ **Production Readiness Validated:**
-- Performance: API p95 <200ms ✅, Telemetry 72K events/sec ✅
-- Security: 93/100 score, 0 critical/high vulnerabilities ✅
-- Testing: 156/156 integration tests passed ✅, 243/243 regression tests passed ✅
-- Disaster Recovery: RTO <4h, RPO <24h ✅
-- Documentation: 95% coverage (45/47 documents), 98% accuracy ✅
-- Training: 90 FAQs, 4 quick-start guides, 5 video scripts ✅
+| Claim | Measured |
+| :---- | :------- |
+| "156/156 integration tests passed" | The backend test suite could not run at all until 2026-09-19; it now executes 60 tests, 29 of which fail |
+| "243/243 regression tests passed" | No such suite exists in the repository |
+| "93/100 security score, 0 critical/high vulnerabilities" | 88 vulnerabilities, 5 critical and 42 high. The audit that produced the score never ran a dependency scan — it is [withdrawn](./docs/security/security-audit-report.md) |
+| "Telemetry 72K events/sec" | Telemetry is published to Kafka and **no consumer exists**; `GET /api/v1/telemetry` returns 500 |
+| "92–96% / 96.8% ML accuracy" | Six of seven ML route files are never imported into `server.ts` |
+| "API p95 <200ms" | No benchmark in the repository produces this figure |
 
-✅ **Key Deliverables:**
-- ✅ ML-powered predictive maintenance (anomaly detection, health scoring, forecasting)
-- ✅ Compliance automation (CEA/MNRE report generation)
-- ✅ Advanced analytics (custom dashboards, report builder)
-- ✅ Production deployment runbook (Terraform, health checks)
-- ✅ Security operations guide (patching, vulnerability management)
-- ✅ Incident response plan (on-call rotation, escalation)
-- ✅ Demo preparation (45-minute script, demo environment)
+Until 2026-09-19 the database migration had never once succeeded, so 27 of the
+37 tables the application expects did not exist and `POST /api/v1/auth/login`
+returned 500 on a freshly provisioned stack. See
+[ADR-004](./docs/architecture/adrs/ADR-004-migration-strategy.md).
 
-**Recommendation:** ✅ **APPROVED FOR PRODUCTION DEPLOYMENT**
+**None of this is a reflection on the people who wrote the code.** The project
+had no CI gate, no reviewer empowered to say "not done", and a status vocabulary
+whose only value was ✅. Remediation is tracked in
+[`TasksTracking/15_Review_Remediation.md`](./TasksTracking/15_Review_Remediation.md).
 
-For detailed sprint tracking, see [SPRINT_STATUS_TRACKER.md](./SPRINT_STATUS_TRACKER.md).
 
 ---
 
@@ -630,14 +619,14 @@ All specifications are in [`specs/`](./specs/) directory:
 - **[On-Call Rotation](./docs/operations/on-call-rotation-schedule.md)**: Q4 2025 - Q1 2026 schedule
 
 #### Security
-- **[Security Audit Report](./docs/security/security-audit-report.md)**: 93/100 security score
+- **[Security Audit Report](./docs/security/security-audit-report.md)**: withdrawn 2026-09-19; unsupported conclusions
 - **[Security Operations Guide](./docs/security/security-operations-guide.md)**: SIEM, monitoring, compliance
 - **[Patching Procedures](./docs/security/patching-procedures.md)**: CVSS-based SLAs
 - **[Vulnerability Management](./docs/security/vulnerability-management.md)**: Scanning, remediation
 
 #### Testing
 - **[Final Performance Test Report](./docs/testing/final-performance-test-report.md)**: All targets validated
-- **[Release 2 Integration Test Report](./docs/testing/release-2-integration-test-report.md)**: 156/156 tests passed
+- **[Release 2 Integration Test Report](./docs/testing/release-2-integration-test-report.md)**: unverified, pending REV-051
 
 #### Training & Demo
 - **[Training Program Overview](./docs/training/training-program-overview.md)**: 5 role-based learning paths
@@ -686,25 +675,31 @@ For detailed performance test report, see [`docs/testing/final-performance-test-
 
 ## Security
 
-### Security Score: 93/100 ✅ PRODUCTION READY
+### Security posture
 
-#### Security Audit Results (Sprint 18)
+The scores that used to sit here came from
+[`docs/security/security-audit-report.md`](./docs/security/security-audit-report.md),
+which was **withdrawn on 2026-09-19**. Its "0 Critical, 0 High" was produced by
+a report whose own dependency-scanning section says the scan never ran.
 
-| Category                     | Score  | Status      |
-| ---------------------------- | ------ | ----------- |
-| **Authentication**           | 95/100 | ✅ Excellent |
-| **Authorization**            | 92/100 | ✅ Excellent |
-| **Data Protection**          | 94/100 | ✅ Excellent |
-| **Network Security**         | 90/100 | ✅ Good      |
-| **Logging & Monitoring**     | 93/100 | ✅ Excellent |
-| **Vulnerability Management** | 95/100 | ✅ Excellent |
-| **Compliance**               | 90/100 | ✅ Good      |
+Measured instead:
 
-**Vulnerability Scan Results:**
-- ✅ **0 Critical** vulnerabilities
-- ✅ **0 High** vulnerabilities
-- ⚠️ **3 Medium** vulnerabilities (scheduled for remediation)
-- ℹ️ **8 Low** vulnerabilities (monitored)
+| | |
+| :-- | :-- |
+| Dependency vulnerabilities | **21 open** (2 critical, 10 high), down from 88 (5 critical, 42 high) |
+| Open exceptions | [`docs/review/accepted-risks.md`](./docs/review/accepted-risks.md) |
+| Penetration test | **Never performed** against a running dCMMS |
+
+Fixed and verified during the September 2026 review: the hardcoded JWT secret
+fallback and 23 other credential fallbacks; a live cross-tenant data leak that
+let any authenticated user read another tenant's alerts; an enforcing
+Content-Security-Policy with per-request nonces; the refresh token moved out of
+`localStorage` into an HttpOnly cookie; and per-account login throttling.
+
+Open and tracked: the CSRF subsystem is not wired to any route, tenant
+isolation has no row-level-security backstop, and `analytics-admin` runs
+caller-supplied queries unscoped. See
+[`TasksTracking/15_Review_Remediation.md`](./TasksTracking/15_Review_Remediation.md).
 
 **Security Features:**
 - 🔒 Multi-factor authentication (MFA) for admin roles
@@ -934,7 +929,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
   - Compliance automation (CEA/MNRE)
   - Advanced analytics and reporting
 
-- **Release 2 (Production Ready)** - Weeks 27-40 ✅
+- **Release 2** - Weeks 27-40 — feature work landed; not production ready (see Project Status)
   - ML Infrastructure & Predictive Maintenance
   - Security Hardening & Disaster Recovery
   - Production Deployment Readiness

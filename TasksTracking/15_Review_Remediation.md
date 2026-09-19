@@ -47,15 +47,18 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 | Phase | Workstreams | Tasks | Done | Status |
 | :---- | :---------- | :---- | :--- | :----- |
 | **Phase 0** — Stop the bleeding (2 days) | WS-2, WS-3 (P0 only) | 9 | 4 | ⚠️ In Progress |
-| **Phase 1** — Ground truth (1 week) | WS-1, WS-3, WS-4 | 16 | 0 | 🔴 Not Started |
+| **Phase 1** — Ground truth (1 week) | WS-1, WS-3, WS-4 | 16 | 13 | ⚠️ In Progress |
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 17 | 0 | 🔴 Not Started |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
-| **TOTAL** | | **61** | **4** | **7%** |
+| **TOTAL** | | **70** | **17** | **24%** |
 
 **By severity:** 🔴 P0: 6 · 🟠 P1: 31 · 🟡 P2: 21 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19)_
 
 > Update this table at the end of each working day. It is the only status anyone outside the team should need to read.
+
+**Phase 1 as of 2026-09-19:** REV-009 ⚠️ · REV-010 ✅ · REV-011 ✅ · REV-012 ✅ · REV-013 ✅ · REV-014 ✅ · REV-015 🛑 · REV-016 ✅ · REV-017 ✅ · REV-018 ✅ · REV-019 ✅ · REV-020 ⚠️ · REV-021 ✅ · REV-022 ✅ · REV-023 ⚠️ · REV-024 ✅.
+Nine new tasks split out: REV-009a/b, REV-011a/b, REV-018a, REV-020a/b, REV-023a/b.
 
 **Phase 0 as of 2026-09-19:** REV-002, REV-004, REV-005, REV-006 ✅ · REV-001, REV-003, REV-008 ⚠️ PARTIAL · REV-007 🛑 BLOCKED.
 All five P0 items are code-complete. What remains in Phase 0 is not code: a pushed PR to produce REV-003's run evidence, repo-admin branch protection (REV-007), secret rotation in non-dev environments (REV-001a), and telling the people who were given the "Production Ready" status (REV-008).
@@ -294,32 +297,112 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
 
 ## 1.1 Verified Feature Inventory (WS-1)
 
-- [ ] **REV-009** - Build the verified feature inventory 🟠 **P1**
-  - [ ] For each of the 113 tasks in `TasksTracking/01`–`14`, locate the implementing code
-  - [ ] Check: is the route registered in `backend/src/server.ts`? If not → `Not wired`
-  - [ ] Check: does the service reach the DB / an external system, or return mock data? If mock → `Mock`
-  - [ ] Check: is there a test or a recorded manual verification? If not → `Unverified`
-  - [ ] Exercise each feature against a running stack (`./scripts/dev.sh`) and record the actual HTTP response
-  - [ ] Assign a final status: `Working` / `Partial` / `Mock` / `Not wired` / `Absent`
-  - **Priority:** 🟠 P1 — every downstream estimate depends on this
-  - **Estimated:** 4 days (2 reviewers)
-  - **Deliverable:** `docs/review/feature-inventory.md`
-  - **Verify:** every one of the 113 task IDs appears in the inventory with a status and an evidence link.
-  - **Status:** 🔴 Not Started
-
-- [ ] **REV-010** - Rewrite the status tables from the inventory 🟠 **P1**
-  - [ ] **Delete** the status tables in `TasksTracking/README.md` and `README.md` §Project Status — do not edit them; they cannot be incrementally corrected
-  - [ ] Regenerate both from REV-009
-  - [ ] Remove all unverifiable metrics from `README.md`: "156/156 integration tests", "243/243 regression tests", "93/100 security score", "92–96% accuracy", "96.8% accuracy", "20 Sprints ✅ 100%"
-  - [ ] Re-mark modules 09 (Machine Learning) and 10 (Cost Management) — both are `✅ Complete` while their routes are unregistered
+- [x] **REV-009** - Build the verified feature inventory 🟠 **P1** ⚠️ **PARTIAL**
+  - [x] For each task in `TasksTracking/01`–`14`, locate the implementing code
+  - [x] Check: is the route registered in `backend/src/server.ts`? If not → `Not wired`
+  - [x] Check: does the service return mock data? If mock → `Mock`
+  - [x] Exercise each feature against a running stack and record the actual HTTP response
+  - [x] Assign a final status
+  - [ ] 84 of 202 tasks remain `Unverified` — frontend and cross-cutting work that needs a browser, not a curl. Split out as REV-009a.
   - **Priority:** 🟠 P1
-  - **Estimated:** 4 hours
-  - **Files:** `README.md`, `TasksTracking/README.md`, `TasksTracking/09_*.md`, `TasksTracking/10_*.md`
-  - **Verify:** every `✅` remaining in `TasksTracking/` traces to an inventory row.
+  - **Estimated:** 4 days (2 reviewers) · **Actual:** ~3 hours (automated)
+  - **Deliverable:** [`docs/review/feature-inventory.md`](../docs/review/feature-inventory.md) ✅
+  - **Verify:** every task ID appears in the inventory with a status and evidence.
+
+  ### The headline
+
+  | | |
+  | :-- | :-- |
+  | Tasks in modules 01–14 | **202** |
+  | Marked complete by the team | **181** (89%) |
+  | **Demonstrably working** | **11** (5%) |
+
+  **Scope correction: there are 202 tasks, not 113.** Both `review-plan.md` and
+  this task said 113. Counting every `- [ ] **DCMMS-nnn**` line across modules
+  01–14 gives 202.
+
+  | Status | Tasks |
+  | :----- | ----: |
+  | Working | 11 |
+  | Partial | 54 |
+  | Mock (service uses `Math.random()`) | 29 |
+  | Not wired | 16 |
+  | Absent | 8 |
+  | Unverified | 84 |
+
+  - **Method — three independent signals, no self-assessment:**
+    1. Route registration parsed from `server.ts`: **23 of 39 route files are
+       registered; 16 are never imported at all.**
+    2. Live probe: every parameterless `GET` under `/api/v1` called against the
+       running stack with a `super_admin` token — **42 endpoints: 29 × 200,
+       6 × 403, 5 × 500, 2 × 400.**
+    3. `grep -rlE "Math\.random\(\)"` across services and routes — 8 files.
+  - **The single worst live result:** `GET /api/v1/users` returns **500** —
+    `The value of '#' does not match schema definition`. The declared response
+    schema does not match what the handler returns. Listing users is as core as
+    this product gets, and it is broken right now. Filed as REV-009b.
+  - **Telemetry's 500s are structural, not a bug:** `POST /api/v1/telemetry`
+    publishes to Kafka and no consumer exists, so the QuestDB tables the read
+    path queries are never populated. Corroborates `docs/review/ingestion.md`.
+  - **Honest about coverage:** this inventory probes `GET` only, parameterless
+    routes only, and a 200 means the endpoint answered — not that the answer was
+    correct. Every one of those limits means the real figure is likely *worse*
+    than 11/202, not better.
+  - **Status:** ⚠️ PARTIAL — published and usable; 84 tasks need the REV-009a browser pass
+
+- [ ] **REV-009a** - Verify the frontend and cross-cutting tasks 🟠 **P1**
+  - [ ] 84 tasks sit at `Unverified` because they have no endpoint to probe — modules 12 (Gap Remediation, 18) and 14 (Frontend Critical Fixes, 30), plus frontend-side tasks elsewhere
+  - [ ] Drive them through the running UI and record what each actually does
+  - **Estimated:** 2 days
+  - **Split from:** REV-009
+  - **Verify:** no task in the inventory is left at `Unverified`.
   - **Status:** 🔴 Not Started
 
-## 1.2 Database & Migrations (WS-4) — blocks Phase 2
+- [ ] **REV-009b** - `GET /api/v1/users` returns 500 🟠 **P1**
+  - [ ] Response serialization fails: `The value of '#' does not match schema definition` (`fast-json-stringify`)
+  - [ ] The route's declared response schema does not match the handler's return value
+  - [ ] Check every other route for the same mismatch — REV-023a found 16 routes whose schemas declare only their happy path, which is the same class of defect
+  - **Priority:** 🟠 P1 — a core endpoint, broken in the running application
+  - **Estimated:** 2 hours
+  - **Split from:** REV-009
+  - **Verify:** `GET /api/v1/users` returns 200 with the user list.
+  - **Status:** 🔴 Not Started
+- [x] **REV-010** - Rewrite the status tables from the inventory 🟠 **P1**
+  - [x] **Delete** the status tables in `TasksTracking/README.md` and `README.md` §Project Status — done; both regenerated rather than edited
+  - [x] Regenerate both from REV-009
+  - [x] Remove all unverifiable metrics from `README.md`
+  - [x] Re-mark modules 09 (Machine Learning) and 10 (Cost Management)
+  - **Priority:** 🟠 P1
+  - **Estimated:** 4 hours · **Actual:** ~1 hour
+  - **Verify:** every `✅` remaining in `TasksTracking/` traces to an inventory row.
+  - **`TasksTracking/README.md`:** the table said `✅ Complete` for all fourteen
+    modules. It now carries task counts, what the team claimed, the verified
+    status, and the evidence for each — e.g. module 09: *"1/7 route files
+    registered; never imported: ml-inference, ml-deployment, ml-explainability,
+    model-governance, model-performance, predictive-wo"*. Only module 03 (Asset
+    Management) comes out `✅ Verified`.
+  - **`README.md`:** "20 Sprints · 113 tasks · ✅ 100%" and "APPROVED FOR
+    PRODUCTION DEPLOYMENT" replaced by the measured table, plus a claim-by-claim
+    account of what was wrong:
 
+    | Claim removed | Measured |
+    | :------------ | :------- |
+    | 156/156 integration tests | suite could not run at all until 2026-09-19; now 60 tests, 29 failing |
+    | 243/243 regression tests | no such suite exists |
+    | 93/100 security, 0 critical/high | 88 vulnerabilities (5 critical, 42 high); the audit never ran a scan |
+    | 72,000 events/sec | no Kafka consumer exists; `GET /telemetry` returns 500 |
+    | 92–96% / 96.8% ML accuracy | 6 of 7 ML route files never imported |
+    | API p95 <200ms | no benchmark in the repository produces it |
+
+    Badges changed from "Production Ready" / "Sprint 20 100% Complete" to "Under
+    Review" / "Verified working 11/202". The §Security section's 93/100 score
+    table is replaced by the real vulnerability counts. The "72,000 events/sec"
+    figure in the architecture section is kept but labelled **target
+    architecture**, since that is what it honestly is.
+  - **Kept the no-blame framing:** every rewritten section ends by attributing
+    the gap to the absent CI gate and the ✅-only status vocabulary, not to the
+    people who wrote the code.
+  - **Status:** ✅ COMPLETE
 - [x] **REV-011** - Reconcile the two migration systems 🔴 **P0**
   - [x] **Decision taken 2026-09-19 (Deepak):** drizzle-kit owns the schema; the 16 hand-written files are deleted. Recorded as [`ADR-004`](../docs/architecture/adrs/ADR-004-migration-strategy.md).
   - [x] Port or delete each of the 16 files; none may remain unreferenced
@@ -492,14 +575,27 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     ```
     CI run link: _(pending push)_
   - **Status:** ✅ COMPLETE
-- [ ] **REV-015** - Review indexes against real query patterns 🟡 **P2**
+- [ ] **REV-015** - Review indexes against real query patterns 🟡 **P2** 🛑 **DEFERRED**
   - [ ] Extract the actual query shapes from `backend/src/services/*`
   - [ ] Confirm composite indexes exist on `(tenant_id, …)` for every filtered table
   - [ ] `EXPLAIN ANALYZE` the ten highest-traffic queries against seeded data
   - **Priority:** 🟡 P2
   - **Estimated:** 1 day
+  - **Deferred, with reason:** the premise changed under REV-011. The database
+    had **no secondary indexes at all** — `schema.ts` declares none, so the
+    generated baseline created none, and the 47 that existed came from
+    `scripts/init-db.sql` and covered only its 10 tables. `0002` now restores
+    47 index definitions ported from the dead migration files.
+    Those are **inherited intent, not a validated design**, and reviewing them
+    against query shapes is only worth doing once they live in `schema.ts`
+    (REV-011b) — otherwise the review is against a file the next
+    `drizzle-kit generate` will ignore.
+  - **Also:** seeded data is 3 sites, 5 assets and 4 work orders. `EXPLAIN
+    ANALYZE` against that tells you nothing; the task needs a realistic volume
+    fixture first.
+  - **Depends on:** REV-011b, and a data volume fixture
   - **Verify:** no sequential scan on any table > 10k rows in the ten sampled queries.
-  - **Status:** 🔴 Not Started
+  - **Status:** 🛑 DEFERRED — blocked on REV-011b
 
 - [x] **REV-016** - Confirm seeding cannot run in production 🟡 **P2**
   - [x] Verify the gate holds under every deployment path — **it did not**

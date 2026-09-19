@@ -8,23 +8,33 @@ This directory contains the master task list for the dCMMS project, broken down 
 
 ## Task Modules
 
-| ID     | Module Name                                                | Focus Area                             | Status     |
-| :----- | :--------------------------------------------------------- | :------------------------------------- | :--------- |
-| **01** | [Foundation & Architecture](01_Foundation_Architecture.md) | Specs 01, 05, 07, 13, 17, 19           | ✅ Complete |
-| **02** | [Identity & Access](02_Identity_Access.md)                 | Specs 03, 08, 09                       | ✅ Complete |
-| **03** | [Asset Management](03_Asset_Management.md)                 | Spec 11 (Assets)                       | ✅ Complete |
-| **04** | [Work Order Management](04_Work_Order_Management.md)       | Spec 02 (WO), Spec 23 (Basic)          | ✅ Complete |
-| **05** | [Mobile & Offline](05_Mobile_Offline.md)                   | Spec 04 (Offline), Spec 21 (Mobile)    | ✅ Complete |
-| **06** | [Telemetry Ingestion](06_Telemetry_Ingestion.md)           | Spec 10, Spec 18, Spec 21              | ✅ Complete |
-| **07** | [Notifications & Alerts](07_Notifications_Alerts.md)       | Spec 14                                | ✅ Complete |
-| **08** | [Analytics & Compliance](08_Analytics_Compliance.md)       | Spec 15, Spec 16                       | ✅ Complete |
-| **09** | [Machine Learning](09_Machine_Learning.md)                 | Spec 22                                | ✅ Complete |
-| **10** | [Cost Management](10_Cost_Management.md)                   | Spec 23 (Advanced)                     | ✅ Complete |
-| **11** | [Advanced Forecasting](11_Advanced_Forecasting.md)         | Spec 25                                | ✅ Complete |
-| **12** | [Gap Remediation](12_Gap_Remediation.md)                   | Safety Gates, Permits (Sprint 3 Fixes) | ✅ Complete |
-| **13** | [GenAI Implementation](13_GenAI_Implementation.md)         | Spec 26 (RAG Pipeline)                 | ✅ Complete |
-| **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md)   | Auth, API Client, RBAC                 | ✅ Complete |
-| **15** | [Review Remediation](15_Review_Remediation.md)             | Findings from the Sep 2026 project review | 🔴 Not Started |
+> **These statuses come from [`docs/review/feature-inventory.md`](../docs/review/feature-inventory.md), not from self-assessment.**
+> Regenerated 2026-09-19 under REV-010. The previous table said `✅ Complete`
+> for all fourteen modules. Each row below states how its status was reached:
+> route registration parsed from `server.ts`, live HTTP probes against a running
+> stack, and a grep for `Math.random()` in the backing services.
+>
+> **202 tasks, 181 marked complete by the team, 11 demonstrably working.**
+> `❓ Unverified` means *not assessed* — mostly frontend work that needs a
+> browser rather than a curl — not *broken*.
+
+| ID | Module | Tasks | Team says | Verified status | Evidence |
+| :-- | :----- | ----: | :-------- | :-------------- | :------- |
+| **01** | [Foundation & Architecture](01_Foundation_Architecture.md) | 22 | 22 complete | ⚠️ PARTIAL | 3/3 route files registered; live 5xx in this area |
+| **02** | [Identity & Access](02_Identity_Access.md) | 9 | 7 complete | ⚠️ PARTIAL | 3/3 route files registered; live 5xx in this area |
+| **03** | [Asset Management](03_Asset_Management.md) | 11 | 11 complete | ✅ Verified | 2/2 route files registered |
+| **04** | [Work Order Management](04_Work_Order_Management.md) | 13 | 13 complete | ⚠️ PARTIAL (mock data) | 4/5 route files registered; never imported: wo-approval; service uses Math.random() |
+| **05** | [Mobile & Offline](05_Mobile_Offline.md) | 8 | 8 complete | 🔴 Not wired | 0/1 route files registered; no route file: sync |
+| **06** | [Telemetry Ingestion](06_Telemetry_Ingestion.md) | 14 | 14 complete | ⚠️ PARTIAL | 1/2 route files registered; never imported: alarms; live 5xx in this area |
+| **07** | [Notifications & Alerts](07_Notifications_Alerts.md) | 16 | 16 complete | ⚠️ PARTIAL (mock data) | 4/6 route files registered; never imported: notification-history, slack; service uses Math.random() |
+| **08** | [Analytics & Compliance](08_Analytics_Compliance.md) | 9 | 9 complete | ⚠️ PARTIAL | 4/5 route files registered; no route file: compliance; live 5xx in this area |
+| **09** | [Machine Learning](09_Machine_Learning.md) | 23 | 23 complete | 🔴 Mostly not wired | 1/7 route files registered; never imported: ml-inference, ml-deployment, ml-explainability, model-governance, model-performance, predictive-wo |
+| **10** | [Cost Management](10_Cost_Management.md) | 4 | 4 complete | 🔴 Not wired | 0/3 route files registered; never imported: cost-analytics, cost-calculation, budget-management |
+| **11** | [Advanced Forecasting](11_Advanced_Forecasting.md) | 13 | 13 complete | ⚠️ PARTIAL | 1/2 route files registered; never imported: weather |
+| **12** | [Gap Remediation](12_Gap_Remediation.md) | 18 | 10 complete | ❓ Unverified | cross-cutting / frontend — no endpoint to probe; needs per-task review |
+| **13** | [GenAI Implementation](13_GenAI_Implementation.md) | 12 | 11 complete | 🔴 Not wired | 0/1 route files registered; never imported: genai.routes |
+| **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md) | 30 | 20 complete | ❓ Unverified | cross-cutting / frontend — no endpoint to probe; needs per-task review |
+| **15** | [Review Remediation](15_Review_Remediation.md) | 70 | — | ⚠️ In Progress | Phases 0–1 executed 2026-09-19 |
 | **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived |
 
 ## Status Legend
