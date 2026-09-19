@@ -57,7 +57,7 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 
 > Update this table at the end of each working day. It is the only status anyone outside the team should need to read.
 
-**CI is disabled** at Deepak's request (2026-09-19). REV-003 is an accepted risk; verification is local. See REV-003a.
+**No CI gate by decision** (Deepak, 2026-09-19) — to be added later, once the app is stable. All verification in this tracker is local: `npm run build`, `npm run lint`, `npm test`, and probing a running stack. REV-003 is an accepted risk; REV-003a is deferred.
 
 **Phase 1 as of 2026-09-19:** REV-009 ⚠️ · REV-010 ✅ · REV-011 ✅ · REV-012 ✅ · REV-013 ✅ · REV-014 ✅ · REV-015 🛑 · REV-016 ✅ · REV-017 ✅ · REV-018 ✅ · REV-019 ✅ · REV-020 ⚠️ · REV-021 ✅ · REV-022 ✅ · REV-023 ⚠️ · REV-024 ✅.
 Nine new tasks split out: REV-009a/b, REV-011a/b, REV-018a, REV-020a/b, REV-023a/b.
@@ -69,7 +69,7 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
 
 # PHASE 0 — Stop the Bleeding
 
-**Duration:** 2 days · **Gate:** CI runs on every PR · `main` protected · no P0 open
+**Duration:** 2 days · **Gate:** ~~CI runs on every PR~~ (withdrawn 2026-09-19 — see REV-003a) · `main` protected · no P0 open
 **Rule:** feature development is frozen from the start of this phase until the Phase 2 gate.
 
 ## 0.1 Critical Security (WS-3)
@@ -203,14 +203,22 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     minutes) would restore the gate cheaply — filed as REV-003a.
   - **Status:** ⏹️ ACCEPTED RISK — CI disabled at Deepak's request, 2026-09-19
 
-- [ ] **REV-003a** - Offer a minimal CI gate 🟠 **P1**
-  - [ ] The full pipeline is slow: Lighthouse, Playwright, axe, CodeQL, SonarQube, Docker builds
-  - [ ] Propose a single fast job — backend `build` + `lint` + the migrations check — that runs in roughly two minutes on PRs to `main` only
-  - [ ] Decision is Deepak's; do not enable anything without it
-  - **Priority:** 🟠 P1 — the review's root cause was the absence of a gate
-  - **Estimated:** 2 hours
-  - **Split from:** REV-003
-  - **Status:** 🔴 Not Started
+- [ ] **REV-003a** - Re-introduce a CI gate 🟠 **P1** ⏹️ **DEFERRED BY DECISION**
+  - **Decision (Deepak, 2026-09-19):** *"I do not want any CI gate right now. I
+    will add those later when the app is stable."* Asked once, reaffirmed. Not
+    to be raised again until the app is stable or Deepak reopens it.
+  - **State left ready, not dismantled:** all five workflows are
+    `disabled_manually` at the repo level, and their `push`/`pull_request`
+    triggers remain uncommented in the branch. Re-enabling is a repo-settings
+    toggle, not a code change — nothing from REV-003 has to be redone.
+  - [ ] When reopened, start small: backend `build` + `lint` + the migrations
+        job is ~2 minutes and would have caught REV-011. The slow parts are
+        Lighthouse, Playwright, axe, CodeQL, SonarQube and the Docker builds.
+  - **The open risk, stated once and left here rather than repeated:** the
+    review's root cause was that nothing forced a claim to be checked. Until a
+    gate exists, that is true again, and every status in this tracker rests on
+    someone running the `Verify:` line by hand.
+  - **Status:** ⏹️ DEFERRED — Deepak's call, revisit when the app is stable
 
 - [x] **REV-004** - Record the CI failure baseline 🟠 **P1**
   - [x] Capture the full lint / type-check / test failure list from REV-003
