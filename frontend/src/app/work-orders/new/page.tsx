@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api-client';
 import type { WorkOrderType, WorkOrderPriority, WorkOrderStatus } from '@/types/api';
+import { ProtectedSection } from '@/components/auth/protected';
 
 interface Task {
   id: string;
@@ -36,6 +37,14 @@ interface Part {
 }
 
 export default function NewWorkOrderPage() {
+  return (
+    <ProtectedSection permissions={['create:work-orders']}>
+      <NewWorkOrderPageContent />
+    </ProtectedSection>
+  );
+}
+
+function NewWorkOrderPageContent() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTab, setCurrentTab] = useState('basic');

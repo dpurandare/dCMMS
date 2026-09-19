@@ -72,31 +72,20 @@ export class EmailProviderService {
     html: string,
     text?: string,
   ): Promise<EmailDeliveryStatus> {
-    try {
-      // TODO: Implement SendGrid integration
-      // const sgMail = require('@sendgrid/mail');
-      // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      // const msg = {
-      //   to,
-      //   from: { email: this.fromEmail, name: this.fromName },
-      //   subject,
-      //   html,
-      //   text: text || this.stripHtml(html),
-      // };
-      // const [response] = await sgMail.send(msg);
-
-      this.fastify.log.info(
-        { to, subject },
-        "[SendGrid] Email would be sent here",
-      );
-
-      return {
-        messageId: `sendgrid-${Date.now()}`,
-        status: "sent",
-      };
-    } catch (error) {
-      throw new Error(`SendGrid error: ${(error as Error).message}`);
-    }
+    // Not implemented (REV-027b/REV-028). This used to report a fabricated
+    // "sent" status here without making any request — silently lying about
+    // delivery to anyone who set EMAIL_PROVIDER=sendgrid. Report the real
+    // state instead: SMTP (below) is a genuine integration, and EMAIL_PROVIDER
+    // defaults to "console" precisely so nothing needs to lie in the meantime.
+    this.fastify.log.error(
+      { to, subject },
+      "[SendGrid] Not implemented — set EMAIL_PROVIDER=smtp or =console, or implement this integration",
+    );
+    return {
+      messageId: "",
+      status: "failed",
+      error: "SendGrid integration is not implemented (see REV-028)",
+    };
   }
 
   /**
@@ -108,37 +97,17 @@ export class EmailProviderService {
     html: string,
     text?: string,
   ): Promise<EmailDeliveryStatus> {
-    try {
-      // TODO: Implement AWS SES integration
-      // const AWS = require('aws-sdk');
-      // const ses = new AWS.SES({
-      //   region: process.env.AWS_REGION || 'us-east-1',
-      // });
-      // const params = {
-      //   Source: `${this.fromName} <${this.fromEmail}>`,
-      //   Destination: { ToAddresses: [to] },
-      //   Message: {
-      //     Subject: { Data: subject },
-      //     Body: {
-      //       Html: { Data: html },
-      //       Text: { Data: text || this.stripHtml(html) },
-      //     },
-      //   },
-      // };
-      // const result = await ses.sendEmail(params).promise();
-
-      this.fastify.log.info(
-        { to, subject },
-        "[AWS SES] Email would be sent here",
-      );
-
-      return {
-        messageId: `ses-${Date.now()}`,
-        status: "sent",
-      };
-    } catch (error) {
-      throw new Error(`AWS SES error: ${(error as Error).message}`);
-    }
+    // Not implemented (REV-027b/REV-028) — see the SendGrid branch above for
+    // why this no longer fabricates a "sent" status.
+    this.fastify.log.error(
+      { to, subject },
+      "[AWS SES] Not implemented — set EMAIL_PROVIDER=smtp or =console, or implement this integration",
+    );
+    return {
+      messageId: "",
+      status: "failed",
+      error: "AWS SES integration is not implemented (see REV-028)",
+    };
   }
 
   /**

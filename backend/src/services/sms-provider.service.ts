@@ -78,29 +78,18 @@ export class SMSProviderService {
     to: string,
     body: string,
   ): Promise<SMSDeliveryStatus> {
-    try {
-      // TODO: Implement Twilio integration
-      // const twilio = require('twilio');
-      // const client = twilio(
-      //   process.env.TWILIO_ACCOUNT_SID,
-      //   process.env.TWILIO_AUTH_TOKEN
-      // );
-      // const message = await client.messages.create({
-      //   body,
-      //   from: this.fromNumber,
-      //   to,
-      // });
-
-      this.fastify.log.info({ to, body }, "[Twilio] SMS would be sent here");
-
-      return {
-        messageId: `twilio-${Date.now()}`,
-        status: "sent",
-        cost: 0.0075, // Approximate cost per SMS
-      };
-    } catch (error) {
-      throw new Error(`Twilio error: ${(error as Error).message}`);
-    }
+    // Not implemented (REV-027b/REV-028). This used to report a fabricated
+    // "sent" status and an invented cost without making any request —
+    // silently lying about delivery to anyone who set SMS_PROVIDER=twilio.
+    this.fastify.log.error(
+      { to },
+      "[Twilio] Not implemented — set SMS_PROVIDER=console, or implement this integration",
+    );
+    return {
+      messageId: "",
+      status: "failed",
+      error: "Twilio integration is not implemented (see REV-028)",
+    };
   }
 
   /**
@@ -110,34 +99,17 @@ export class SMSProviderService {
     to: string,
     body: string,
   ): Promise<SMSDeliveryStatus> {
-    try {
-      // TODO: Implement AWS SNS integration
-      // const AWS = require('aws-sdk');
-      // const sns = new AWS.SNS({
-      //   region: process.env.AWS_REGION || 'us-east-1',
-      // });
-      // const params = {
-      //   Message: body,
-      //   PhoneNumber: to,
-      //   MessageAttributes: {
-      //     'AWS.SNS.SMS.SMSType': {
-      //       DataType: 'String',
-      //       StringValue: 'Transactional',
-      //     },
-      //   },
-      // };
-      // const result = await sns.publish(params).promise();
-
-      this.fastify.log.info({ to, body }, "[AWS SNS] SMS would be sent here");
-
-      return {
-        messageId: `sns-${Date.now()}`,
-        status: "sent",
-        cost: 0.00645, // Approximate cost per SMS
-      };
-    } catch (error) {
-      throw new Error(`AWS SNS error: ${(error as Error).message}`);
-    }
+    // Not implemented (REV-027b/REV-028) — see the Twilio branch above for
+    // why this no longer fabricates a "sent" status and a cost.
+    this.fastify.log.error(
+      { to },
+      "[AWS SNS] Not implemented — set SMS_PROVIDER=console, or implement this integration",
+    );
+    return {
+      messageId: "",
+      status: "failed",
+      error: "AWS SNS integration is not implemented (see REV-028)",
+    };
   }
 
   /**

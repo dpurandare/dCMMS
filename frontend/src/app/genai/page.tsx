@@ -1,10 +1,19 @@
 import React from "react";
+import { ProtectedSection } from "@/components/auth/protected";
 import { ChatInterface } from "@/components/genai/ChatInterface";
 import { FileUploader } from "@/components/genai/FileUploader";
 import { DocumentList } from "@/components/genai/DocumentList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function GenAIPage() {
+    return (
+        <ProtectedSection permissions={["use:genai"]}>
+            <GenAIPageContent />
+        </ProtectedSection>
+    );
+}
+
+function GenAIPageContent() {
     return (
         <div className="container mx-auto py-8">
             <h1 className="text-2xl font-bold mb-6">AI Knowledge Assistant</h1>

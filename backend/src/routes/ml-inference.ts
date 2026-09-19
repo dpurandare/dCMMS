@@ -1,10 +1,15 @@
 import { FastifyPluginAsync } from "fastify";
-import { MLInferenceService } from "../services/ml-inference.service";
+import { MLInferenceService } from "../services/ml-inference.mock";
 
 const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
   const { csrfProtection } = await import('../middleware/csrf');
-  
+
+  // This plugin serves mock data only (REV-027) — label every response.
+  server.addHook("onSend", async (_request, reply) => {
+    reply.header("X-Mock-Data", "true");
+  });
+
   const inferenceService = new MLInferenceService();
 
   // GET /api/v1/ml-inference/predict/asset/:assetId

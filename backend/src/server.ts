@@ -43,6 +43,9 @@ import forecastRoutes from "./routes/forecasts";
 import usersRoutes from "./routes/users";
 import { genaiRoutes } from "./routes/genai.routes";
 import crewRoutes from "./routes/crews";
+import weatherRoutes from "./routes/weather";
+import mlInferenceRoutes from "./routes/ml-inference";
+import modelGovernanceRoutes from "./routes/model-governance";
 
 export async function buildServer(): Promise<FastifyInstance> {
   const isProduction = process.env.NODE_ENV === "production";
@@ -494,7 +497,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(siteRoutes, { prefix: "/api/v1/sites" });
   await server.register(telemetryRoutes, { prefix: "/api/v1/telemetry" });
   await server.register(notificationRoutes, { prefix: "/api/v1" });
-  await server.register(webhookRoutes, { prefix: "/api/v1" });
+  await server.register(webhookRoutes, { prefix: "/api/v1/webhooks" });
   await server.register(alertRoutes, { prefix: "/api/v1" });
   await server.register(integrationRoutes, { prefix: "/api/v1" });
   await server.register(analyticsAdminRoutes, { prefix: "/api/v1" });
@@ -509,6 +512,11 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
   await server.register(usersRoutes, { prefix: "/api/v1/users" });
   await server.register(genaiRoutes, { prefix: "/api/v1/genai" });
   await server.register(crewRoutes, { prefix: "/api/v1/crews" });
+  await server.register(weatherRoutes, { prefix: "/api/v1/weather" });
+  await server.register(mlInferenceRoutes, { prefix: "/api/v1/ml-inference" });
+  await server.register(modelGovernanceRoutes, {
+    prefix: "/api/v1/model-governance",
+  });
 
   // 404 handler
   server.setNotFoundHandler((request, reply) => {

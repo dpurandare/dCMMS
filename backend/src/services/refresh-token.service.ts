@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { refreshTokens } from "../db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, isNull } from "drizzle-orm";
 import { randomBytes, createHash } from "crypto";
 
 /**
@@ -166,6 +166,13 @@ export class RefreshTokenService {
    * Revoke all refresh tokens for a user (used for logout or security incidents)
    */
   static async revokeAllUserTokens(userId: string): Promise<void> {
+    // REV-038: was `eq(refreshTokens.revokedAt, null as any)`, which
+    // compiles to literal SQL `revoked_at = NULL` — under SQL's
+    // three-valued logic that never matches any row (NULL comparisons
+    // require IS NULL). The UPDATE always affected zero rows: logout, and
+    // the token-theft-detection path in validateRefreshToken above, have
+    // never actually revoked anything. Found by writing the first test
+    // for this path, which had none. Real fix: isNull(), not eq(..., null).
     await db
       .update(refreshTokens)
       .set({
@@ -175,7 +182,7 @@ export class RefreshTokenService {
       .where(
         and(
           eq(refreshTokens.userId, userId),
-          eq(refreshTokens.revokedAt, null as any)
+          isNull(refreshTokens.revokedAt)
         )
       );
   }
@@ -198,13 +205,17 @@ export class RefreshTokenService {
   static async getUserActiveTokens(
     userId: string
   ): Promise<RefreshTokenRecord[]> {
+    // Same eq(..., null) bug as revokeAllUserTokens above — always matched
+    // zero rows. Not currently called from any route, so no live feature
+    // was affected, but would have silently shown "no active sessions" to
+    // whoever eventually built a security dashboard on top of this.
     return db
       .select()
       .from(refreshTokens)
       .where(
         and(
           eq(refreshTokens.userId, userId),
-          eq(refreshTokens.revokedAt, null as any)
+          isNull(refreshTokens.revokedAt)
         )
       );
   }

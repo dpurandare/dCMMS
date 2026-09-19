@@ -2,7 +2,10 @@
  * ML Inference Service
  *
  * Mock implementation for development/build without external dependencies.
+ * Never returns real predictions — see REV-027 (mock policy).
  */
+
+import { assertMockAllowed } from "../utils/mock-guard";
 
 export interface AssetPrediction {
   assetId: string;
@@ -30,6 +33,7 @@ export interface PredictionLog {
 
 export class MLInferenceService {
   constructor() {
+    assertMockAllowed("MLInferenceService");
     console.log("ML Inference Service initialized (Mock Provider)");
   }
 

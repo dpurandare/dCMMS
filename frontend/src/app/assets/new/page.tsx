@@ -18,8 +18,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api-client';
 import type { AssetStatus } from '@/types/api';
+import { ProtectedSection } from '@/components/auth/protected';
 
 export default function NewAssetPage() {
+  return (
+    <ProtectedSection permissions={['create:assets']}>
+      <NewAssetPageContent />
+    </ProtectedSection>
+  );
+}
+
+function NewAssetPageContent() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({

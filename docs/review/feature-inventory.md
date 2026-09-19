@@ -90,40 +90,38 @@ path queries are never populated. See `docs/review/ingestion.md`.
 
 ## Route files that serve nothing
 
-16 of 39 route files are never imported into `server.ts`. Their code is
-complete enough to read as finished, and no request can reach it:
+**Resolved 2026-09-19 under REV-025** (`TasksTracking/15_Review_Remediation.md`).
+`dashboards.ts` and `genai.routes.ts`, both listed here at the time of the original
+REV-009 pass, were separately registered before this pass and are omitted below —
+this section had gone stale; check `server.ts` directly rather than trusting a
+frozen list like this one again.
 
-- `backend/src/routes/alarms.ts`
-- `backend/src/routes/budget-management.ts`
-- `backend/src/routes/cost-analytics.ts`
-- `backend/src/routes/cost-calculation.ts`
-- `backend/src/routes/dashboards.ts`
-- `backend/src/routes/genai.routes.ts`
-- `backend/src/routes/ml-deployment.ts`
-- `backend/src/routes/ml-explainability.ts`
-- `backend/src/routes/ml-inference.ts`
-- `backend/src/routes/model-governance.ts`
-- `backend/src/routes/model-performance.ts`
-- `backend/src/routes/notification-history.ts`
-- `backend/src/routes/predictive-wo.ts`
-- `backend/src/routes/slack.ts`
-- `backend/src/routes/weather.ts`
-- `backend/src/routes/wo-approval.ts`
+Of the 14 that were genuinely unregistered: 3 were completed and registered
+(`weather`, and `ml-inference`/`model-governance` as **declared mocks** — real,
+reachable endpoints that always return fabricated data, labeled with an
+`X-Mock-Data: true` response header and refusing to load under
+`NODE_ENV=production`). The other 11 were deleted — either nothing referenced
+them, or (for `alarms`, `notification-history`) they were unsafe/redundant
+duplicates of working code. See `TasksTracking/99_Descoped_Tasks.md` for the
+per-file reasons.
 
-This is why modules 09 (Machine Learning) and 10 (Cost Management) are marked
-`✅ Complete` in `TasksTracking/` while none of their endpoints exist at
-runtime.
+This is why modules 09 (Machine Learning) and 10 (Cost Management) were marked
+`✅ Complete` in `TasksTracking/` while none of their endpoints existed at
+runtime; both modules have been corrected in place.
 
 ## Services that return invented numbers
 
 - `backend/src/routes/alerts.ts`
 - `backend/src/routes/permits.ts`
 - `backend/src/routes/telemetry.ts`
-- `backend/src/services/budget-management.service.ts`
-- `backend/src/services/cost-analytics.service.ts`
-- `backend/src/services/cost-calculation.service.ts`
 - `backend/src/services/forecast.service.ts`
 - `backend/src/services/work-order.service.ts`
+- `backend/src/services/ml-inference.mock.ts`, `model-governance.mock.ts` — **by
+  declaration**, not by accident: registered, reachable, and every response is
+  labeled `X-Mock-Data: true` (REV-027a)
+
+`budget-management.service.ts`, `cost-analytics.service.ts`,
+`cost-calculation.service.ts` were deleted under REV-025, not fixed — see above.
 
 ---
 
@@ -278,6 +276,13 @@ the two can be compared directly.
 
 9 tasks · Partial 9
 
+**Note (2026-09-19):** every row below cites `services/cost-analytics.service.ts`,
+which was deleted under REV-025 (nothing imported it — confirmed by a clean
+`npm run build` after removal). That means this citation was already wrong before
+the deletion: `/api/v1/analytics/kpis` never depended on that file. The real source
+of its fabricated numbers is unverified and belongs to a REV-029/030 pass on
+`routes/analytics.ts`, not to this deletion.
+
 | Task | Team | Status | Evidence |
 | :--- | :--: | :----- | :------- |
 | `DCMMS-080` | x | **Partial** | Math.random() in services/cost-analytics.service.ts; live 500: /api/v1/analytics/kpis |
@@ -292,7 +297,7 @@ the two can be compared directly.
 
 ### 09 Machine Learning
 
-23 tasks · Unverified 23
+23 tasks · Unverified 17 · Mock (declared) 2 · Descoped 4 **(corrected 2026-09-19, REV-025)**
 
 | Task | Team | Status | Evidence |
 | :--- | :--: | :----- | :------- |
@@ -309,27 +314,27 @@ the two can be compared directly.
 | `DCMMS-106` | x | **Unverified** | registered, but no parameterless GET to probe |
 | `DCMMS-107` | x | **Unverified** | registered, but no parameterless GET to probe |
 | `DCMMS-108` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-109` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-110` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-111` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-116` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-117` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-118` | x | **Unverified** | registered, but no parameterless GET to probe |
-| `DCMMS-119` | x | **Unverified** | registered, but no parameterless GET to probe |
+| `DCMMS-109` | x | **Descoped** | `ml-deployment.ts` deleted 2026-09-19 — never registered, hardcoded mock, nothing referenced it |
+| `DCMMS-110` | x | **Mock (declared)** | `ml-inference.ts` registered 2026-09-19 on `ml-inference.mock.ts`; every response `X-Mock-Data: true`, refuses to load under `NODE_ENV=production`. `GET /api/v1/ml-inference/predictions/logs` → 200, header confirmed on a running stack |
+| `DCMMS-111` | x | **Descoped** | `ml-explainability.ts` deleted 2026-09-19 — same reason as DCMMS-109 |
+| `DCMMS-116` | x | **Descoped** | `predictive-wo.ts` deleted 2026-09-19 — never registered, in-memory only, unimplemented TODOs, orphaned cron job. See REV-028 |
+| `DCMMS-117` | x | **Descoped** | `wo-approval.ts` deleted 2026-09-19 — never registered, approvals never persisted. See REV-028 |
+| `DCMMS-118` | x | **Descoped** | `model-performance.ts` deleted 2026-09-19 — never registered, hardcoded mock, orphaned cron job |
+| `DCMMS-119` | x | **Mock (declared)** | `model-governance.ts` registered 2026-09-19 on `model-governance.mock.ts`; every response `X-Mock-Data: true`, refuses to load under `NODE_ENV=production`. `GET /api/v1/model-governance/models` → 200, header confirmed on a running stack |
 | `DCMMS-123` | x | **Unverified** | registered, but no parameterless GET to probe |
 | `DCMMS-136A` | x | **Unverified** | registered, but no parameterless GET to probe |
 | `DCMMS-136B` | x | **Unverified** | registered, but no parameterless GET to probe |
 
 ### 10 Cost Management
 
-4 tasks · Not wired 4
+4 tasks · Unverified 1 · Descoped 3 **(corrected 2026-09-19, REV-025)**
 
 | Task | Team | Status | Evidence |
 | :--- | :--: | :----- | :------- |
-| `DCMMS-124` | x | **Not wired** | route file(s) exist but are never imported into server.ts: cost-analytics, cost-calculation, budget-management |
-| `DCMMS-125` | x | **Not wired** | route file(s) exist but are never imported into server.ts: cost-analytics, cost-calculation, budget-management |
-| `DCMMS-126` | x | **Not wired** | route file(s) exist but are never imported into server.ts: cost-analytics, cost-calculation, budget-management |
-| `DCMMS-127` | x | **Not wired** | route file(s) exist but are never imported into server.ts: cost-analytics, cost-calculation, budget-management |
+| `DCMMS-124` | x | **Unverified** | Cost Record schema; not part of REV-025's scope, needs its own verification pass |
+| `DCMMS-125` | x | **Descoped** | `budget-management.ts`/`.service.ts` deleted 2026-09-19 — service stored data in an in-memory `Map`, lost on every restart |
+| `DCMMS-126` | x | **Descoped** | `cost-calculation.ts`/`.service.ts` deleted 2026-09-19 — same, in-memory only |
+| `DCMMS-127` | x | **Descoped** | `cost-analytics.ts`/`.service.ts` deleted 2026-09-19 — fabricated every figure with `Math.random()` |
 
 ### 11 Advanced Forecasting
 

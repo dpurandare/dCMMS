@@ -16,6 +16,7 @@ import { eq } from "drizzle-orm";
 import { buildServer } from "../../src/server";
 import { db } from "../../src/db";
 import { tenants, sites, users, assets, alerts, workOrders } from "../../src/db/schema";
+import { ingestionQueue } from "../../src/services/queue.service";
 
 interface Tenant {
   id: string;
@@ -188,6 +189,60 @@ describe("cross-tenant isolation", () => {
       // 403 or 404 are both fine. 200 with the row is not.
       expect([401, 403, 404]).toContain(response.statusCode);
       expect(bodyOf(response)).not.toContain("mallory-corp Site");
+    });
+  });
+
+  describe("ml-features asset ownership (REV-029)", () => {
+    // Found during the Phase 2 per-route review: POST /ml/features/assets
+    // took any assetIds with zero check they belonged to the caller's
+    // tenant — asset type/age, health score, work-order history and
+    // telemetry rollups for any tenant's equipment, readable by guessing a
+    // UUID. `mallory.assetId` doesn't exist in this fixture yet; use the
+    // asset created by createTenant() by re-deriving it via the alert row.
+    it("refuses asset features for another tenant's asset", async () => {
+      const [malloryAsset] = await db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(eq(assets.tenantId, mallory.id));
+
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/v1/ml/features/assets",
+        headers: { authorization: `Bearer ${alice.token}` },
+        payload: { assetIds: [malloryAsset.id] },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(bodyOf(response)).not.toContain("inverter");
+    });
+  });
+
+  describe("genai job status ownership (REV-041)", () => {
+    // BullMQ assigns sequential job IDs by default, making them trivially
+    // enumerable — GET /genai/jobs/:id had zero check that the job belonged
+    // to the caller's tenant.
+    it("refuses another tenant's genai ingestion job status", async () => {
+      const job = await ingestionQueue.add("ingest_document", {
+        buffer: { data: Buffer.from("mallory's secret manual").toJSON().data },
+        filename: "mallory-confidential.pdf",
+        tenantId: mallory.id,
+        metadata: {},
+      });
+
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/v1/genai/jobs/${job.id}`,
+        headers: { authorization: `Bearer ${alice.token}` },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(bodyOf(response)).not.toContain("mallory-confidential");
+
+      // Best-effort cleanup only: the real worker in queue.service.ts picks
+      // up jobs immediately in this environment and can hold a processing
+      // lock, which makes remove() fail with "locked by another worker" —
+      // that's a race in test cleanup, not a failure of the assertion above.
+      await job.remove().catch(() => undefined);
     });
   });
 

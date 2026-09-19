@@ -43,11 +43,13 @@ function StatCard({
         {change !== undefined && (
           <div className="mt-2 flex items-center gap-1 text-sm">
             {isPositive ? (
-              <ArrowUpRight className="h-4 w-4 text-green-600" />
+              <ArrowUpRight className="h-4 w-4 text-green-700" />
             ) : (
               <ArrowDownRight className="h-4 w-4 text-red-600" />
             )}
-            <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
+            {/* text-green-600 fails WCAG AA contrast on white (3.29:1,
+                needs 4.5:1) — REV-036. text-red-600 already passes. */}
+            <span className={isPositive ? 'text-green-700' : 'text-red-600'}>
               {Math.abs(change)}%
             </span>
             {changeLabel && <span className="text-slate-500">{changeLabel}</span>}

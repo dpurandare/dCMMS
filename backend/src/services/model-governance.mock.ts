@@ -2,7 +2,10 @@
  * Model Governance Service
  *
  * Mock implementation for development/build without external dependencies.
+ * Never persists anything — see REV-027 (mock policy).
  */
+
+import { assertMockAllowed } from "../utils/mock-guard";
 
 export type ModelStage =
   | "development"
@@ -70,6 +73,7 @@ export interface Incident {
 
 export class ModelGovernanceService {
   constructor() {
+    assertMockAllowed("ModelGovernanceService");
     console.log("Model Governance Service initialized (Mock Provider)");
   }
 

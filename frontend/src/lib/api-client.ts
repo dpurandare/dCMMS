@@ -19,7 +19,11 @@ import type {
 } from '@/types/api';
 
 // API client configuration
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+// 3001 is the backend's port (see CLAUDE.md) — 3000 is this frontend's own
+// port. Defaulting to 3000 here was a same-origin looking but wrong fallback
+// that only ever worked because NEXT_PUBLIC_API_URL happened to always be
+// set (REV-033).
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
@@ -61,6 +65,27 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Serializes concurrent refresh attempts behind one in-flight request
+// (REV-035). Without this, N requests that all 401 at once each fire their
+// own /auth/refresh call; with refresh-token rotation the second call can
+// invalidate the token the first one just issued, incorrectly logging out a
+// session that was actually still valid. Every 401 handler awaits this same
+// promise instead, so exactly one refresh happens no matter how many
+// requests were in flight when the token expired.
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
+      .then((response) => response.data.accessToken as string)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
 // Response interceptor to handle errors and token refresh
 apiClient.interceptors.response.use(
   (response) => response,
@@ -79,13 +104,7 @@ apiClient.interceptors.response.use(
       try {
         // No token is sent: the browser attaches the HttpOnly refresh cookie.
         // This is also why withCredentials is set on the instance.
-        const response = await axios.post(
-          `${API_URL}/auth/refresh`,
-          {},
-          { withCredentials: true },
-        );
-
-        const { accessToken: newAccessToken } = response.data;
+        const newAccessToken = await refreshAccessToken();
         useAuthStore.getState().setAccessToken(newAccessToken);
 
         // Update header and retry original request

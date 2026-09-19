@@ -49,6 +49,12 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
                 predictedGenerationMw: z.number(),
                 confidenceIntervalLowerMw: z.number().optional(),
                 confidenceIntervalUpperMw: z.number().optional(),
+                // Already stored honestly per-row ("MOCK" when
+                // ML_SERVICE_URL was unreachable and forecast.service.ts
+                // fell back to a fabricated forecast) — this endpoint's
+                // response schema just used to strip the field before it
+                // reached the caller (REV-030).
+                algorithm: z.string(),
               }),
             ),
           }),
@@ -67,6 +73,16 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         modelType: modelType || "sarima",
         energyType,
       });
+
+      // No ML forecasting microservice exists anywhere in this repo, so
+      // ML_SERVICE_URL (default http://localhost:8001) never resolves and
+      // every call falls back to a fabricated sine-wave/Weibull forecast —
+      // silently, until now. Label it the same way ml-inference/
+      // model-governance do (REV-027a/REV-030).
+      const isMock = forecasts.some((f) => f.algorithm === "MOCK");
+      if (isMock) {
+        reply.header("X-Mock-Data", "true");
+      }
 
       return reply.code(200).send({
         message: "Forecast generated successfully",
@@ -129,6 +145,10 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         endDate ? new Date(endDate) : undefined,
         activeOnly !== false,
       );
+
+      if (forecasts.some((f) => f.algorithm === "MOCK")) {
+        reply.header("X-Mock-Data", "true");
+      }
 
       return reply.code(200).send(
         forecasts.map((f) => ({

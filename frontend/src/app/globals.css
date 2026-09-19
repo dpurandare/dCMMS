@@ -18,7 +18,10 @@
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    /* Lightness lowered from 60.2% to 42% (REV-036): the original
+       bg-destructive + white text failed WCAG AA (3.59:1 vs a required
+       4.5:1) on every destructive-variant Button/Badge app-wide. */
+    --destructive: 0 84.2% 42%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
@@ -56,4 +59,18 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Shepherd.js's default theme fails WCAG AA color contrast (REV-036):
+   title #919191 on #f1f1f1 (2.79:1), secondary button #919191 on #f7f8f8
+   (2.96:1), primary button #fbfcfd on #86b8ef (2.02:1) — all need 4.5:1. */
+.shepherd-title {
+  color: #4b5563;
+}
+.shepherd-button-secondary {
+  color: #374151;
+}
+.shepherd-button-primary {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
 }

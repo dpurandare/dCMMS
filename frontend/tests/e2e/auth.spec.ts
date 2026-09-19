@@ -24,9 +24,10 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    // Fill in login form
-    await page.fill('input[name="email"]', 'admin@dcmms.local');
-    await page.fill('input[name="password"]', 'admin123');
+    // Fill in login form — real seeded credentials (CLAUDE.md), not the
+    // fictitious ones this test used before REV-037's consolidation.
+    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="password"]', 'Password123!');
 
     // Submit form
     await page.click('button[type="submit"]');
@@ -53,8 +54,8 @@ test.describe('Authentication Flow', () => {
 
   test('should logout successfully', async ({ page }) => {
     // Login first
-    await page.fill('input[name="email"]', 'admin@dcmms.local');
-    await page.fill('input[name="password"]', 'admin123');
+    await page.fill('input[name="email"]', 'admin@example.com');
+    await page.fill('input[name="password"]', 'Password123!');
     await page.click('button[type="submit"]');
 
     // Wait for dashboard

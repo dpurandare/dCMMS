@@ -22,6 +22,11 @@ const customJestConfig = {
     '**/__tests__/**/*.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
+  // Playwright specs (tests/e2e/) use `test`/`expect` from '@playwright/test',
+  // not Jest's globals — Jest's own testMatch glob was picking them up and
+  // failing them with unrelated errors (REV-037). `frontend/e2e/`, the
+  // duplicate tree this used to also match, no longer exists.
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/tests/e2e/'],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

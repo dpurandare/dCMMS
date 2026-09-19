@@ -3,9 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
 
-  // Environment variables exposed to the browser
+  // Environment variables exposed to the browser.
+  // 3001 is the backend's port (CLAUDE.md); 3000 is this frontend's own
+  // port and was the wrong fallback here — only ever masked because
+  // NEXT_PUBLIC_API_URL is always set in practice (REV-033).
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
   },
 
   // Security headers. Content-Security-Policy is NOT here — it needs a
