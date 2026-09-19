@@ -5,13 +5,28 @@ import { tenants } from "./schema";
  * Automatically seed the database if it's empty and auto-seed is enabled
  * Only runs in development/test environments
  */
-export async function autoSeedIfNeeded() {
-    const environment = process.env.NODE_ENV || "development";
-    const autoSeed = process.env.AUTO_SEED === "true";
-    const allowedEnvironments = ["development", "test", "local"];
+/** Seeding writes known credentials, so it may only ever run here. */
+const SEEDABLE_ENVIRONMENTS = ["development", "test", "local"];
 
-    // Skip if not enabled or not in allowed environment
-    if (!allowedEnvironments.includes(environment) || !autoSeed) {
+export async function autoSeedIfNeeded() {
+    const environment = process.env.NODE_ENV;
+    const autoSeed = process.env.AUTO_SEED === "true";
+
+    // Fail closed. This used to default an unset NODE_ENV to "development",
+    // which meant a deployment that simply forgot to set it — and had
+    // AUTO_SEED=true, as .env.example ships — would seed itself with the
+    // documented test credentials (REV-016).
+    if (environment === undefined) {
+        if (autoSeed) {
+            console.warn(
+                "⚠️ AUTO_SEED=true but NODE_ENV is not set — refusing to seed. " +
+                    `Set NODE_ENV to one of: ${SEEDABLE_ENVIRONMENTS.join(", ")}.`,
+            );
+        }
+        return;
+    }
+
+    if (!SEEDABLE_ENVIRONMENTS.includes(environment) || !autoSeed) {
         return;
     }
 

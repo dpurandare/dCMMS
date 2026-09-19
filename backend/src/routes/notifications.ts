@@ -8,6 +8,7 @@ import { db } from "../db";
 import { notificationPreferences, notificationHistory } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
 
 // Validation schemas
 const notificationPreferenceSchema = z.object({
@@ -353,7 +354,8 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { tenantId, userId, status, channel, eventType } = request.query;
+        const tenantId = getTenantId(request);
+        const { userId, status, channel, eventType } = request.query;
         const limit = parseInt(request.query.limit || "100");
         const offset = parseInt(request.query.offset || "0");
 
@@ -510,7 +512,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
 
         // Send test notification
         await notificationService.sendNotification({
-          tenantId: "default-tenant-id", // TODO: Get from auth context
+          tenantId: getTenantId(request),
           userId,
           templateCode: eventType,
           variables: data,

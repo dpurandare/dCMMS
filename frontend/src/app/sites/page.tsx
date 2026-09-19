@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Plus, Search, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -43,16 +43,7 @@ export default function SitesPage() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchSites();
-  }, [isAuthenticated, router]);
-
-  const fetchSites = async () => {
+  const fetchSites = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -68,7 +59,16 @@ export default function SitesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchSites();
+  }, [isAuthenticated, router, fetchSites]);
 
   const handleDelete = async () => {
     if (!selectedSite) return;

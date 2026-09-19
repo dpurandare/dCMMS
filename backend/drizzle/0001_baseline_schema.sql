@@ -1,3 +1,13 @@
+-- Baseline schema: 37 tables.
+--
+-- Previously 0000_abnormal_omega_flight.sql. Renamed and renumbered under
+-- REV-011 so the prerequisites above run first. One correction from the
+-- generated original: document_embeddings.embedding was emitted as the quoted
+-- type "vector(768)", which Postgres reads as a type literally named
+-- `vector(768)`. That error made this migration fail on every run, which is
+-- why __drizzle_migrations was empty and only scripts/init-db.sql's 10 tables
+-- ever existed. See docs/architecture/adrs/ADR-004-migration-strategy.md.
+
 DO $$ BEGIN
  CREATE TYPE "alert_severity" AS ENUM('critical', 'high', 'medium', 'low', 'info');
 EXCEPTION
@@ -261,7 +271,7 @@ CREATE TABLE IF NOT EXISTS "document_embeddings" (
 	"site_id" uuid,
 	"content" text NOT NULL,
 	"metadata" jsonb,
-	"embedding" "vector(768)",
+	"embedding" vector(768),
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

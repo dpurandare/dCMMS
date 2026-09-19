@@ -69,10 +69,11 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
   user: User;
+  csrfToken?: string;
   passwordChangeReminder?: string;
+  // No refreshToken: it is an HttpOnly cookie and never reaches JavaScript.
 }
 
 export interface RefreshTokenRequest {
@@ -81,8 +82,8 @@ export interface RefreshTokenRequest {
 
 export interface RefreshTokenResponse {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
+  // No refreshToken: it is an HttpOnly cookie and never reaches JavaScript.
 }
 
 // ==========================================
@@ -529,6 +530,9 @@ export type Permission =
   | "create:reports"
   | "read:analytics"
   | "read:dashboards"
+  | "create:dashboards"
+  | "update:dashboards"
+  | "delete:dashboards"
   | "read:compliance"
   | "create:compliance"
   | "approve:compliance"

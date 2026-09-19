@@ -2,6 +2,7 @@ import { db } from "../db";
 import { weatherForecasts } from "../db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import axios from "axios";
+import { optionalSecret } from "../config/env";
 
 // ==========================================
 // Types & Interfaces
@@ -99,7 +100,7 @@ export class WeatherAPIService {
   private solcastBaseUrl: string = "https://api.solcast.com.au";
 
   constructor() {
-    this.apiKey = process.env.OPENWEATHERMAP_API_KEY || "";
+    this.apiKey = optionalSecret("OPENWEATHERMAP_API_KEY");
     if (!this.apiKey) {
       console.warn(
         "OPENWEATHERMAP_API_KEY not set - weather API will not work",

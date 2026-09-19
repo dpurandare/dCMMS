@@ -159,8 +159,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "update:dashboards",
     "delete:dashboards",
     "read:forecasts",
-    "read:ml-features",
-    "use:genai",
     "read:notifications",
     "update:notifications",
     "update:alerts",

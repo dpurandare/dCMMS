@@ -11,6 +11,7 @@ import { jsonSchemaTransform } from "fastify-type-provider-zod";
 
 // Plugins
 import { registerJwt } from "./plugins/jwt";
+import { registerRefreshCookie } from "./plugins/refresh-cookie";
 import { registerRedis } from "./plugins/redis";
 
 // Middleware
@@ -148,6 +149,9 @@ export async function buildServer(): Promise<FastifyInstance> {
   // JWT Authentication
   await registerJwt(server);
 
+  // Cookie support, for the HttpOnly refresh token (REV-017).
+  await registerRefreshCookie(server);
+
   // Security headers
   await server.register(helmet, {
     contentSecurityPolicy: false, // Disable for Swagger UI
@@ -242,7 +246,11 @@ export async function buildServer(): Promise<FastifyInstance> {
           const transformed = jsonSchemaTransform(input);
           return {
             ...transformed,
-            schema: sanitizeSchema(transformed.schema),
+            // sanitizeSchema is deliberately `unknown`-in/`unknown`-out; narrow
+            // it back the same way the route-level call on line 130 does.
+            schema: sanitizeSchema(
+              transformed.schema,
+            ) as typeof transformed.schema,
           };
         },
         openapi: {

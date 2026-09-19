@@ -2,15 +2,15 @@ name: Backend CI/CD
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [ main, develop, 'feature/**', 'claude/**' ]
-  #   paths:
-  #     - 'backend/**'
-  #     - '.github/workflows/backend-ci.yml'
-  # pull_request:
-  #   branches: [ main, develop ]
-  #   paths:
-  #     - 'backend/**'
+  push:
+    branches: [ main, develop, 'feature/**', 'claude/**' ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
 
 env:
   NODE_VERSION: '20.x'
@@ -92,7 +92,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector, not plain postgres: 0000_extensions_and_enums.sql
+        # creates the vector extension (REV-011).
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_DB: dcmms_test
           POSTGRES_USER: test_user
@@ -150,6 +152,93 @@ jobs:
           files: ./backend/coverage/lcov.info
           flags: backend-integration
           name: backend-integration-tests
+
+  # ==========================================
+  # MIGRATIONS
+  # ==========================================
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: dcmms_migrations
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/dcmms_migrations
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      # The bug this job exists to catch (REV-011): every migration failed on
+      # `type "vector(768)" does not exist`, nothing recorded it, and the
+      # application ran for months on a schema no migration had produced.
+      - name: Migrate an empty database to head
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Re-run migrations (must be a no-op)
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Assert the schema is actually there
+        run: |
+          set -euo pipefail
+          query() { psql "$DATABASE_URL" -tAc "$1"; }
+
+          tables=$(query "select count(*) from information_schema.tables
+                          where table_schema='public' and table_type='BASE TABLE';")
+          enums=$(query "select count(*) from pg_type t
+                         join pg_namespace n on n.oid = t.typnamespace
+                         where n.nspname='public' and t.typtype='e';")
+          indexes=$(query "select count(*) from pg_indexes
+                           where schemaname='public' and indexname not like '%_pkey';")
+          applied=$(query "select count(*) from drizzle.__drizzle_migrations;")
+
+          echo "tables=$tables enums=$enums indexes=$indexes applied=$applied"
+
+          # A migration that fails leaves an empty __drizzle_migrations and a
+          # database that looks plausible but is not the schema anyone declared.
+          [ "$applied" -ge 3 ] || { echo "::error::no migrations recorded as applied"; exit 1; }
+          [ "$tables"  -ge 37 ] || { echo "::error::expected >= 37 tables, found $tables"; exit 1; }
+          [ "$enums"   -ge 14 ] || { echo "::error::expected >= 14 enum types, found $enums"; exit 1; }
+          [ "$indexes" -ge 47 ] || { echo "::error::expected >= 47 secondary indexes, found $indexes"; exit 1; }
+
+          # refresh_tokens is the table whose absence made login return 500.
+          query "select 1 from information_schema.tables
+                 where table_schema='public' and table_name='refresh_tokens';" | grep -q 1 \
+            || { echo "::error::refresh_tokens missing"; exit 1; }
+
+      - name: Assert schema.ts matches the migrated database
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          npx drizzle-kit introspect:pg --driver=pg \
+            --connectionString="$DATABASE_URL" --out=/tmp/introspect | tee /tmp/introspect.log
+          grep -q "37  tables fetched" /tmp/introspect.log \
+            || { echo "::error::introspection did not find the expected 37 tables"; exit 1; }
 
   # ==========================================
   # SECURITY SCANNING

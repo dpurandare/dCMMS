@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
-import { createClient } from "@clickhouse/client";
+import { ClickHouseClient } from "@clickhouse/client";
+import { createClickhouseClient } from "../config/clickhouse";
 
 export type ReportDataSource =
   | "work_orders"
@@ -54,7 +55,7 @@ export interface ReportExecutionOptions {
  */
 export class ReportBuilderService {
   private fastify: FastifyInstance;
-  private clickhouse: ReturnType<typeof createClient>;
+  private clickhouse: ClickHouseClient;
 
   // Field mappings for each datasource
   private readonly DATASOURCE_TABLES: Record<ReportDataSource, string> = {
@@ -126,12 +127,7 @@ export class ReportBuilderService {
     this.fastify = fastify;
 
     // Initialize ClickHouse client
-    this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
-      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
-      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
-      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
-    });
+    this.clickhouse = createClickhouseClient();
   }
 
   /**

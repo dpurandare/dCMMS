@@ -7,11 +7,17 @@
 
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test_user:test_password@localhost:5432/dcmms_test';
+// Must match tests/global-setup.ts, which creates and migrates this database.
+// These two disagreed (test_user@5432 vs dcmms_user@5434), so the suite could
+// never connect even once the database existed.
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://dcmms_user:dcmms_password_dev@localhost:5434/dcmms_test';
 process.env.REDIS_HOST = process.env.REDIS_HOST = 'localhost';
 process.env.REDIS_PORT = '6379';
 process.env.REDIS_PASSWORD = 'redis_password_dev'; process.env.TEST_REDIS_PORT || '6379';
-process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
+// Must satisfy the 64-character minimum enforced by src/config/env.ts.
+process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only-not-used-anywhere-else-0123456789';
+process.env.CLICKHOUSE_PASSWORD = 'clickhouse_password_dev';
+process.env.QUESTDB_PASSWORD = 'quest';
 process.env.LOG_LEVEL = 'error'; // Suppress logs during tests
 
 // Extend Jest matchers

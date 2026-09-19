@@ -2,16 +2,18 @@ import { FastifyPluginAsync } from "fastify";
 // import { WebClient } from '@slack/web-api';
 import { db, pool } from "../db";
 import SlackService from "../services/slack.service";
+import { envOrDefault, optionalSecret } from "../config/env";
 
 const slackRoutes: FastifyPluginAsync = async (server) => {
   const slackService = new SlackService();
 
   // Slack OAuth configuration
-  const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID || "";
-  const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET || "";
-  const SLACK_REDIRECT_URI =
-    process.env.SLACK_REDIRECT_URI ||
-    "http://localhost:3000/api/v1/slack/oauth/callback";
+  const SLACK_CLIENT_ID = optionalSecret("SLACK_CLIENT_ID");
+  const SLACK_CLIENT_SECRET = optionalSecret("SLACK_CLIENT_SECRET");
+  const SLACK_REDIRECT_URI = envOrDefault(
+    "SLACK_REDIRECT_URI",
+    "http://localhost:3000/api/v1/slack/oauth/callback",
+  );
 
   // GET /api/v1/slack/install
   server.get(

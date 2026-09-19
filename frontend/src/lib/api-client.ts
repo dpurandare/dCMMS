@@ -28,14 +28,19 @@ export const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Required so the browser sends the HttpOnly refresh cookie to /auth/refresh
+  // and /auth/logout (REV-017).
+  withCredentials: true,
 });
 
 // Request interceptor to add auth token and CSRF token
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
-      // Add auth token
-      const token = localStorage.getItem('accessToken');
+      // The access token lives in memory, not localStorage, so an injected
+      // script has nothing durable to steal (REV-017).
+      const { useAuthStore } = await import('@/store/auth-store');
+      const token = useAuthStore.getState().accessToken;
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -69,21 +74,19 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      const { useAuthStore } = await import('@/store/auth-store');
+
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
+        // No token is sent: the browser attaches the HttpOnly refresh cookie.
+        // This is also why withCredentials is set on the instance.
+        const response = await axios.post(
+          `${API_URL}/auth/refresh`,
+          {},
+          { withCredentials: true },
+        );
 
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
-
-        // Store new tokens
-        localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        const { accessToken: newAccessToken } = response.data;
+        useAuthStore.getState().setAccessToken(newAccessToken);
 
         // Update header and retry original request
         if (originalRequest.headers) {
@@ -91,9 +94,8 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, logout user
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        // Refresh failed — the cookie is gone, expired or revoked.
+        useAuthStore.getState().logout();
         window.location.href = '/auth/login';
         return Promise.reject(refreshError);
       }
@@ -134,8 +136,9 @@ export const api = {
       const response = await apiClient.get<User>('/auth/me');
       return response.data;
     },
-    refresh: async (refreshToken: string): Promise<RefreshTokenResponse> => {
-      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', { refreshToken });
+    /** Takes no argument: the refresh token is the HttpOnly cookie (REV-017). */
+    refresh: async (): Promise<RefreshTokenResponse> => {
+      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh');
       return response.data;
     },
   },

@@ -66,7 +66,8 @@ export default function LoginPage() {
       const response = await api.auth.login(formData.email, formData.password);
 
       // Store auth data
-      login(response.accessToken, response.refreshToken, response.user);
+      // No refresh token here: the server sets it as an HttpOnly cookie (REV-017).
+      login(response.accessToken, response.user);
 
       if (response.passwordChangeReminder) {
         showToast.error(response.passwordChangeReminder);

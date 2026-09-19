@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Plus, Search, Filter, Download, Eye, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -75,16 +75,7 @@ function ComplianceReportsContent() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ComplianceReport | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchReports();
-  }, [isAuthenticated, router]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -100,7 +91,16 @@ function ComplianceReportsContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, templateFilter]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchReports();
+  }, [isAuthenticated, router, fetchReports]);
 
   const handleReportGenerated = (reportId: string) => {
     setShowGenerator(false);

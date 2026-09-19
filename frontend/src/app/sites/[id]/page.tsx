@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
@@ -17,16 +17,7 @@ export default function SiteDetailPage({ params }: { params: { id: string } }) {
   const [site, setSite] = useState<Site | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchSite();
-  }, [isAuthenticated, params.id]);
-
-  const fetchSite = async () => {
+  const fetchSite = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.sites.getById(params.id);
@@ -37,7 +28,16 @@ export default function SiteDetailPage({ params }: { params: { id: string } }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchSite();
+  }, [isAuthenticated, params.id, router, fetchSite]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';

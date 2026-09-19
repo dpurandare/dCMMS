@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,11 +40,7 @@ export default function SettingsPage() {
         confirmPassword: ''
     });
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         try {
             setIsLoading(true);
             const [userProfile, userPreferences] = await Promise.all([
@@ -71,7 +67,11 @@ export default function SettingsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [authUser]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleProfileUpdate = async () => {
         if (!profile) return;

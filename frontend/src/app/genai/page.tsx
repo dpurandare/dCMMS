@@ -37,10 +37,10 @@ export default function GenAIPage() {
 
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
                         <h4 className="font-semibold mb-1">Tips</h4>
-                        <p>Upload PDF manuals or guidelines to enhance the AI's knowledge. Try asking specific questions like:</p>
+                        <p>Upload PDF manuals or guidelines to enhance the AI&apos;s knowledge. Try asking specific questions like:</p>
                         <ul className="list-disc list-inside mt-2 space-y-1 opacity-80">
-                            <li>"How do I reset the inverter?"</li>
-                            <li>"What is the maintenance schedule for Site A?"</li>
+                            <li>&quot;How do I reset the inverter?&quot;</li>
+                            <li>&quot;What is the maintenance schedule for Site A?&quot;</li>
                         </ul>
                     </div>
                 </div>
