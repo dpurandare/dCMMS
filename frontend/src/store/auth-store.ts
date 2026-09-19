@@ -11,15 +11,19 @@ interface User {
 
 interface AuthState {
   user: User | null;
+  /**
+   * Held in memory only. Never persisted, never written to localStorage.
+   * The refresh token is not here at all — it lives in an HttpOnly cookie the
+   * browser attaches itself, which JavaScript cannot read (REV-017).
+   */
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
 
   // Actions
-  login: (accessToken: string, refreshToken: string, user: User) => void;
+  login: (accessToken: string, user: User) => void;
   logout: () => void;
   setUser: (user: User | null) => void;
-  updateTokens: (accessToken: string, refreshToken: string) => void;
+  setAccessToken: (accessToken: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,20 +31,12 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
 
-      login: (accessToken: string, refreshToken: string, user: User) => {
-        // Store tokens in localStorage for API client
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-        }
-
+      login: (accessToken: string, user: User) => {
         set({
           user,
           accessToken,
-          refreshToken,
           isAuthenticated: true,
         });
       },
@@ -60,7 +56,6 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
         });
       },
@@ -69,23 +64,19 @@ export const useAuthStore = create<AuthState>()(
         set({ user });
       },
 
-      updateTokens: (accessToken: string, refreshToken: string) => {
-        // Update tokens in localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
-        }
-
-        set({ accessToken, refreshToken });
+      setAccessToken: (accessToken: string) => {
+        set({ accessToken });
       },
     }),
     {
       name: 'auth-storage',
+      // Tokens are deliberately excluded. Persisting them put a 7-day refresh
+      // credential in localStorage, where any XSS could read it (REV-017).
+      // On reload the access token is gone and the client silently refreshes
+      // using the HttpOnly cookie.
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
       }),
     }
   )

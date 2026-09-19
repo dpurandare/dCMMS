@@ -2,6 +2,11 @@ import { FastifyPluginAsync } from "fastify";
 import { AuthService, UserPayload } from "../services/auth.service";
 import { TokenService } from "../services/token.service";
 import {
+  clearRefreshCookie,
+  readRefreshCookie,
+  setRefreshCookie,
+} from "../plugins/refresh-cookie";
+import {
   checkLoginAllowed,
   clearLoginFailures,
   recordLoginFailure,
@@ -28,7 +33,6 @@ const authRoutes: FastifyPluginAsync = async (server) => {
             type: "object",
             properties: {
               accessToken: { type: "string" },
-              refreshToken: { type: "string" },
               expiresIn: { type: "number" },
               csrfToken: { type: "string" },
               user: {
@@ -111,8 +115,13 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           passwordChangeReminder = "Please change your password immediately. This is your first login with the default password.";
         }
 
+        // Refresh token goes to an HttpOnly cookie, not the response body,
+        // so no XSS can read it (REV-017).
+        setRefreshCookie(reply, tokens.refreshToken);
+        const { refreshToken: _withheld, ...safeTokens } = tokens;
+
         return {
-          ...tokens,
+          ...safeTokens,
           csrfToken, // Include CSRF token in response
           user: {
             id: user.id,
@@ -140,29 +149,42 @@ const authRoutes: FastifyPluginAsync = async (server) => {
     "/refresh",
     {
       schema: {
-        description: "Refresh access token",
+        description:
+          "Refresh access token. The refresh token is read from the HttpOnly " +
+          "dcmms_refresh_token cookie set at login; there is no request body.",
         tags: ["auth"],
-        body: {
-          type: "object",
-          required: ["refreshToken"],
-          properties: {
-            refreshToken: { type: "string" },
-          },
-        },
         response: {
           200: {
             type: "object",
             properties: {
               accessToken: { type: "string" },
-              refreshToken: { type: "string" },
               expiresIn: { type: "number" },
+            },
+          },
+          401: {
+            type: "object",
+            properties: {
+              statusCode: { type: "number" },
+              error: { type: "string" },
+              message: { type: "string" },
             },
           },
         },
       },
     },
     async (request, reply) => {
-      const { refreshToken } = request.body as { refreshToken: string };
+      // The refresh token is only ever accepted from the HttpOnly cookie. It is
+      // deliberately NOT read from the body any more: accepting both would
+      // leave the XSS-readable path open and make the hardening cosmetic.
+      const refreshToken = readRefreshCookie(request);
+
+      if (!refreshToken) {
+        return reply.status(401).send({
+          statusCode: 401,
+          error: "Unauthorized",
+          message: "No refresh token cookie present",
+        });
+      }
 
       try {
         // Rotate refresh token (validates old token, creates new one)
@@ -175,8 +197,11 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           },
         );
 
-        return tokens;
+        setRefreshCookie(reply, tokens.refreshToken);
+        const { refreshToken: _rotated, ...safeTokens } = tokens;
+        return safeTokens;
       } catch (error) {
+        clearRefreshCookie(reply);
         request.log.error({ err: error }, "Token refresh error");
         return reply.status(401).send({
           statusCode: 401,
@@ -217,6 +242,8 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         // Revoke all refresh tokens for this user for security
         await RefreshTokenService.revokeAllUserTokens(user.id);
+
+        clearRefreshCookie(reply);
 
         // Delete CSRF token
         const { deleteCsrfToken } = await import('../middleware/csrf');

@@ -521,28 +521,88 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     calls `dotenv.config()` at import time, so the checked-in dev `.env` was
     restoring `NODE_ENV=development` and quietly invalidating the first attempt.
   - **Status:** ✅ COMPLETE
-- [ ] **REV-017** - Decide and implement the token storage model 🟠 **P1**
-  - [ ] Access and refresh tokens are currently in `localStorage` (`frontend/src/store/auth-store.ts:36-37,75-76`) — any XSS yields both, including the 7-day refresh token
-  - [ ] **Recommendation:** refresh token in an `HttpOnly; Secure; SameSite=Strict` cookie; access token in memory only
-  - [ ] Note: this also makes the existing CSRF subsystem *correct* rather than redundant (see REV-018)
-  - [ ] Update `frontend/src/lib/api-client.ts` and `backend/src/routes/auth.ts` accordingly
+- [x] **REV-017** - Decide and implement the token storage model 🟠 **P1**
+  - [x] **Decision (Deepak, 2026-09-19):** refresh token in an `HttpOnly; Secure; SameSite=Strict` cookie; access token in memory only. Recorded as [`ADR-005`](../docs/architecture/adrs/ADR-005-auth-transport-and-csrf.md).
+  - [x] Update `frontend/src/lib/api-client.ts` and `backend/src/routes/auth.ts`
   - **Priority:** 🟠 P1
-  - **Estimated:** 2 days
+  - **Estimated:** 2 days · **Actual:** ~3 hours
+  - **Files:** `backend/src/plugins/refresh-cookie.ts` (new), `backend/src/routes/auth.ts`, `backend/src/server.ts`, `frontend/src/store/auth-store.ts`, `frontend/src/lib/api-client.ts`, `frontend/src/app/auth/login/page.tsx`, `frontend/src/types/api.ts`
   - **Verify:** after login, `localStorage` contains no token; `document.cookie` cannot read the refresh token from JS.
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ curl -D - -X POST /api/v1/auth/login -d '{"email":"admin@example.com",...}'
+    set-cookie: dcmms_refresh_token=6ab8700d…; Max-Age=604800;
+                Path=/api/v1/auth; HttpOnly; SameSite=Strict
+    body keys: ['accessToken', 'csrfToken', 'expiresIn', 'user']
+    refreshToken in body: False
 
-- [ ] **REV-018** - Resolve the CSRF / threat-model mismatch 🟠 **P1**
-  - [ ] Authentication is pure `Authorization: Bearer` — there are no cookies in `backend/src/routes/auth.ts` or `plugins/jwt.ts`. Bearer tokens are not sent ambiently by browsers, so CSRF is not applicable to the current design.
-  - [ ] The team nonetheless built `middleware/csrf.ts`, Redis token storage, `routes/csrf.ts`, `frontend/src/lib/csrf.ts`, 28 test assertions (the repo's largest test cluster), two design docs and `backend/scripts/add-csrf-protection.sh` for it.
-  - [ ] **If REV-017 moves to cookies:** keep the CSRF work — it becomes correct and necessary. Re-verify it against the new flow.
-  - [ ] **If REV-017 keeps Bearer:** remove the subsystem and document why in an ADR.
-  - [ ] Either way, write the threat model down. Its absence is what allowed a large, well-executed body of work to be aimed at the wrong risk.
+    1. login                         → access token issued
+    2. GET /alerts with it           → 200
+    3. refresh via cookie            → {'accessToken','expiresIn'}, no refreshToken
+       refresh without cookie        → 401
+       refresh with token in body    → 401   (the old vector is closed)
+    4. logout                        → 200, set-cookie: …Expires=Thu, 01 Jan 1970
+    5. refresh with the old cookie   → 401
+    ```
+    `HttpOnly` is what makes `document.cookie` unable to see it; the store no
+    longer persists either token, so `localStorage` holds none.
+  - **`/auth/refresh` deliberately does not accept the token from the body.**
+    Supporting both would have left the XSS-readable path open and made the
+    change cosmetic.
+  - **Still open, and accepted in ADR-005:** an in-memory access token is still
+    readable by script running in the page. The mitigation is blast radius — 15
+    minutes, no silent renewal, and REV-019's CSP now actually enforces.
+  - **Breaking:** `LoginResponse`/`RefreshTokenResponse` no longer carry
+    `refreshToken`. Any other client reading it breaks — including `mobile/`,
+    which this review has not examined. Flagged for REV-055.
+  - **Status:** ✅ COMPLETE
+- [x] **REV-018** - Resolve the CSRF / threat-model mismatch 🟠 **P1**
+  - [x] Write the threat model down — [`ADR-005`](../docs/architecture/adrs/ADR-005-auth-transport-and-csrf.md)
+  - [x] REV-017 moved to cookies, so the CSRF work is kept rather than deleted
   - **Priority:** 🟠 P1
-  - **Estimated:** 1 day (decision + follow-through)
-  - **Depends on:** REV-017
+  - **Estimated:** 1 day · **Actual:** ~1 hour
+  - **Depends on:** REV-017 ✅
   - **Verify:** an ADR exists recording the auth transport, the threats it addresses, and the CSRF decision.
-  - **Status:** 🔴 Not Started
 
+  ### The subsystem was never wired to anything
+
+  The review found that CSRF did not apply to a pure-Bearer design. The sharper
+  finding is that it would not have mattered either way:
+
+  ```
+  $ grep -rn "csrfProtection" backend/src --include=*.ts
+  backend/src/__tests__/middleware/csrf.test.ts:2: …
+  ```
+
+  `csrfProtection` is imported by exactly one file — **its own test**. No route,
+  no hook, no `preHandler` uses it. Tokens are generated at login, stored in
+  Redis and dutifully sent by the frontend on every mutation, and **nothing on
+  the server has ever checked one**.
+
+  So 277 lines, the repository's largest test cluster (28 assertions), two
+  design documents and `backend/scripts/add-csrf-protection.sh` describe a
+  control that does not exist at runtime. The tests pass because they call the
+  middleware directly.
+
+  This is the same shape as REV-024's audit report: the artefact reads like
+  protection, and the thing it describes was never connected. It is also why
+  "we have CSRF protection" survived as a belief for so long — everything except
+  the wiring was there to point at.
+  - **Now:** `SameSite=Strict` plus the cookie's `Path=/api/v1/auth` scope is the
+    CSRF defence, because the cookie is the only ambient credential in the
+    system. Every other endpoint still uses a Bearer token and remains
+    CSRF-immune.
+  - **Status:** ✅ COMPLETE
+
+- [ ] **REV-018a** - Wire or delete the CSRF subsystem 🟠 **P1**
+  - [ ] Decide: attach `csrfProtection` as defence in depth on authenticated state-changing routes, or delete the subsystem
+  - [ ] Note the mismatch that blocks the obvious answer: a double-submit token keyed by user id does not fit `/auth/refresh`, which by definition runs when there is no authenticated user to key against — so it cannot simply be bolted onto the one endpoint that carries an ambient credential
+  - [ ] Whichever way it goes, `backend/scripts/add-csrf-protection.sh` and the two design documents must match reality afterwards
+  - **Priority:** 🟠 P1 — 277 lines of inert security machinery is its own hazard: it reads like protection in review and in audits, and it is not
+  - **Estimated:** 1 day
+  - **Split from:** REV-018
+  - **Verify:** either a request with a missing/incorrect CSRF token is rejected by a real route, or `grep -rn csrfProtection backend/src` returns nothing.
+  - **Status:** 🔴 Not Started
 - [x] **REV-019** - Tighten Content-Security-Policy 🟠 **P1**
   - [x] Remove `'unsafe-eval'` and `'unsafe-inline'` from `script-src`
   - [x] Make `connect-src` environment-driven

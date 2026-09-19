@@ -11,6 +11,7 @@ import { jsonSchemaTransform } from "fastify-type-provider-zod";
 
 // Plugins
 import { registerJwt } from "./plugins/jwt";
+import { registerRefreshCookie } from "./plugins/refresh-cookie";
 import { registerRedis } from "./plugins/redis";
 
 // Middleware
@@ -147,6 +148,9 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // JWT Authentication
   await registerJwt(server);
+
+  // Cookie support, for the HttpOnly refresh token (REV-017).
+  await registerRefreshCookie(server);
 
   // Security headers
   await server.register(helmet, {
