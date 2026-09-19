@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { db } from "../db";
 import { deviceTokens } from "../db/schema";
 import { eq, and } from "drizzle-orm";
+import { optionalSecret } from "../config/env";
 
 export interface PushNotificationOptions {
   userId: string;
@@ -33,8 +34,8 @@ export class PushNotificationService {
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
     this.fcmEnabled =
-      !!process.env.FCM_SERVER_KEY ||
-      !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      optionalSecret("FCM_SERVER_KEY") !== "" ||
+      optionalSecret("GOOGLE_APPLICATION_CREDENTIALS") !== "";
   }
 
   /**

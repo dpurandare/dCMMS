@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from "fastify";
 import { kafkaService } from "../services/kafka.service";
 import { Pool } from "pg";
 import { authorize } from "../middleware/authorize";
+import { envOrDefault, requireSecret } from "../config/env";
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
@@ -13,11 +14,11 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
 
   // QuestDB connection pool
   const questdb = new Pool({
-    host: process.env.QUESTDB_HOST || "localhost",
-    port: parseInt(process.env.QUESTDB_PORT || "8812"),
-    user: process.env.QUESTDB_USER || "admin",
-    password: process.env.QUESTDB_PASSWORD || "quest",
-    database: process.env.QUESTDB_DATABASE || "qdb",
+    host: envOrDefault("QUESTDB_HOST", "localhost"),
+    port: parseInt(envOrDefault("QUESTDB_PORT", "8812"), 10),
+    user: envOrDefault("QUESTDB_USER", "admin"),
+    password: requireSecret("QUESTDB_PASSWORD"),
+    database: envOrDefault("QUESTDB_DATABASE", "qdb"),
   });
 
   interface TelemetryQuery {

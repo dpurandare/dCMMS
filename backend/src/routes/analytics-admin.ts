@@ -7,6 +7,7 @@ import {
 import { createETLSchedulerService } from "../services/etl-scheduler.service";
 import { createClickHouseETLService } from "../services/clickhouse-etl.service";
 import { authorize } from "../middleware/authorize";
+import { createClickhouseClient } from "../config/clickhouse";
 
 // Validation schemas
 const triggerETLSchema = z.object({
@@ -209,14 +210,7 @@ export default async function analyticsAdminRoutes(fastify: FastifyInstance) {
           );
 
           // Create temporary ClickHouse client
-          const { createClient } = await import("@clickhouse/client");
-          const client = createClient({
-            host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
-            username: process.env.CLICKHOUSE_USER || "clickhouse_user",
-            password:
-              process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
-            database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
-          });
+          const client = createClickhouseClient();
 
           const result = await client.query({
             query,

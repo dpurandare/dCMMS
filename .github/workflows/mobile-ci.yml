@@ -2,15 +2,15 @@ name: Mobile CI/CD (Flutter)
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [ main, develop, 'feature/**', 'claude/**' ]
-  #   paths:
-  #     - 'mobile/**'
-  #     - '.github/workflows/mobile-ci.yml'
-  # pull_request:
-  #   branches: [ main, develop ]
-  #   paths:
-  #     - 'mobile/**'
+  push:
+    branches: [ main, develop, 'feature/**', 'claude/**' ]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'mobile/**'
 
 env:
   FLUTTER_VERSION: '3.16.x'

@@ -1,5 +1,25 @@
 # dCMMS - Comprehensive Non-Conventional Energy CMMS Platform
 
+> ## ⚠️ Status claims in this README are under review — do not plan against them
+>
+> A project-wide review (September 2026) found that the status section below,
+> the badges above it, and the metrics quoted throughout this file are not
+> supported by the code. Examples verified on `main` @ `79c3267`: the
+> "Production Ready" badge, "Sprint 20 — 100% Complete", "156/156 integration
+> tests", "243/243 regression tests" and "93/100 security score".
+>
+> **Until [REV-009](./TasksTracking/15_Review_Remediation.md) publishes a
+> verified feature inventory, treat every status, percentage and test count in
+> this file as unverified.** Nothing here should be used for planning,
+> estimation, or a go-live decision.
+>
+> The evidence is in [`review-plan.md`](./review-plan.md) §2; remediation is
+> tracked in [`TasksTracking/15_Review_Remediation.md`](./TasksTracking/15_Review_Remediation.md).
+>
+> This is a process finding, not a reflection on the people who wrote the code:
+> the project had no CI gate and no status vocabulary for "partly done", so
+> claims were never forced to be checked. That is what REV-003 and REV-057 fix.
+
 <div align="center">
 
 **A production-ready, AI-powered Computerized Maintenance Management System for non-conventional energy power plants**
@@ -41,7 +61,7 @@
 
 ## User Seeding (Production & Dev/Test)
 
-- In production deployments, if no users exist, the system will automatically seed a single admin user with a known, strong default password. On first login, the admin will be shown a mandatory reminder to change their password immediately.
+- In production deployments, if no users exist, the system seeds a single admin user using the password supplied in `ADMIN_DEFAULT_PASSWORD` (required, minimum 12 characters — seeding fails without it). On first login, the admin is shown a mandatory reminder to change it immediately.
 - In dev/test, standard users (admin, manager, technician) are seeded with known credentials for testing and sample data is provided.
 
 ### What Makes dCMMS Different?

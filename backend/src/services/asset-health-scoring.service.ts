@@ -2,7 +2,8 @@ import { FastifyInstance } from "fastify";
 import { db } from "../db";
 import { assets, workOrders, alerts } from "../db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
-import { createClient } from "@clickhouse/client";
+import { ClickHouseClient } from "@clickhouse/client";
+import { createClickhouseClient } from "../config/clickhouse";
 
 export interface HealthScoreBreakdown {
   assetId: string;
@@ -34,7 +35,7 @@ export interface HealthScoreBreakdown {
  */
 export class AssetHealthScoringService {
   private fastify: FastifyInstance;
-  private clickhouse: ReturnType<typeof createClient>;
+  private clickhouse: ClickHouseClient;
 
   // Weight configuration
   private readonly WEIGHTS = {
@@ -49,12 +50,7 @@ export class AssetHealthScoringService {
     this.fastify = fastify;
 
     // Initialize ClickHouse client
-    this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
-      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
-      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
-      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
-    });
+    this.clickhouse = createClickhouseClient();
   }
 
   /**

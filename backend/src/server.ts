@@ -242,7 +242,11 @@ export async function buildServer(): Promise<FastifyInstance> {
           const transformed = jsonSchemaTransform(input);
           return {
             ...transformed,
-            schema: sanitizeSchema(transformed.schema),
+            // sanitizeSchema is deliberately `unknown`-in/`unknown`-out; narrow
+            // it back the same way the route-level call on line 130 does.
+            schema: sanitizeSchema(
+              transformed.schema,
+            ) as typeof transformed.schema,
           };
         },
         openapi: {

@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { UserPayload, RefreshTokenPayload } from "./auth.service";
 import { RefreshTokenService } from "./refresh-token.service";
+import { envOrDefault } from "../config/env";
 
 export interface TokenPair {
   accessToken: string;
@@ -34,7 +35,7 @@ export class TokenService {
         role: user.role,
       },
       {
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m",
+        expiresIn: envOrDefault("JWT_ACCESS_TOKEN_EXPIRY", "15m"),
       },
     );
 
@@ -48,7 +49,7 @@ export class TokenService {
       });
 
     // Parse expiry time (e.g., "15m" -> 900 seconds)
-    const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
+    const expiryString = envOrDefault("JWT_ACCESS_TOKEN_EXPIRY", "15m");
     const expiresIn = this.parseExpiryToSeconds(expiryString);
 
     return {
@@ -119,11 +120,11 @@ export class TokenService {
         role: user.role,
       },
       {
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m",
+        expiresIn: envOrDefault("JWT_ACCESS_TOKEN_EXPIRY", "15m"),
       },
     );
 
-    const expiryString = process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m";
+    const expiryString = envOrDefault("JWT_ACCESS_TOKEN_EXPIRY", "15m");
     const expiresIn = this.parseExpiryToSeconds(expiryString);
 
     return {

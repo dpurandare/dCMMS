@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save, Plus, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -63,16 +63,7 @@ export default function EditWorkOrderPage() {
   const [parts, setParts] = useState<Part[]>([]);
   const [newPart, setNewPart] = useState({ partId: '', name: '', quantity: 1 });
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchWorkOrder();
-  }, [isAuthenticated, workOrderId, router]);
-
-  const fetchWorkOrder = async () => {
+  const fetchWorkOrder = useCallback(async () => {
     try {
       setIsLoading(true);
       const wo = await api.workOrders.getById(workOrderId);
@@ -123,7 +114,16 @@ export default function EditWorkOrderPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [workOrderId, router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchWorkOrder();
+  }, [isAuthenticated, workOrderId, router, fetchWorkOrder]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

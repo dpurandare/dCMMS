@@ -9,6 +9,7 @@ import {
 } from "./schema";
 import { eq } from "drizzle-orm";
 import { AuthService } from "../services/auth.service";
+import { requireSecret } from "../config/env";
 
 async function seed() {
   console.log("🌱 Starting database seed...");
@@ -56,9 +57,11 @@ async function seed() {
         console.log(`  ✓ Using existing tenant: ${tenant.name}`);
       }
 
-      // Seed only the admin user with a strong default password
-      const strongDefaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || "ChangeMeNow!2024";
-      const passwordHash = await AuthService.hashPassword(strongDefaultPassword);
+      // Seed only the admin user. The password must be supplied by the
+      // operator: a default here becomes the production admin credential, and
+      // it was previously both hardcoded and echoed to stdout (REV-002).
+      const adminPassword = requireSecret("ADMIN_DEFAULT_PASSWORD", 12);
+      const passwordHash = await AuthService.hashPassword(adminPassword);
       await db
         .insert(users)
         .values({
@@ -71,7 +74,9 @@ async function seed() {
           passwordHash,
           metadata: JSON.stringify({ requirePasswordChange: true }),
         });
-      console.log("  ✓ Seeded admin user for production: admin@production.com / " + strongDefaultPassword);
+      console.log(
+        "  ✓ Seeded admin user for production: admin@production.com (password from ADMIN_DEFAULT_PASSWORD; change on first login)",
+      );
       return;
     }
     // Non-production: continue with full seed

@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import jwt from "@fastify/jwt";
 import { authorize, AuthorizeOptions } from "../middleware/authorize";
 import { Permission } from "../constants/permissions";
+import { envOrDefault, jwtSecret } from "../config/env";
 
 declare module "fastify" {
   export interface FastifyInstance {
@@ -17,9 +18,9 @@ declare module "fastify" {
 
 export async function registerJwt(server: FastifyInstance) {
   await server.register(jwt, {
-    secret: process.env.JWT_SECRET || "changeme-secret-key",
+    secret: jwtSecret(),
     sign: {
-      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || "15m",
+      expiresIn: envOrDefault("JWT_ACCESS_TOKEN_EXPIRY", "15m"),
     },
   });
 

@@ -1,8 +1,9 @@
 import "dotenv/config";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { optionalSecret } from "../config/env";
 
 async function main() {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const genAI = new GoogleGenerativeAI(optionalSecret("GEMINI_API_KEY"));
   try {
     // Unfortunately the SDK doesn't expose listModels directly easily on the instance?
     // Actually it does not. We have to use a model manager or fetch via fetch.

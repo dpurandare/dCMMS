@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Edit, Trash2, Wrench, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -36,16 +36,7 @@ export default function WorkOrderDetailsPage() {
   const [transitionAction, setTransitionAction] = useState<string>('');
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchWorkOrder();
-  }, [isAuthenticated, woId, router]);
-
-  const fetchWorkOrder = async () => {
+  const fetchWorkOrder = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await api.workOrders.getById(woId);
@@ -61,7 +52,16 @@ export default function WorkOrderDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [woId, router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchWorkOrder();
+  }, [isAuthenticated, woId, router, fetchWorkOrder]);
 
   const handleDelete = async () => {
     try {

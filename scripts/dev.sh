@@ -109,6 +109,25 @@ if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
   npm --prefix "$ROOT_DIR/frontend" ci
 fi
 
+# ── Ensure backend/.env exists with a real JWT secret ──────────
+# The backend refuses to start without JWT_SECRET (REV-001). Previously it
+# booted on a hardcoded fallback, so no .env was ever needed. Generate a
+# developer-local one; it is gitignored and unique per machine.
+BACKEND_ENV="$ROOT_DIR/backend/.env"
+if [ ! -f "$BACKEND_ENV" ]; then
+  echo -e "${YELLOW}🔑 Creating backend/.env from .env.example...${NC}"
+  cp "$ROOT_DIR/backend/.env.example" "$BACKEND_ENV"
+  GENERATED_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+  # Use a non-/ delimiter: base64 output contains slashes.
+  sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${GENERATED_SECRET}|" "$BACKEND_ENV"
+  echo -e "   ${GREEN}• Generated a unique JWT_SECRET${NC} → backend/.env (gitignored)"
+elif ! grep -qE '^JWT_SECRET=.{64,}$' "$BACKEND_ENV"; then
+  echo -e "${RED}❌ backend/.env has no JWT_SECRET of at least 64 characters.${NC}"
+  echo -e "   Fix it with: ${YELLOW}openssl rand -base64 64${NC}"
+  exit 1
+fi
+echo ""
+
 # ── Run database migrations ────────────────────────────────────
 echo -e "${YELLOW}🔄 Running database migrations...${NC}"
 npm --prefix "$ROOT_DIR/backend" run db:migrate

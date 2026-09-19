@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -40,16 +40,7 @@ export default function EditAssetPage() {
     parentAssetId: '',
   });
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchAsset();
-  }, [isAuthenticated, assetId, router]);
-
-  const fetchAsset = async () => {
+  const fetchAsset = useCallback(async () => {
     try {
       setIsLoading(true);
       const asset = await api.assets.getById(assetId);
@@ -78,7 +69,16 @@ export default function EditAssetPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [assetId, router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchAsset();
+  }, [isAuthenticated, assetId, router, fetchAsset]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

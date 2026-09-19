@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wrench, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, Users, User as UserIcon } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -57,16 +57,7 @@ export default function WorkOrdersPage() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedWO, setSelectedWO] = useState<WorkOrder | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchWorkOrders();
-  }, [isAuthenticated, router]);
-
-  const fetchWorkOrders = async () => {
+  const fetchWorkOrders = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -82,7 +73,16 @@ export default function WorkOrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchWorkOrders();
+  }, [isAuthenticated, router, fetchWorkOrders]);
 
   const handleDelete = async () => {
     if (!selectedWO) return;

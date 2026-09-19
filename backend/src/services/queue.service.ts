@@ -4,6 +4,7 @@ import { db } from "../db";
 import { documentEmbeddings } from "../db/schema";
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { optionalSecret } from "../config/env";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pdfParse = require("pdf-parse");
 
@@ -14,7 +15,7 @@ const connection = {
 export const ingestionQueue = new Queue("ingestion-queue", { connection });
 
 // Initialize GenAI models for the worker
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(optionalSecret("GEMINI_API_KEY"));
 const embeddingModel = genAI.getGenerativeModel({
     model: "text-embedding-004",
 });

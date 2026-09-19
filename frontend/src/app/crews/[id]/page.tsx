@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { api } from '@/lib/api-client';
@@ -33,12 +33,7 @@ function CrewDetailsContent({ crewId }: { crewId: string }) {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        if (!isAuthenticated) return;
-        fetchData();
-    }, [isAuthenticated, crewId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setIsLoading(true);
             const [crewData, usersData] = await Promise.all([
@@ -53,7 +48,12 @@ function CrewDetailsContent({ crewId }: { crewId: string }) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [crewId]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        fetchData();
+    }, [isAuthenticated, crewId, fetchData]);
 
     const handleAddMember = async () => {
         if (!can('update:users')) return;

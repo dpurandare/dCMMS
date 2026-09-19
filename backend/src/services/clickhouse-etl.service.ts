@@ -2,7 +2,8 @@ import { FastifyInstance } from "fastify";
 import { db } from "../db";
 import { workOrders, assets, alerts } from "../db/schema";
 import { gte, lte } from "drizzle-orm";
-import { createClient } from "@clickhouse/client";
+import { ClickHouseClient } from "@clickhouse/client";
+import { createClickhouseClient } from "../config/clickhouse";
 
 /**
  * ClickHouse ETL Service
@@ -10,18 +11,13 @@ import { createClient } from "@clickhouse/client";
  */
 export class ClickHouseETLService {
   private fastify: FastifyInstance;
-  private clickhouse: ReturnType<typeof createClient>;
+  private clickhouse: ClickHouseClient;
 
   constructor(fastify: FastifyInstance) {
     this.fastify = fastify;
 
     // Initialize ClickHouse client
-    this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
-      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
-      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
-      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
-    });
+    this.clickhouse = createClickhouseClient();
   }
 
   /**

@@ -3,10 +3,11 @@ import { documentEmbeddings, genAiFeedback } from "../db/schema";
 import { sql, eq, and } from "drizzle-orm";
 import { ingestionQueue } from "./queue.service";
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
+import { optionalSecret } from "../config/env";
 
 export class GenAIService {
   private static genAI = new GoogleGenerativeAI(
-    process.env.GEMINI_API_KEY || "",
+    optionalSecret("GEMINI_API_KEY"),
   );
   private static embeddingModel = GenAIService.genAI.getGenerativeModel({
     model: "text-embedding-004",

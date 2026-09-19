@@ -1,6 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { createClient } from "@clickhouse/client";
 import Redis from "ioredis";
+import { ClickHouseClient } from "@clickhouse/client";
+import { createClickhouseClient } from "../config/clickhouse";
+import { optionalSecret } from "../config/env";
 
 export interface KPIFilters {
   tenantId: string;
@@ -35,7 +37,7 @@ export interface KPIResult {
  */
 export class KPICalculationService {
   private fastify: FastifyInstance;
-  private clickhouse: ReturnType<typeof createClient>;
+  private clickhouse: ClickHouseClient;
   private redis: Redis;
   private readonly CACHE_TTL = 3600; // 1 hour
 
@@ -43,18 +45,13 @@ export class KPICalculationService {
     this.fastify = fastify;
 
     // Initialize ClickHouse client
-    this.clickhouse = createClient({
-      host: process.env.CLICKHOUSE_HOST || "http://localhost:8123",
-      username: process.env.CLICKHOUSE_USER || "clickhouse_user",
-      password: process.env.CLICKHOUSE_PASSWORD || "clickhouse_password_dev",
-      database: process.env.CLICKHOUSE_DATABASE || "dcmms_analytics",
-    });
+    this.clickhouse = createClickhouseClient();
 
     // Initialize Redis client
     this.redis = new Redis({
       host: process.env.REDIS_HOST || "localhost",
       port: parseInt(process.env.REDIS_PORT || "6379"),
-      password: process.env.REDIS_PASSWORD || undefined,
+      password: optionalSecret("REDIS_PASSWORD") || undefined,
       db: parseInt(process.env.REDIS_DB || "0"),
     });
   }

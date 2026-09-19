@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -55,16 +55,7 @@ export default function AssetsPage() {
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    fetchAssets();
-  }, [isAuthenticated, router]);
-
-  const fetchAssets = async () => {
+  const fetchAssets = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -80,7 +71,16 @@ export default function AssetsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    fetchAssets();
+  }, [isAuthenticated, router, fetchAssets]);
 
   const handleDelete = async () => {
     if (!selectedAsset) return;

@@ -2,7 +2,7 @@
 
 **Focus:** Remediation of findings from the project-wide review (see [`review-plan.md`](../review-plan.md))
 **Priority:** 🔴 CRITICAL
-**Status:** 🔴 Not Started
+**Status:** ⚠️ In Progress — Phase 0 started 2026-09-19
 **Review Date:** September 2, 2026
 **Repo State Reviewed:** `main` @ `79c3267`
 **Target Completion:** Internal beta gate — 6–10 weeks from start
@@ -46,16 +46,19 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 
 | Phase | Workstreams | Tasks | Done | Status |
 | :---- | :---------- | :---- | :--- | :----- |
-| **Phase 0** — Stop the bleeding (2 days) | WS-2, WS-3 (P0 only) | 8 | 0 | 🔴 Not Started |
+| **Phase 0** — Stop the bleeding (2 days) | WS-2, WS-3 (P0 only) | 9 | 4 | ⚠️ In Progress |
 | **Phase 1** — Ground truth (1 week) | WS-1, WS-3, WS-4 | 16 | 0 | 🔴 Not Started |
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 17 | 0 | 🔴 Not Started |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
-| **TOTAL** | | **60** | **0** | **0%** |
+| **TOTAL** | | **61** | **4** | **7%** |
 
-**By severity:** 🔴 P0: 5 · 🟠 P1: 31 · 🟡 P2: 21 · 🔵 P3: 3
+**By severity:** 🔴 P0: 6 · 🟠 P1: 31 · 🟡 P2: 21 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19)_
 
 > Update this table at the end of each working day. It is the only status anyone outside the team should need to read.
+
+**Phase 0 as of 2026-09-19:** REV-002, REV-004, REV-005, REV-006 ✅ · REV-001, REV-003, REV-008 ⚠️ PARTIAL · REV-007 🛑 BLOCKED.
+All five P0 items are code-complete. What remains in Phase 0 is not code: a pushed PR to produce REV-003's run evidence, repo-admin branch protection (REV-007), secret rotation in non-dev environments (REV-001a), and telling the people who were given the "Production Ready" status (REV-008).
 
 ---
 
@@ -66,77 +69,182 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 
 ## 0.1 Critical Security (WS-3)
 
-- [ ] **REV-001** - Remove hardcoded JWT secret fallback 🔴 **P0**
-  - [ ] Delete the `|| "changeme-secret-key"` fallback in `backend/src/plugins/jwt.ts:20`
-  - [ ] Add a boot-time assertion: fail startup if `JWT_SECRET` is unset or < 64 chars
-  - [ ] Extend the assertion to all required secrets (DB, Redis, ClickHouse)
-  - [ ] Rotate `JWT_SECRET` in every existing environment (dev, staging, any demo instance)
-  - [ ] Invalidate all outstanding refresh tokens after rotation
-  - **Priority:** 🔴 P0 — anyone with repo read access can currently mint a `super_admin` token
-  - **Estimated:** 2 hours
-  - **Files:** `backend/src/plugins/jwt.ts`, `backend/src/config/`, `backend/src/index.ts`
+- [x] **REV-001** - Remove hardcoded JWT secret fallback 🔴 **P0**
+  - [x] Delete the `|| "changeme-secret-key"` fallback in `backend/src/plugins/jwt.ts:20`
+  - [x] Add a boot-time assertion: fail startup if `JWT_SECRET` is unset or < 64 chars
+  - [x] Extend the assertion to all required secrets (DB, Redis, ClickHouse)
+  - [x] Rotate `JWT_SECRET` in dev — `scripts/dev.sh` now generates a unique per-machine secret into the gitignored `backend/.env`
+  - [ ] Rotate `JWT_SECRET` in staging / any demo instance — **split out as REV-001a**, needs whoever holds those environments
+  - [ ] Invalidate all outstanding refresh tokens after rotation — **split out as REV-001a** (moot for dev: rotation invalidates them)
+  - **Priority:** 🔴 P0 — anyone with repo read access could previously mint a `super_admin` token
+  - **Estimated:** 2 hours · **Actual:** ~2 hours
+  - **Files:** `backend/src/config/env.ts` (new), `backend/src/config/boot.ts` (new), `backend/src/plugins/jwt.ts`, `backend/src/index.ts`, `backend/.env.example`, `scripts/dev.sh`, `backend/tests/setup.ts`
   - **Verify:** `unset JWT_SECRET && npm --prefix backend run dev` → process exits non-zero with a clear message. `grep -rn 'process.env.JWT_SECRET ||' backend/src` → no matches.
-  - **Evidence:** _(paste output)_
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ grep -rn 'process.env.JWT_SECRET ||' backend/src
+    (no matches)
 
-- [ ] **REV-002** - Remove remaining credential fallbacks 🔴 **P0**
-  - [ ] `backend/src/services/clickhouse-etl.service.ts:21-23`
-  - [ ] `backend/src/services/kpi-calculation.service.ts:48-50`
-  - [ ] `backend/src/services/asset-health-scoring.service.ts:54-56`
-  - [ ] `backend/src/services/compliance-template.service.ts:55-57`
+    $ cd backend && env -u JWT_SECRET -u DATABASE_URL -u CLICKHOUSE_PASSWORD -u QUESTDB_PASSWORD node dist/index.js
+
+    Refusing to start: 4 required environment variable(s) are missing or invalid.
+      • JWT_SECRET is not set — required for signing access and refresh tokens.
+      • DATABASE_URL is not set — required for the primary PostgreSQL connection.
+      • CLICKHOUSE_PASSWORD is not set — required for the analytics database (KPIs, ETL, reports, health scoring).
+      • QUESTDB_PASSWORD is not set — required for the telemetry time-series store.
+
+    Copy backend/.env.example to backend/.env and fill in real values.
+    Generate a suitable JWT_SECRET with:  openssl rand -base64 64
+
+    EXIT=1
+
+    $ env JWT_SECRET=tooshort ... node dist/index.js
+      • JWT_SECRET is 8 characters — at least 64 are required for signing access and refresh tokens.
+    EXIT=1
+
+    $ env JWT_SECRET='changeme-use-a-long-random-string-at-least-64-characters-long!' ... node dist/index.js
+      • JWT_SECRET is still set to a placeholder from .env.example — replace it with a real secret.
+    EXIT=1
+
+    $ env NODE_ENV=production DATABASE_URL='postgresql://dcmms_user:dcmms_password_dev@...' CLICKHOUSE_PASSWORD=clickhouse_password_dev REDIS_PASSWORD=redis_password_dev ... node dist/index.js
+      • DATABASE_URL contains the local development credential "dcmms_password_dev", which must never be used with NODE_ENV=production.
+      • CLICKHOUSE_PASSWORD contains the local development credential "clickhouse_password_dev", ...
+      • REDIS_PASSWORD contains the local development credential "redis_password_dev", ...
+    EXIT=1
+    ```
+  - **Note:** validation moved into `config/boot.ts`, imported first in `index.ts`. The original placement (after the `import` block) let modules with import-time side effects — the Kafka client — run *before* `.env` was read and before any secret was checked.
+  - **Status:** ⚠️ PARTIAL — code complete and verified; non-dev environment rotation is REV-001a
+
+- [ ] **REV-001a** - Rotate secrets in non-dev environments 🔴 **P0** 🛑 **BLOCKED**
+  - [ ] Generate a fresh `JWT_SECRET` (≥64 chars) for staging and any demo instance
+  - [ ] Rotate `CLICKHOUSE_PASSWORD`, `REDIS_PASSWORD`, `QUESTDB_PASSWORD` and the database password anywhere they were set to the `*_dev` values from `docker-compose.yml`
+  - [ ] Invalidate all outstanding refresh tokens after rotation
+  - [ ] Confirm each environment boots — the new validation will reject the old placeholder and `*_dev` values under `NODE_ENV=production`
+  - **Priority:** 🔴 P0 — the old `"changeme-secret-key"` is in this repository's history; every token signed with it stays valid until rotation
+  - **Estimated:** 1 hour, once someone with access is available
+  - **Split from:** REV-001, which is code-complete
+  - **Blocked on:** access to the staging / demo environments. Nothing in the working tree can do this.
+  - **Verify:** each environment starts successfully and previously issued tokens are rejected.
+  - **Status:** 🛑 BLOCKED — needs whoever holds the environment secrets
+
+- [x] **REV-002** - Remove remaining credential fallbacks 🔴 **P0**
+  - [x] `backend/src/services/clickhouse-etl.service.ts:21-23`
+  - [x] `backend/src/services/kpi-calculation.service.ts:48-50`
+  - [x] `backend/src/services/asset-health-scoring.service.ts:54-56`
+  - [x] `backend/src/services/compliance-template.service.ts:55-57`
+  - [x] **Nine more sites the task list did not have**, found by running the verify grep: `report-builder.service.ts:132` and `routes/analytics-admin.ts:217` (two more copies of the same ClickHouse block), `routes/telemetry.ts:19` (QuestDB), `scripts/process-notification-digests.ts:23` (`DATABASE_PASSWORD || "postgres"`), `db/seed.ts:60`, `routes/slack.ts:11`, `services/weather-api.service.ts:102`, `services/queue.service.ts:17`, `services/genai.service.ts:9`
+  - [x] `db/seed.ts` was the worst of them: it seeded the **production** admin with a hardcoded `"ChangeMeNow!2024"` and then printed that password to stdout. Now requires `ADMIN_DEFAULT_PASSWORD` (min 12 chars) and logs only the variable name.
   - **Priority:** 🔴 P0
-  - **Estimated:** 1 hour
+  - **Estimated:** 1 hour · **Actual:** ~1.5 hours
   - **Verify:** `grep -rnE "process\.env\.[A-Z_]*(PASSWORD|SECRET|KEY|TOKEN)[^;]*\|\|" backend/src` → no matches.
-  - **Evidence:** _(paste output)_
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ grep -rnE "process\.env\.[A-Z_]*(PASSWORD|SECRET|KEY|TOKEN)[^;]*\|\|" backend/src
+    (no matches)
+    ```
+    Before the fix the same grep returned 23 lines.
+  - **Note:** the six identical ClickHouse `createClient({...})` blocks are now one `createClickhouseClient()` factory in `backend/src/config/clickhouse.ts`. Three accessors replace the inline `||` idiom and make the intent explicit at each call site: `requireSecret()` (throws), `optionalSecret()` (returns `""`, integration disabled), `envOrDefault()` (non-credential setting).
+  - **Status:** ✅ COMPLETE
 
 ## 0.2 Restore Quality Gates (WS-2)
 
-- [ ] **REV-003** - Re-enable CI on all four workflows 🔴 **P0**
-  - [ ] Uncomment `push` / `pull_request` triggers in `backend-ci.yml`
-  - [ ] Same in `frontend-ci.yml`, `mobile-ci.yml`, `code-quality.yml`
-  - [ ] Add the missing `format:check` and `type-check` scripts to `frontend/package.json` (the workflow calls scripts that do not exist)
-  - [ ] Let the pipeline fail loudly — **do not** fix failures in this task; record them as REV-004
+- [x] **REV-003** - Re-enable CI on all four workflows 🔴 **P0**
+  - [x] Uncomment `push` / `pull_request` triggers in `backend-ci.yml`
+  - [x] Same in `frontend-ci.yml`, `mobile-ci.yml`, `code-quality.yml` (code-quality's weekly `schedule` restored too)
+  - [x] Add the missing `format:check` and `type-check` scripts to `frontend/package.json` — also added `prettier@3.2.5` as a devDependency, which the frontend did not have at all
+  - [x] Let the pipeline fail loudly — no CI failure was fixed under this task
+  - [ ] **Verify still outstanding:** needs a pushed PR. Blocked on the push/PR decision, not on code.
   - **Priority:** 🔴 P0 — no CI has gated any of the last 301 commits
-  - **Estimated:** 3 hours
-  - **Files:** `.github/workflows/*.yml`, `frontend/package.json`
+  - **Estimated:** 3 hours · **Actual:** ~1 hour
+  - **Files:** `.github/workflows/*.yml`, `frontend/package.json`, `frontend/package-lock.json`
   - **Verify:** open a trivial PR → all four workflows appear as checks and report a result.
-  - **Evidence:** _(link to PR run)_
-  - **Status:** 🔴 Not Started
+  - **Evidence:** triggers parse correctly —
+    ```
+    $ python3 -c "import yaml,glob; [print(f,'->',sorted((yaml.safe_load(open(f)).get('on') or yaml.safe_load(open(f))[True]).keys())) for f in sorted(glob.glob('.github/workflows/*.yml'))]"
+    .github/workflows/backend-ci.yml   -> ['pull_request', 'push', 'workflow_dispatch']
+    .github/workflows/code-quality.yml -> ['pull_request', 'push', 'schedule', 'workflow_dispatch']
+    .github/workflows/frontend-ci.yml  -> ['pull_request', 'push', 'workflow_dispatch']
+    .github/workflows/mobile-ci.yml    -> ['pull_request', 'push', 'workflow_dispatch']
+    ```
+    PR run link: _(pending push)_
+  - **Note:** `frontend-ci.yml` also calls three scripts that still do not exist — `test:unit`, `analyze`, `test:a11y`. Left alone deliberately: they are CI failures for REV-004 to record, not silent fixes.
+  - **Status:** ⚠️ PARTIAL — code complete; PR-run evidence pending
 
-- [ ] **REV-004** - Record the CI failure baseline 🟠 **P1**
-  - [ ] Capture the full lint / type-check / test failure list from REV-003
-  - [ ] File one sub-task per failure cluster; add to Phase 1 or 2
-  - [ ] Record the counts here as a burn-down target
+- [x] **REV-004** - Record the CI failure baseline 🟠 **P1**
+  - [x] Capture the full lint / type-check / test failure list from REV-003
+  - [x] File one sub-task per failure cluster; add to Phase 1 or 2
+  - [x] Record the counts here as a burn-down target
   - **Priority:** 🟠 P1 — this list is the real backlog
-  - **Estimated:** 2 hours
+  - **Estimated:** 2 hours · **Actual:** ~1 hour
   - **Verify:** failure counts recorded below and referenced by task IDs.
-  - **Baseline:** backend lint `___` · backend type-check `___` · frontend lint `___` · tests `___`
-  - **Status:** 🔴 Not Started
+  - **Baseline** (measured locally 2026-09-19, `node 20`, after REV-001/002/005 but before any lint fix):
 
-- [ ] **REV-005** - Make the backend build capable of failing 🔴 **P0**
-  - [ ] Remove `|| true` from the `build` script in `backend/package.json`
-  - [ ] Delete `backend/tsconfig.prod.json` (it ships production code compiled with `strict:false`, `strictNullChecks:false`, `noEmitOnError:false`)
-  - [ ] Point `build` at the strict `tsconfig.json`
-  - [ ] Record the resulting error count as the REV-021 burn-down target
-  - **Priority:** 🔴 P0 — the deployed artefact is currently compiled under weaker rules than developers see
-  - **Estimated:** 1 hour (+ REV-021 for the fixes)
-  - **Files:** `backend/package.json`, `backend/tsconfig.prod.json`
+    | Check | Result | Cluster | Task |
+    | :---- | :----- | :------ | :--- |
+    | backend `build` (strict `tsc`) | **1 error** | `@fastify/swagger` transform typing, `server.ts:240` | fixed under REV-005 |
+    | backend `type-check` | **1 error** | same error | fixed under REV-005 |
+    | backend `lint` | **1,604 problems** (1,045 errors, 559 warnings) | 1,042 `prettier/prettier` (auto-fixable), 470 `no-explicit-any`, 89 `no-unused-vars`, 3 other | REV-021 |
+    | backend `format:check` | **55 files** unformatted | same prettier cluster | REV-021 |
+    | backend `test` | **could not run** — `globalSetup` needs the test database | infra, not code | REV-022 |
+    | frontend `type-check` | **6 errors** | 3× `TS2554` in `src/__tests__/auth/auth-flow.test.tsx`, 3× `TS2339` in `tests/e2e/asset-hierarchy.spec.ts` | REV-021 |
+    | frontend `lint` | **6 errors, 11 warnings** | 6 `react/no-unescaped-entities`, 11 `react-hooks/exhaustive-deps` | fixed under REV-006 |
+    | frontend `format:check` | **141 files** unformatted | prettier was never a frontend dependency | REV-021 |
+    | frontend `test` | **9 of 12 suites failed**, 4 of 49 tests failed | suite-level import/mock failures | REV-022 |
+
+  - **Two findings worth separating from the raw counts:**
+    1. **The strict-build burn-down is 1 error, not hundreds.** `tsconfig.prod.json` was hiding exactly one type error. The review predicted a large backlog here; it was wrong, and this is the cheapest good news in the whole report.
+    2. **1,042 of the backend's 1,045 lint errors are prettier formatting**, every one auto-fixable. The genuine backend lint debt is 3 errors plus 470 `any` warnings. `npm run lint:fix` would clear the 1,042 in one commit — deliberately **not** done here, because it would bury the REV-001/002 diff.
+  - **Also noted:** `backend/tsconfig.json` excludes `tests`, `**/*.test.ts` and `src/__tests__`, so no backend test file is type-checked by `build` or `type-check`. Add to REV-021.
+  - **Status:** ✅ COMPLETE
+
+- [x] **REV-005** - Make the backend build capable of failing 🔴 **P0**
+  - [x] Remove `|| true` from the `build` script in `backend/package.json`
+  - [x] Delete `backend/tsconfig.prod.json`
+  - [x] Point `build` at the strict `tsconfig.json` (the now-redundant `build:strict` script was removed; nothing referenced it)
+  - [x] Record the resulting error count as the REV-021 burn-down target — **the count was 1**
+  - **Priority:** 🔴 P0 — the deployed artefact was compiled under weaker rules than developers see
+  - **Estimated:** 1 hour (+ REV-021 for the fixes) · **Actual:** ~40 minutes
+  - **Files:** `backend/package.json`, `backend/tsconfig.prod.json` (deleted), `backend/src/server.ts`
   - **Verify:** introduce a deliberate type error → `npm --prefix backend run build` exits non-zero. Revert.
-  - **Evidence:** _(paste output)_
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ echo 'const deliberateTypeError: number = "REV-005 verification";' >> backend/src/index.ts
+    $ npm --prefix backend run build
+    src/index.ts(42,7): error TS2322: Type 'string' is not assignable to type 'number'.
+    exit with deliberate error = 2
 
-- [ ] **REV-006** - Stop skipping frontend lint at build time 🟠 **P1**
-  - [ ] Remove `eslint: { ignoreDuringBuilds: true }` from `frontend/next.config.js`
-  - [ ] Triage the resulting warnings — fix or explicitly `eslint-disable` with a reason comment
-  - [ ] Fix `docs/qa/KNOWN_ISSUES.md` M-001: the `exhaustive-deps` warnings were reasoned away as "intentional / functions are stable". They are not stable — they are recreated each render. Apply the `useCallback` fix the document itself describes.
+    $ git checkout backend/src/index.ts   # reverted
+    $ npm --prefix backend run build
+    clean build exit = 0
+    ```
+  - **Deviation from the task as written:** the task says record the error count and do not fix. The count turned out to be **one** — a `sanitizeSchema` return typed `unknown` where `@fastify/swagger` wants `FastifySchema` (`server.ts:240`). Leaving it would have left `main` unbuildable under the new strict build, which defeats the Phase 0 gate, so it was fixed with the same one-line narrowing cast already used at `server.ts:130`. No `any` was introduced. If the reviewer prefers this tracked separately, it is one commit to revert.
+  - **Status:** ✅ COMPLETE
+
+- [x] **REV-006** - Stop skipping frontend lint at build time 🟠 **P1**
+  - [x] Remove `eslint: { ignoreDuringBuilds: true }` from `frontend/next.config.js`
+  - [x] Triage the resulting warnings — all fixed; no `eslint-disable` was needed anywhere
+  - [x] Fix `docs/qa/KNOWN_ISSUES.md` M-001 — `useCallback` applied to all 11 `exhaustive-deps` sites across 11 files. The document's own reasoning ("functions are stable") was wrong: each was recreated on every render.
   - **Priority:** 🟠 P1
-  - **Estimated:** 4 hours
-  - **Files:** `frontend/next.config.js`, `frontend/src/app/work-orders/*`, `frontend/src/app/assets/[id]/page.tsx`
+  - **Estimated:** 4 hours · **Actual:** ~1.5 hours
+  - **Files:** `frontend/next.config.js`, plus `assets/[id]/edit`, `assets`, `compliance-reports/[id]`, `compliance-reports`, `crews/[id]`, `settings`, `sites/[id]`, `sites`, `work-orders/[id]/edit`, `work-orders/[id]`, `work-orders` pages, `genai/page.tsx`, `components/error-boundary.tsx`
   - **Verify:** `npm --prefix frontend run build` completes with zero eslint errors.
-  - **Status:** 🔴 Not Started
+  - **Evidence:**
+    ```
+    $ npm --prefix frontend run lint
+    ✔ No ESLint warnings or errors
 
-- [ ] **REV-007** - Enable branch protection on `main` 🟠 **P1**
+    $ npm --prefix frontend run build
+    ✓ Compiled successfully
+      Linting and checking validity of types ...
+    exit=0
+    ```
+    No behavioural regression: frontend tests are identical before and after the refactor —
+    `Test Suites: 9 failed, 3 passed, 12 total` / `Tests: 4 failed, 45 passed, 49 total` in both runs.
+    Each `useCallback` dependency array was checked by re-running `next lint` until the rule itself reported nothing missing, rather than by eye.
+  - **Follow-up:** `docs/qa/KNOWN_ISSUES.md` M-001 still contains the incorrect "functions are stable" reasoning. Correcting that text belongs with the documentation rewrite in REV-010.
+  - **Status:** ✅ COMPLETE
+
+- [ ] **REV-007** - Enable branch protection on `main` 🟠 **P1** 🛑 **BLOCKED**
   - [ ] No direct pushes
   - [ ] CI green required to merge
   - [ ] One approving review from someone other than the author
@@ -144,16 +252,19 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
   - **Priority:** 🟠 P1
   - **Estimated:** 30 minutes
   - **Verify:** attempt `git push origin main` directly → rejected by the server.
-  - **Status:** 🔴 Not Started
+  - **Blocked on:** a repository-admin action on `github.com/dpurandare/dCMMS`, and on REV-003's first PR run (there are no check names to require until the workflows have reported once). Not startable from the working tree.
+  - **Status:** 🛑 BLOCKED — needs the repo owner
 
-- [ ] **REV-008** - Flag the README status section as under review 🟠 **P1**
-  - [ ] Add a banner to `README.md` stating the status section is unverified and must not be used for planning until REV-009 completes
-  - [ ] Notify anyone who has been given the "Production Ready / 100% Complete / APPROVED FOR PRODUCTION DEPLOYMENT" status
+- [x] **REV-008** - Flag the README status section as under review 🟠 **P1**
+  - [x] Add a banner to `README.md` stating the status section is unverified and must not be used for planning until REV-009 completes
+  - [ ] Notify anyone who has been given the "Production Ready / 100% Complete / APPROVED FOR PRODUCTION DEPLOYMENT" status — ****human action****, cannot be done from the repo
   - **Priority:** 🟠 P1 — planning decisions are currently being made on bad data
-  - **Estimated:** 30 minutes
+  - **Estimated:** 30 minutes · **Actual:** ~20 minutes
   - **Files:** `README.md`
   - **Verify:** banner visible at the top of `README.md` on `main`.
-  - **Status:** 🔴 Not Started
+  - **Evidence:** banner is lines 3–21 of `README.md`, immediately under the `#` title and above the badge block. It names the specific unsupported claims, points at `review-plan.md` §2 and REV-009, and keeps the no-blame framing.
+  - **Also corrected:** the README's "User Seeding" section claimed production seeds an admin "with a known, strong default password". That is no longer true after REV-002 — it now documents the required `ADMIN_DEFAULT_PASSWORD`. Left every other status claim untouched for REV-010 to rewrite from the inventory.
+  - **Status:** ⚠️ PARTIAL — banner live; stakeholder notification is yours to send
 
 ---
 

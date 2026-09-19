@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { FileText, ArrowLeft, Download, Edit, Trash2, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -43,18 +43,7 @@ export default function ComplianceReportDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (reportId) {
-      fetchReport();
-    }
-  }, [isAuthenticated, reportId, router]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -66,7 +55,18 @@ export default function ComplianceReportDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reportId]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (reportId) {
+      fetchReport();
+    }
+  }, [isAuthenticated, reportId, router, fetchReport]);
 
   const handleStatusChange = async (newStatus: 'draft' | 'final' | 'submitted') => {
     if (!report) return;

@@ -2,15 +2,15 @@ name: Backend CI/CD
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: [ main, develop, 'feature/**', 'claude/**' ]
-  #   paths:
-  #     - 'backend/**'
-  #     - '.github/workflows/backend-ci.yml'
-  # pull_request:
-  #   branches: [ main, develop ]
-  #   paths:
-  #     - 'backend/**'
+  push:
+    branches: [ main, develop, 'feature/**', 'claude/**' ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
 
 env:
   NODE_VERSION: '20.x'
