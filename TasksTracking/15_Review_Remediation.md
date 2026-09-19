@@ -617,24 +617,94 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Verify:** 10 failed logins for one account → subsequent attempts rejected; a different account is unaffected.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-023** - Triage all dependency vulnerabilities 🟠 **P1**
-  - [ ] Backend: **59 vulnerabilities — 4 critical, 21 high**. Frontend: **28 — 1 critical, 21 high**.
-  - [ ] Priority advisories: `fast-jwt` improper `iss` validation (critical, sits in the auth path); `drizzle-orm` SQL injection via improperly escaped identifiers (high, sits in every query); `handlebars` JS injection (critical, used for report/notification templating); `@fastify/static` authorization bypass via non-canonical paths (high)
-  - [ ] Patch every critical and high, or record an accepted risk with a named approver
-  - [ ] Enable Dependabot; fail CI on new critical/high
-  - **Priority:** 🟠 P1 — `docs/security/security-audit-report.md` claims "0 Critical, 0 High"
-  - **Estimated:** 2 days
+- [x] **REV-023** - Triage all dependency vulnerabilities 🟠 **P1** ⚠️ **PARTIAL**
+  - [x] Backend: **60 → 13** (4 critical → 1, 21 high → 3). Frontend: **28 → 8** (1 critical → 1, 21 high → 7).
+  - [x] Patch every critical and high, or record an accepted risk with a named approver — see [`docs/review/accepted-risks.md`](../docs/review/accepted-risks.md)
+  - [ ] Enable Dependabot; fail CI on new critical/high — **blocked**: `.github/dependabot.yml` is deleted in the working tree and Deepak asked on 2026-09-19 to leave those four `.github/` files alone pending a decision
+  - **Priority:** 🟠 P1
+  - **Estimated:** 2 days · **Actual:** ~2 hours
   - **Verify:** `npm audit --audit-level=high` exits 0 in both projects, or every exception is listed in `docs/review/accepted-risks.md`.
+  - **Fixed by non-breaking `npm audit fix`, plus four deliberate major bumps:**
+    | Bump | Clears |
+    | :--- | :----- |
+    | `bcrypt` 5 → 6 | critical node-tar hardlink path traversal, `@mapbox/node-pre-gyp` high |
+    | `nodemailer` 7 → 10 | SMTP command injection via `envelope.size` |
+    | `drizzle-orm` 0.30 → 0.45, `drizzle-kit` 0.20 → 0.31 | SQL injection via improperly escaped SQL identifiers — this sat in *every* query |
+    | `shepherd.js` 14 → 15 | `deepmerge-ts` high |
+
+    bcrypt sits under every stored password, so it was verified rather than
+    assumed: hashing, comparison, and that hashes written by bcrypt 5 still
+    verify. The drizzle bump also closed **REV-011a** — 0.45 has a native
+    `vector` type, so `drizzle-kit generate` now emits `vector(768)` correctly
+    and the customType footgun that caused REV-011 is gone.
+  - **Not fixed, recorded as accepted risks:** AR-001 (`fast-jwt` via
+    `@fastify/jwt@8`), AR-002 (`next@14`), AR-003 (eslint tooling). AR-001 was
+    analysed advisory by advisory against how dCMMS actually configures JWT —
+    HS256 with a static secret, no cache, no async key resolver — and none of
+    the three criticals is reachable in that configuration. AR-002 was **not**
+    analysed and should be treated as unquantified.
+  - **Status:** ⚠️ PARTIAL — Dependabot re-enablement is blocked on the `.github` decision
+
+- [ ] **REV-023a** - Migrate to Fastify v5 🟠 **P1**
+  - [ ] `fastify` 4 → 5 with the plugin ecosystem: `@fastify/jwt` 8 → 10, `@fastify/swagger-ui` 3 → 6, `@fastify/cors` 9 → 11, `@fastify/helmet` 11 → 13, `@fastify/multipart` 8 → 9, `@fastify/rate-limit` 9 → 10, `@fastify/swagger` 8 → 9, `fastify-type-provider-zod` 1 → 4
+  - [ ] Clears AR-001 in full, plus the `fastify` and `find-my-way` DoS highs
+  - **Attempted 2026-09-19 and reverted.** The upgrade installs cleanly and produces **47 type errors across 8 files**. They are not all noise — 16 of them are genuinely useful:
+    ```
+    src/routes/attachments.ts(62,31): Argument of type '404' is not assignable to parameter of type '201'.
+    src/routes/auth.ts(102,29):       Argument of type '500' is not assignable to parameter of type '401 | 200'.
+    ```
+    The newer type provider checks `reply.status(N)` against the declared
+    response schema, and **these routes declare only their happy path**. So the
+    upgrade surfaced a real defect: the route schemas are incomplete, which
+    means the OpenAPI spec REV-048 will generate would misdescribe every error
+    response. Worth fixing on its own merits, and it belongs with REV-048
+    rather than buried in a dependency bump.
+  - The rest: 28 × TS18046 (`unknown`, mostly `slack-provider.service.ts`), plus `request.routerPath` removed in v5 (`middleware/audit.ts:142`).
+  - **Estimated:** 2 days, including a runtime pass over all 39 route files — Fastify v5 has behavioural changes types do not catch
+  - **Split from:** REV-023
+  - **Verify:** `npm audit --audit-level=high` exits 0 for the backend; every route still responds as before.
   - **Status:** 🔴 Not Started
 
-- [ ] **REV-024** - Rewrite or withdraw the security audit report 🟠 **P1**
-  - [ ] `docs/security/security-audit-report.md` claims "🟢 EXCELLENT (93/100), 0 Critical, 0 High, APPROVED for deployment" — contradicted by REV-001 and REV-023
-  - [ ] Rewrite from the actual findings, or delete it. It cannot stand as written.
-  - **Priority:** 🟠 P1
-  - **Estimated:** 4 hours
-  - **Depends on:** REV-023
-  - **Verify:** the document either reflects the findings register or no longer exists.
+- [ ] **REV-023b** - Upgrade Next.js 14 → 16 🟠 **P1**
+  - [ ] Clears AR-002 (1 critical, 2 high) and AR-003 (3 high, dev tooling)
+  - [ ] Crosses the Next 15 async request APIs, and lands on top of the nonce CSP and `force-dynamic` rendering from REV-019 — both need re-verifying afterwards
+  - **Estimated:** 2 days
+  - **Split from:** REV-023
+  - **Verify:** `npm audit --audit-level=high` exits 0 for the frontend; CSP nonces still reach every script tag.
   - **Status:** 🔴 Not Started
+
+- [x] **REV-024** - Rewrite or withdraw the security audit report 🟠 **P1**
+  - [x] Rewrite from the actual findings, or delete it. It cannot stand as written.
+  - **Priority:** 🟠 P1
+  - **Estimated:** 4 hours · **Actual:** ~1 hour
+  - **Depends on:** REV-023 ✅
+  - **Verify:** the document either reflects the findings register or no longer exists.
+  - **Outcome:** withdrawn and replaced in place. 883 lines → 123. The original is recoverable: `git show fe3d936:docs/security/security-audit-report.md`.
+  - **The most useful thing this task found: the report disagreed with itself.**
+    The body was careful and honest; the summary was not, and the summary is
+    what everyone read.
+
+    | Section | Body said | Summary said |
+    | :------ | :-------- | :----------- |
+    | §4.1 Snyk scan | ⚪ PENDING, all three scan checkboxes unticked | ✅ 0 Critical, 0 High |
+    | §4.2 Known vulnerable deps | ⚪ UNKNOWN (requires Snyk scan) | ✅ 0 Critical, 0 High |
+    | §5.1 OWASP ZAP | ⚪ PENDING — needs Docker and a running app | 🟢 LOW risk |
+    | §7.1 | — | CRITICAL 0 · HIGH 0 · 🟢 PRODUCTION READY |
+
+    **The report counted "not tested" as "zero findings."** Nobody invented a
+    result; three sections said the work had not been done, and by §7 that had
+    become a table of zeros with a sign-off field under it.
+  - **§5.2 "Manual Penetration Testing ✅ COMPLETED (Code Review)"** — ten ✅ PASS
+    rows produced by reading code. Two are demonstrably wrong: "Authorization
+    Bypass ✅ PASS — Tenant isolation enforced" (REV-020: 16 route files and 28
+    service files never mention `tenantId`), and "Brute Force ✅ PASS — Rate
+    limiting enabled" (REV-022: a global 100 req/min is not a credential-stuffing
+    defence). One is right and inconvenient: "CSRF ✅ PASS — JWT tokens
+    (stateless)" is correct reasoning, and it contradicts the 277-line CSRF
+    subsystem the team built (REV-018).
+  - **Feeds REV-057:** the concrete rule this yields is that a section marked
+    PENDING or UNKNOWN may not contribute a zero to a vulnerability count.
+  - **Status:** ✅ COMPLETE
 
 ---
 
