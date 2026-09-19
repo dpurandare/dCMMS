@@ -1,15 +1,17 @@
-import type { Config } from 'drizzle-kit';
+import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 
 config();
 
-export default {
+// drizzle-kit 0.31 replaced `driver: 'pg'` + `connectionString` with
+// `dialect: 'postgresql'` + `url` (REV-023).
+export default defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL!,
   },
   verbose: true,
   strict: true,
-} satisfies Config;
+});
