@@ -1,11 +1,15 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { inArray, and, eq } from "drizzle-orm";
 import {
   validatorCompiler,
   serializerCompiler,
 } from "fastify-type-provider-zod";
 import { createFeastFeatureService } from "../services/feast-feature.service";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
+import { db } from "../db";
+import { assets } from "../db/schema";
 
 // Validation schemas
 const getAssetFeaturesSchema = z.object({
@@ -26,7 +30,10 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
 
   // Require authentication and RBAC for all routes
   fastify.addHook("onRequest", fastify.authenticate);
-  fastify.addHook("onRequest", authorize({ permissions: ["read:ml-features"] }));
+  fastify.addHook(
+    "onRequest",
+    authorize({ permissions: ["read:ml-features"] }),
+  );
 
   const featureService = createFeastFeatureService(fastify);
 
@@ -49,6 +56,28 @@ export default async function mlFeatureRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { assetIds } = request.body;
+        const tenantId = getTenantId(request);
+
+        // REV-029: this took any assetIds with no ownership check — any
+        // authenticated user with read:ml-features could pull another
+        // tenant's asset health scores, telemetry rollups and work-order
+        // history just by guessing/enumerating UUIDs. Scope to the
+        // requester's own tenant before asking Feast for anything.
+        const owned = await db
+          .select({ id: assets.id })
+          .from(assets)
+          .where(
+            and(inArray(assets.id, assetIds), eq(assets.tenantId, tenantId)),
+          );
+        const ownedIds = new Set(owned.map((a) => a.id));
+        const unauthorized = assetIds.filter((id) => !ownedIds.has(id));
+
+        if (unauthorized.length > 0) {
+          return reply.status(403).send({
+            error: "Forbidden",
+            message: "One or more assetIds do not belong to your tenant",
+          });
+        }
 
         const features = await featureService.getAssetFeatures(assetIds);
 

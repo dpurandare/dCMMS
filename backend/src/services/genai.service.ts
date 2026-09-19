@@ -41,9 +41,21 @@ export class GenAIService {
     };
   }
 
-  static async getJobStatus(jobId: string) {
+  static async getJobStatus(jobId: string, tenantId: string) {
     const job = await ingestionQueue.getJob(jobId);
     if (!job) {
+      return null;
+    }
+
+    // REV-041: BullMQ assigns sequential job IDs by default (no custom
+    // jobId is set in ingestDocument below) — /genai/jobs/1, /jobs/2, ...
+    // are trivially enumerable, and this had no ownership check at all.
+    // Any authenticated user from any tenant could read every other
+    // tenant's ingestion job status and result. job.data carries the
+    // tenantId it was queued with; treat a mismatch the same as
+    // not-found, not a 403, so enumeration can't distinguish
+    // "exists but not yours" from "doesn't exist".
+    if (job.data?.tenantId !== tenantId) {
       return null;
     }
 

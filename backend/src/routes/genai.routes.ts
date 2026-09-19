@@ -120,7 +120,11 @@ export const genaiRoutes = async (app: FastifyInstance) => {
       preHandler: server.authenticate,
     },
     async (request, reply) => {
-      const status = await GenAIService.getJobStatus(request.params.id);
+      const user = request.user as UserPayload;
+      const status = await GenAIService.getJobStatus(
+        request.params.id,
+        user.tenantId,
+      );
       if (!status) {
         return reply.status(404).send({ message: "Job not found" });
       }
