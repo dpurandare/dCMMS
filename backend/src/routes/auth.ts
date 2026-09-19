@@ -221,8 +221,17 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         tags: ["auth"],
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         security: [{ bearerAuth: [] }],
+        // REV-038: this used to require `type: "object"` with no `body`
+        // marked optional, so a request with no body at all (undefined,
+        // not `{}`) failed schema validation — which runs before
+        // `preHandler`/authenticate, so even an unauthenticated caller got
+        // 400 instead of 401. The real frontend calls this with no body
+        // (`apiClient.post('/auth/logout')`), so logout was broken for
+        // every real caller: found by writing a first test for this path,
+        // which had none. `nullable: true` lets an absent body through.
         body: {
           type: "object",
+          nullable: true,
           properties: {
             allDevices: {
               type: "boolean",
