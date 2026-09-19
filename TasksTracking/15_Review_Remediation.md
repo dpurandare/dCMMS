@@ -57,6 +57,8 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 
 > Update this table at the end of each working day. It is the only status anyone outside the team should need to read.
 
+**CI is disabled** at Deepak's request (2026-09-19). REV-003 is an accepted risk; verification is local. See REV-003a.
+
 **Phase 1 as of 2026-09-19:** REV-009 ⚠️ · REV-010 ✅ · REV-011 ✅ · REV-012 ✅ · REV-013 ✅ · REV-014 ✅ · REV-015 🛑 · REV-016 ✅ · REV-017 ✅ · REV-018 ✅ · REV-019 ✅ · REV-020 ⚠️ · REV-021 ✅ · REV-022 ✅ · REV-023 ⚠️ · REV-024 ✅.
 Nine new tasks split out: REV-009a/b, REV-011a/b, REV-018a, REV-020a/b, REV-023a/b.
 
@@ -181,7 +183,34 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     Two CodeQL jobs are the only green checks on the first gated PR in the
     project's history. That is the honest starting line.
   - **Note:** `frontend-ci.yml` also calls three scripts that still do not exist — `test:unit`, `analyze`, `test:a11y`. Left alone deliberately: they are CI failures for REV-004 to record, not silent fixes.
-  - **Status:** ✅ COMPLETE
+  - **⚠️ Superseded 2026-09-19 by an explicit instruction:** *"I don't want the
+    github CI actions to run. They take a lot of time."* All four workflows are
+    now **disabled at the repo level**, and the four `.github` automation files
+    were deleted for the same reason — that was a deliberate choice, not an
+    oversight.
+
+    The workflow files and their uncommented triggers remain correct in the
+    branch, so nothing is lost if this is revisited. But **the gate this task
+    existed to create does not exist**, and Phase 0's stated gate — "CI runs on
+    every PR" — cannot be claimed. That is a real, open risk: the project's
+    original failure was that nothing forced a claim to be checked, and right
+    now nothing does again.
+
+    Verification has moved local: `npm run build`, `npm run lint`, `npm test`,
+    and probing a running stack. Every `Verify:` line in this tracker was
+    satisfied that way, not by CI. If the concern is run time rather than CI
+    itself, a trimmed workflow (lint + build + the migrations job only, ~2
+    minutes) would restore the gate cheaply — filed as REV-003a.
+  - **Status:** ⏹️ ACCEPTED RISK — CI disabled at Deepak's request, 2026-09-19
+
+- [ ] **REV-003a** - Offer a minimal CI gate 🟠 **P1**
+  - [ ] The full pipeline is slow: Lighthouse, Playwright, axe, CodeQL, SonarQube, Docker builds
+  - [ ] Propose a single fast job — backend `build` + `lint` + the migrations check — that runs in roughly two minutes on PRs to `main` only
+  - [ ] Decision is Deepak's; do not enable anything without it
+  - **Priority:** 🟠 P1 — the review's root cause was the absence of a gate
+  - **Estimated:** 2 hours
+  - **Split from:** REV-003
+  - **Status:** 🔴 Not Started
 
 - [x] **REV-004** - Record the CI failure baseline 🟠 **P1**
   - [x] Capture the full lint / type-check / test failure list from REV-003
