@@ -3,10 +3,22 @@
  *
  * Features:
  * - Webhook delivery with HTTP POST
- * - HMAC-SHA256 signature verification
- * - Retry logic (exponential backoff)
+ * - HMAC-SHA256 signature verification (whenever a webhook has a secret)
+ * - Retry logic (exponential backoff, in-memory)
  * - Delivery tracking and logging
- * - Timeout enforcement (10 seconds)
+ * - Timeout enforcement (default 10 seconds)
+ *
+ * Rewritten 2026-09-19 (REV-025b): the original version queried columns
+ * (custom_headers, event_types, secret_key, timeout_seconds, max_retries,
+ * active, request_url, response_status, attempt_number, next_retry_at, a
+ * "retrying" delivery status, generate_webhook_secret()) that do not exist
+ * anywhere in `db/schema.ts` or the database. Every call — including the two
+ * live call sites in alert-notification-handler.service.ts and
+ * notification.service.ts — has always failed at its first query and been
+ * silently swallowed by their try/catch. This version matches the real
+ * `webhooks` / `webhook_deliveries` tables. `timeoutSeconds`, `maxRetries`
+ * and an optional `description` are not real columns on `webhooks`, so
+ * they're packed into its `metadata` text column instead of being dropped.
  *
  * Configuration:
  *   WEBHOOK_TIMEOUT_MS=10000
@@ -14,7 +26,7 @@
  */
 
 import crypto from "crypto";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { pool } from "../db";
 
 // ==========================================
@@ -24,10 +36,12 @@ import { pool } from "../db";
 export interface WebhookConfig {
   id: string;
   url: string;
-  authType: "none" | "bearer" | "basic" | "hmac";
-  authToken?: string;
-  customHeaders?: Record<string, string>;
-  secretKey?: string;
+  authType: "none" | "bearer" | "basic" | "api_key";
+  authToken?: string | null;
+  authUsername?: string | null;
+  authPassword?: string | null;
+  headers?: Record<string, string>;
+  secret?: string | null;
   timeoutSeconds: number;
   maxRetries: number;
 }
@@ -43,12 +57,18 @@ export interface WebhookPayload {
 
 export interface WebhookDeliveryResult {
   success: boolean;
-  deliveryId: string;
+  deliveryId: string | null;
   status?: number;
   responseTime?: number;
   error?: string;
   attemptNumber: number;
 }
+
+type DeliveryStatus = "success" | "failed" | "timeout" | "invalid_response";
+
+const DEFAULT_TIMEOUT_SECONDS = 10;
+const DEFAULT_MAX_RETRIES = 3;
+const RESPONSE_BODY_MAX_CHARS = 5000;
 
 // ==========================================
 // Webhook Service
@@ -64,11 +84,10 @@ export class WebhookService {
   }
 
   /**
-   * Trigger webhooks for an event
-   */
-
-  /**
-   * Send webhook notification
+   * Send webhook notification. Delivery is logged in a single row once the
+   * outcome is known — `webhook_delivery_status` has no "pending"/"retrying"
+   * value, so there is nothing meaningful to write before the attempt
+   * completes.
    */
   async sendWebhook(
     webhook: WebhookConfig,
@@ -76,130 +95,76 @@ export class WebhookService {
     attemptNumber: number = 1,
   ): Promise<WebhookDeliveryResult> {
     const startTime = Date.now();
+    const requestBody = JSON.stringify(payload);
+    const headers = this.buildHeaders(webhook, payload, requestBody);
+    const timeoutMs =
+      (webhook.timeoutSeconds || DEFAULT_TIMEOUT_SECONDS) * 1000;
+
+    let response: AxiosResponse | undefined;
+    let thrown: unknown = null;
 
     try {
-      // Build headers
-      const headers = this.buildHeaders(webhook, payload);
-
-      // Build request body
-      const requestBody = JSON.stringify(payload);
-
-      // Log delivery attempt
-      const deliveryId = await this.logDeliveryAttempt(
-        webhook.id,
-        payload.eventType,
-        payload.data,
-        webhook.url,
-        requestBody,
-        attemptNumber,
-      );
-
-      // Send HTTP POST
-      const response = await axios.post(webhook.url, requestBody, {
+      response = await axios.post(webhook.url, requestBody, {
         headers,
-        timeout: webhook.timeoutSeconds * 1000,
-        validateStatus: () => true, // Don't throw on any status
+        timeout: timeoutMs,
       });
+    } catch (error) {
+      thrown = error;
+    }
 
-      const responseTime = Date.now() - startTime;
+    const responseTime = Date.now() - startTime;
+    const status = this.classifyStatus(thrown, response);
+    const errorMessage = thrown
+      ? this.getErrorMessage(thrown)
+      : status === "invalid_response"
+        ? `HTTP ${response!.status}: ${response!.statusText}`
+        : undefined;
 
-      // Check if successful (2xx status)
-      const success = response.status >= 200 && response.status < 300;
+    const deliveryId = await this.recordDelivery(
+      webhook.id,
+      payload.eventType,
+      requestBody,
+      status,
+      response?.status,
+      response ? this.truncate(JSON.stringify(response.data)) : undefined,
+      errorMessage,
+      attemptNumber,
+    );
 
-      // Update delivery log
-      await this.updateDeliveryLog(deliveryId, {
-        status: success ? "success" : "failed",
-        responseStatus: response.status,
-        responseBody: JSON.stringify(response.data).substring(0, 10000), // Limit size
-        responseTimeMs: responseTime,
-        errorMessage: success
-          ? null
-          : `HTTP ${response.status}: ${response.statusText}`,
-        completedAt: new Date(),
-      });
+    const success = status === "success";
 
-      if (success) {
-        console.log(
-          `✓ Webhook delivered successfully: ${webhook.url} (${response.status}) in ${responseTime}ms`,
-        );
-        return {
-          success: true,
-          deliveryId,
-          status: response.status,
-          responseTime,
-          attemptNumber,
-        };
-      } else {
-        // Schedule retry if not max attempts
-        if (attemptNumber < webhook.maxRetries) {
-          await this.scheduleRetry(deliveryId, webhook, payload, attemptNumber);
-          return {
-            success: false,
-            deliveryId,
-            status: response.status,
-            error: `HTTP ${response.status}, will retry`,
-            attemptNumber,
-          };
-        } else {
-          console.error(
-            `✗ Webhook failed after ${attemptNumber} attempts: ${webhook.url} (${response.status})`,
-          );
-          return {
-            success: false,
-            deliveryId,
-            status: response.status,
-            error: `HTTP ${response.status}: ${response.statusText}`,
-            attemptNumber,
-          };
-        }
-      }
-    } catch (error: unknown) {
-      // const responseTime = Date.now() - startTime;
-      const errorMessage = this.getErrorMessage(error);
-
-      console.error(`✗ Webhook error: ${webhook.url} - ${errorMessage}`);
-
-      // Log error (use existing deliveryId if available)
-      const deliveryId = await this.logDeliveryAttempt(
-        webhook.id,
-        payload.eventType,
-        payload.data,
-        webhook.url,
-        JSON.stringify(payload),
-        attemptNumber,
-        "failed",
-        errorMessage,
+    if (success) {
+      console.log(
+        `✓ Webhook delivered: ${webhook.url} (${response?.status}) in ${responseTime}ms`,
       );
-
-      // Schedule retry if not max attempts
-      if (attemptNumber < webhook.maxRetries) {
-        await this.scheduleRetry(deliveryId, webhook, payload, attemptNumber);
-        return {
-          success: false,
-          deliveryId,
-          error: `${errorMessage}, will retry`,
-          attemptNumber,
-        };
-      } else {
-        return {
-          success: false,
-          deliveryId,
-          error: errorMessage,
-          attemptNumber,
-        };
+    } else {
+      console.error(
+        `✗ Webhook ${status}: ${webhook.url} — ${errorMessage ?? "unknown error"}`,
+      );
+      const maxRetries = webhook.maxRetries ?? this.maxRetries;
+      if (attemptNumber <= maxRetries) {
+        this.scheduleRetry(webhook, payload, attemptNumber);
       }
     }
+
+    return {
+      success,
+      deliveryId,
+      status: response?.status,
+      responseTime,
+      error: errorMessage,
+      attemptNumber,
+    };
   }
 
   /**
-   * Send webhook to all registered webhooks for event type
+   * Send to all webhooks registered for an event type
    */
   async triggerWebhooks(
     tenantId: string,
     eventType: string,
     eventData: Record<string, unknown>,
   ): Promise<WebhookDeliveryResult[]> {
-    // Get webhooks for this event type
     const webhooks = await this.getWebhooksForEvent(tenantId, eventType);
 
     if (webhooks.length === 0) {
@@ -211,7 +176,6 @@ export class WebhookService {
       `Triggering ${webhooks.length} webhook(s) for event: ${eventType}`,
     );
 
-    // Build payload
     const payload: WebhookPayload = {
       event: `notification.${eventType}`,
       eventType,
@@ -224,20 +188,40 @@ export class WebhookService {
       },
     };
 
-    // Send to all webhooks in parallel
-    const results = await Promise.all(
+    return Promise.all(
       webhooks.map((webhook) => this.sendWebhook(webhook, payload)),
     );
-
-    return results;
   }
 
   /**
-   * Build HTTP headers for webhook request
+   * Classify the outcome of an attempt into the four values
+   * `webhook_delivery_status` actually supports.
+   */
+  private classifyStatus(
+    error: unknown,
+    response?: AxiosResponse,
+  ): DeliveryStatus {
+    if (!error && response) {
+      return response.status >= 200 && response.status < 300
+        ? "success"
+        : "invalid_response";
+    }
+    if (axios.isAxiosError(error) && error.code === "ECONNABORTED") {
+      return "timeout";
+    }
+    return "failed";
+  }
+
+  /**
+   * Build HTTP headers for webhook request. HMAC signing is applied
+   * whenever the webhook has a secret, independent of `authType` — signing
+   * proves payload authenticity, `authType` controls the Authorization
+   * header, and `webhook_auth_type` has no "hmac" value.
    */
   private buildHeaders(
     webhook: WebhookConfig,
     payload: WebhookPayload,
+    requestBody: string,
   ): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -247,26 +231,31 @@ export class WebhookService {
       "X-Webhook-ID": crypto.randomUUID(),
     };
 
-    // Add authentication
     if (webhook.authType === "bearer" && webhook.authToken) {
       headers["Authorization"] = `Bearer ${webhook.authToken}`;
-    } else if (webhook.authType === "basic" && webhook.authToken) {
-      headers["Authorization"] = `Basic ${webhook.authToken}`;
+    } else if (
+      webhook.authType === "basic" &&
+      webhook.authUsername &&
+      webhook.authPassword
+    ) {
+      const creds = Buffer.from(
+        `${webhook.authUsername}:${webhook.authPassword}`,
+      ).toString("base64");
+      headers["Authorization"] = `Basic ${creds}`;
+    } else if (webhook.authType === "api_key" && webhook.authToken) {
+      headers["X-Api-Key"] = webhook.authToken;
     }
 
-    // Add HMAC signature
-    if (webhook.authType === "hmac" && webhook.secretKey) {
-      const signature = this.generateSignature(
-        JSON.stringify(payload),
-        webhook.secretKey,
+    if (webhook.secret) {
+      headers["X-Webhook-Signature"] = this.generateSignature(
+        requestBody,
+        webhook.secret,
       );
-      headers["X-Webhook-Signature"] = signature;
       headers["X-Webhook-Signature-Algorithm"] = "sha256";
     }
 
-    // Add custom headers
-    if (webhook.customHeaders) {
-      Object.assign(headers, webhook.customHeaders);
+    if (webhook.headers) {
+      Object.assign(headers, webhook.headers);
     }
 
     return headers;
@@ -286,14 +275,15 @@ export class WebhookService {
    */
   verifySignature(payload: string, signature: string, secret: string): boolean {
     const expectedSignature = this.generateSignature(payload, secret);
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature),
-    );
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expectedSignature);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
 
   /**
-   * Get webhooks for event type
+   * Get active webhooks subscribed to an event type. `events` is a text
+   * column holding a JSON array (or the string "all"), not a Postgres
+   * array, so subscription matching happens in JS after fetching.
    */
   private async getWebhooksForEvent(
     tenantId: string,
@@ -302,164 +292,128 @@ export class WebhookService {
     const result = await pool.query(
       `
       SELECT
-        w.id,
-        w.url,
-        w.auth_type AS "authType",
-        w.auth_token AS "authToken",
-        w.custom_headers AS "customHeaders",
-        w.secret_key AS "secretKey",
-        w.timeout_seconds AS "timeoutSeconds",
-        w.max_retries AS "maxRetries"
-      FROM webhooks w
-      WHERE w.tenant_id = $1
-        AND w.active = true
-        AND (
-          $2 = ANY(w.event_types)
-          OR 'all' = ANY(w.event_types)
-        )
+        id,
+        url,
+        auth_type AS "authType",
+        auth_token AS "authToken",
+        auth_username AS "authUsername",
+        auth_password AS "authPassword",
+        headers,
+        secret,
+        metadata,
+        events
+      FROM webhooks
+      WHERE tenant_id = $1 AND is_active = true
     `,
-      [tenantId, eventType],
+      [tenantId],
     );
 
-    return result.rows;
+    return result.rows
+      .filter((row) => {
+        let events: string[] = [];
+        try {
+          events = JSON.parse(row.events || "[]");
+        } catch {
+          events = [];
+        }
+        return events.includes(eventType) || events.includes("all");
+      })
+      .map((row) => this.toWebhookConfig(row));
+  }
+
+  private toWebhookConfig(row: {
+    id: string;
+    url: string;
+    authType: string;
+    authToken: string | null;
+    authUsername: string | null;
+    authPassword: string | null;
+    headers: string | null;
+    secret: string | null;
+    metadata: string | null;
+  }): WebhookConfig {
+    let meta: { timeoutSeconds?: number; maxRetries?: number } = {};
+    try {
+      meta = JSON.parse(row.metadata || "{}");
+    } catch {
+      meta = {};
+    }
+    let headers: Record<string, string> | undefined;
+    try {
+      headers = row.headers ? JSON.parse(row.headers) : undefined;
+    } catch {
+      headers = undefined;
+    }
+
+    return {
+      id: row.id,
+      url: row.url,
+      authType: row.authType as WebhookConfig["authType"],
+      authToken: row.authToken,
+      authUsername: row.authUsername,
+      authPassword: row.authPassword,
+      headers,
+      secret: row.secret,
+      timeoutSeconds: meta.timeoutSeconds ?? DEFAULT_TIMEOUT_SECONDS,
+      maxRetries: meta.maxRetries ?? DEFAULT_MAX_RETRIES,
+    };
+  }
+
+  private truncate(value: string): string {
+    return value.length > RESPONSE_BODY_MAX_CHARS
+      ? value.slice(0, RESPONSE_BODY_MAX_CHARS)
+      : value;
   }
 
   /**
-   * Log webhook delivery attempt
+   * Record a completed delivery attempt. Returns null (and logs a warning,
+   * without throwing) if the insert fails — most likely because `eventType`
+   * isn't one of the ten values `notification_event_type` allows. Losing an
+   * audit row must never block the actual webhook delivery, which has
+   * already happened by the time this is called.
    */
-  private async logDeliveryAttempt(
+  private async recordDelivery(
     webhookId: string,
     eventType: string,
-    eventData: Record<string, unknown>,
-    url: string,
-    requestBody: string,
-    attemptNumber: number,
-    status: string = "pending",
+    payload: string,
+    status: DeliveryStatus,
+    statusCode?: number,
+    responseBody?: string,
     errorMessage?: string,
-  ): Promise<string> {
-    const result = await pool.query(
-      `
-      INSERT INTO webhook_deliveries (
-        webhook_id,
-        event_type,
-        event_data,
-        request_url,
-        request_body,
-        attempt_number,
-        status,
-        error_message
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id
-    `,
-      [
-        webhookId,
-        eventType,
-        JSON.stringify(eventData),
-        url,
-        requestBody,
-        attemptNumber,
-        status,
-        errorMessage || null,
-      ],
-    );
-
-    return result.rows[0].id;
+    attemptCount: number = 1,
+  ): Promise<string | null> {
+    try {
+      const result = await pool.query(
+        `
+        INSERT INTO webhook_deliveries (
+          webhook_id, event_type, payload, status, status_code,
+          response_body, error_message, attempt_count, sent_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING id
+      `,
+        [
+          webhookId,
+          eventType,
+          payload,
+          status,
+          statusCode ?? null,
+          responseBody ?? null,
+          errorMessage ?? null,
+          attemptCount,
+        ],
+      );
+      return result.rows[0].id;
+    } catch (error) {
+      console.error(
+        `Could not record webhook delivery for event "${eventType}" (likely outside the notification_event_type enum):`,
+        error,
+      );
+      return null;
+    }
   }
 
   /**
-   * Update delivery log
-   */
-  private async updateDeliveryLog(
-    deliveryId: string,
-    updates: {
-      status?: string;
-      responseStatus?: number;
-      responseBody?: string;
-      responseTimeMs?: number;
-      errorMessage?: string | null;
-      completedAt?: Date;
-    },
-  ): Promise<void> {
-    const fields: string[] = [];
-    const values: unknown[] = [];
-    let paramCount = 1;
-
-    if (updates.status !== undefined) {
-      fields.push(`status = $${paramCount++}`);
-      values.push(updates.status);
-    }
-    if (updates.responseStatus !== undefined) {
-      fields.push(`response_status = $${paramCount++}`);
-      values.push(updates.responseStatus);
-    }
-    if (updates.responseBody !== undefined) {
-      fields.push(`response_body = $${paramCount++}`);
-      values.push(updates.responseBody);
-    }
-    if (updates.responseTimeMs !== undefined) {
-      fields.push(`response_time_ms = $${paramCount++}`);
-      values.push(updates.responseTimeMs);
-    }
-    if (updates.errorMessage !== undefined) {
-      fields.push(`error_message = $${paramCount++}`);
-      values.push(updates.errorMessage);
-    }
-    if (updates.completedAt !== undefined) {
-      fields.push(`completed_at = $${paramCount++}`);
-      values.push(updates.completedAt);
-    }
-
-    if (fields.length === 0) return;
-
-    values.push(deliveryId);
-
-    await pool.query(
-      `
-      UPDATE webhook_deliveries
-      SET ${fields.join(", ")}
-      WHERE id = $${paramCount}
-    `,
-      values,
-    );
-  }
-
-  /**
-   * Schedule retry with exponential backoff
-   */
-  private async scheduleRetry(
-    deliveryId: string,
-    webhook: WebhookConfig,
-    payload: WebhookPayload,
-    attemptNumber: number,
-  ): Promise<void> {
-    // Exponential backoff: 2^attempt seconds
-    const delaySeconds = Math.pow(2, attemptNumber); // 2, 4, 8 seconds
-    const nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
-
-    await pool.query(
-      `
-      UPDATE webhook_deliveries
-      SET
-        status = 'retrying',
-        next_retry_at = $1
-      WHERE id = $2
-    `,
-      [nextRetryAt, deliveryId],
-    );
-
-    console.log(
-      `Scheduled retry #${attemptNumber + 1} for webhook ${webhook.url} in ${delaySeconds}s`,
-    );
-
-    // In production, this would be handled by a background worker
-    // For now, schedule in-memory retry
-    setTimeout(() => {
-      this.sendWebhook(webhook, payload, attemptNumber + 1);
-    }, delaySeconds * 1000);
-  }
-
-  /**
-   * Get error message from axios error
+   * Get a readable error message from a failed delivery attempt
    */
   private getErrorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
@@ -479,55 +433,24 @@ export class WebhookService {
   }
 
   /**
-   * Process pending retries
-   * (Called by background worker)
+   * Schedule an in-memory retry with exponential backoff. There is no
+   * "retrying" delivery status or `next_retry_at` column to persist this
+   * to, matching the pattern already used elsewhere in this codebase
+   * (e.g. notification-batching) — acceptable here because retries are
+   * best-effort and each attempt still gets its own permanent delivery row.
    */
-  async processRetries(): Promise<void> {
-    const result = await pool.query(`
-      SELECT
-        wd.id AS delivery_id,
-        wd.webhook_id,
-        wd.event_type,
-        wd.event_data,
-        wd.attempt_number,
-        w.url,
-        w.auth_type AS "authType",
-        w.auth_token AS "authToken",
-        w.custom_headers AS "customHeaders",
-        w.secret_key AS "secretKey",
-        w.timeout_seconds AS "timeoutSeconds",
-        w.max_retries AS "maxRetries"
-      FROM webhook_deliveries wd
-      INNER JOIN webhooks w ON wd.webhook_id = w.id
-      WHERE wd.status = 'retrying'
-        AND wd.next_retry_at <= NOW()
-      LIMIT 100
-    `);
-
-    console.log(`Processing ${result.rows.length} webhook retries`);
-
-    for (const row of result.rows) {
-      const webhook: WebhookConfig = {
-        id: row.webhook_id,
-        url: row.url,
-        authType: row.authType,
-        authToken: row.authToken,
-        customHeaders: row.customHeaders,
-        secretKey: row.secretKey,
-        timeoutSeconds: row.timeoutSeconds,
-        maxRetries: row.maxRetries,
-      };
-
-      const payload: WebhookPayload = {
-        event: `notification.${row.event_type}`,
-        eventType: row.event_type,
-        timestamp: new Date().toISOString(),
-        tenantId: row.event_data.tenantId || "",
-        data: row.event_data,
-      };
-
-      await this.sendWebhook(webhook, payload, row.attempt_number + 1);
-    }
+  private scheduleRetry(
+    webhook: WebhookConfig,
+    payload: WebhookPayload,
+    attemptNumber: number,
+  ): void {
+    const delaySeconds = Math.pow(2, attemptNumber); // 2, 4, 8 seconds
+    console.log(
+      `Scheduling retry #${attemptNumber + 1} for webhook ${webhook.url} in ${delaySeconds}s`,
+    );
+    setTimeout(() => {
+      this.sendWebhook(webhook, payload, attemptNumber + 1);
+    }, delaySeconds * 1000);
   }
 }
 

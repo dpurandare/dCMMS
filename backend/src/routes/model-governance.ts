@@ -3,12 +3,17 @@ import {
   ModelGovernanceService,
   ModelDocumentation,
   ModelStage,
-} from "../services/model-governance.service";
+} from "../services/model-governance.mock";
 
 const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
   const { csrfProtection } = await import('../middleware/csrf');
-  
+
+  // This plugin serves mock data only (REV-027) — label every response.
+  server.addHook("onSend", async (_request, reply) => {
+    reply.header("X-Mock-Data", "true");
+  });
+
   const governanceService = new ModelGovernanceService();
 
   // POST /api/v1/model-governance/register
@@ -23,8 +28,8 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           type: "object",
           required: ["modelName", "version", "description", "owner"],
           properties: {
-            modelName: { type: "string", example: "predictive_maintenance" },
-            version: { type: "string", example: "v2.0.0" },
+            modelName: { type: "string" },
+            version: { type: "string" },
             description: { type: "string" },
             owner: { type: "string" },
           },

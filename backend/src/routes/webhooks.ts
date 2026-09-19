@@ -1,11 +1,42 @@
+import crypto from "crypto";
 import { FastifyPluginAsync } from "fastify";
-import { db, pool } from "../db";
+import { pool } from "../db";
 import WebhookService from "../services/webhook.service";
 import { authorize } from "../middleware/authorize";
 
+// Delivery stats, computed from webhook_deliveries — there is no
+// webhook_stats table (REV-025b). No per-delivery timing is captured
+// anywhere in the schema, so avgResponseTime is honestly NULL rather than
+// fabricated.
+const DELIVERY_STATS_SUBQUERY = `
+  SELECT
+    webhook_id,
+    COUNT(*) AS total_deliveries,
+    COUNT(*) FILTER (WHERE status = 'success') AS successful_deliveries,
+    COUNT(*) FILTER (WHERE status != 'success') AS failed_deliveries,
+    ROUND(100.0 * COUNT(*) FILTER (WHERE status = 'success') / NULLIF(COUNT(*), 0), 2) AS success_rate_percent,
+    MAX(sent_at) AS last_delivery_at
+  FROM webhook_deliveries
+  GROUP BY webhook_id
+`;
+
+interface WebhookMetadata {
+  description?: string;
+  timeoutSeconds?: number;
+  maxRetries?: number;
+}
+
+function parseMetadata(raw: string | null): WebhookMetadata {
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 const webhookRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
+  const { csrfProtection } = await import("../middleware/csrf");
 
   // Require authentication and RBAC for all routes
   server.addHook("onRequest", server.authenticate);
@@ -30,10 +61,12 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
             url: { type: "string", format: "uri" },
             authType: {
               type: "string",
-              enum: ["none", "bearer", "basic", "hmac"],
+              enum: ["none", "bearer", "basic", "api_key"],
               default: "none",
             },
             authToken: { type: "string" },
+            authUsername: { type: "string" },
+            authPassword: { type: "string" },
             customHeaders: { type: "object" },
             eventTypes: { type: "array", items: { type: "string" } },
             timeoutSeconds: {
@@ -56,6 +89,8 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           url,
           authType = "none",
           authToken,
+          authUsername,
+          authPassword,
           customHeaders,
           eventTypes,
           timeoutSeconds = 10,
@@ -64,62 +99,49 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         const user = request.user;
         const tenantId = user.tenantId;
-        const userId = user.id;
 
-        // Generate secret key for HMAC
-        const secretKeyResult = await pool.query(
-          "SELECT generate_webhook_secret() AS secret",
-        );
-        const secretKey = secretKeyResult.rows[0].secret;
+        const secret = crypto.randomBytes(32).toString("hex");
+        const externalWebhookId = `wh_${crypto.randomBytes(12).toString("hex")}`;
+        const metadata: WebhookMetadata = {
+          description,
+          timeoutSeconds,
+          maxRetries,
+        };
 
-        // Insert webhook
         const result = await pool.query(
           `
           INSERT INTO webhooks (
-            tenant_id,
-            name,
-            description,
-            url,
-            auth_type,
-            auth_token,
-            custom_headers,
-            event_types,
-            secret_key,
-            timeout_seconds,
-            max_retries,
-            created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            tenant_id, webhook_id, name, url, auth_type, auth_token,
+            auth_username, auth_password, headers, events, secret,
+            is_active, metadata
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true, $12)
           RETURNING
-            id,
-            name,
-            url,
-            auth_type AS "authType",
-            event_types AS "eventTypes",
-            secret_key AS "secretKey",
-            active,
-            created_at AS "createdAt"
+            id, name, url, auth_type AS "authType", events,
+            is_active AS "active", created_at AS "createdAt"
         `,
           [
             tenantId,
+            externalWebhookId,
             name,
-            description,
             url,
             authType,
-            authToken,
+            authToken || null,
+            authUsername || null,
+            authPassword || null,
             JSON.stringify(customHeaders || {}),
-            eventTypes,
-            secretKey,
-            timeoutSeconds,
-            maxRetries,
-            userId,
+            JSON.stringify(eventTypes || []),
+            secret,
+            JSON.stringify(metadata),
           ],
         );
 
         const webhook = result.rows[0];
+        webhook.eventTypes = JSON.parse(webhook.events);
+        delete webhook.events;
 
         return reply.status(201).send({
           success: true,
-          webhook,
+          webhook: { ...webhook, secretKey: secret },
           message: "Webhook created successfully",
         });
       } catch (error: any) {
@@ -159,22 +181,16 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
 
         let query = `
           SELECT
-            w.id,
-            w.name,
-            w.description,
-            w.url,
-            w.auth_type AS "authType",
-            w.event_types AS "eventTypes",
-            w.active,
-            w.created_at AS "createdAt",
-            w.updated_at AS "updatedAt",
-            w.last_triggered_at AS "lastTriggeredAt",
-            ws.total_deliveries AS "totalDeliveries",
-            ws.successful_deliveries AS "successfulDeliveries",
-            ws.failed_deliveries AS "failedDeliveries",
-            ws.success_rate_percent AS "successRate"
+            w.id, w.name, w.url, w.auth_type AS "authType", w.events,
+            w.is_active AS "active", w.metadata,
+            w.created_at AS "createdAt", w.updated_at AS "updatedAt",
+            COALESCE(ws.total_deliveries, 0) AS "totalDeliveries",
+            COALESCE(ws.successful_deliveries, 0) AS "successfulDeliveries",
+            COALESCE(ws.failed_deliveries, 0) AS "failedDeliveries",
+            ws.success_rate_percent AS "successRate",
+            ws.last_delivery_at AS "lastTriggeredAt"
           FROM webhooks w
-          LEFT JOIN webhook_stats ws ON w.id = ws.webhook_id
+          LEFT JOIN (${DELIVERY_STATS_SUBQUERY}) ws ON w.id = ws.webhook_id
           WHERE w.tenant_id = $1
         `;
 
@@ -182,23 +198,38 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         let paramCount = 2;
 
         if (active !== undefined) {
-          query += ` AND w.active = $${paramCount++}`;
+          query += ` AND w.is_active = $${paramCount++}`;
           params.push(active === "true" || active === true);
-        }
-
-        if (eventType) {
-          query += ` AND $${paramCount++} = ANY(w.event_types)`;
-          params.push(eventType);
         }
 
         query += " ORDER BY w.created_at DESC";
 
         const result = await pool.query(query, params);
 
+        let webhooks = result.rows.map((row) => {
+          const meta = parseMetadata(row.metadata);
+          let eventTypes: string[] = [];
+          try {
+            eventTypes = JSON.parse(row.events || "[]");
+          } catch {
+            eventTypes = [];
+          }
+          delete row.events;
+          delete row.metadata;
+          return { ...row, eventTypes, description: meta.description };
+        });
+
+        if (eventType) {
+          webhooks = webhooks.filter(
+            (w) =>
+              w.eventTypes.includes(eventType) || w.eventTypes.includes("all"),
+          );
+        }
+
         return {
           success: true,
-          webhooks: result.rows,
-          count: result.rows.length,
+          webhooks,
+          count: webhooks.length,
         };
       } catch (error: any) {
         request.log.error(error);
@@ -237,27 +268,18 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const result = await pool.query(
           `
           SELECT
-            w.id,
-            w.name,
-            w.description,
-            w.url,
-            w.auth_type AS "authType",
-            w.custom_headers AS "customHeaders",
-            w.event_types AS "eventTypes",
-            w.secret_key AS "secretKey",
-            w.timeout_seconds AS "timeoutSeconds",
-            w.max_retries AS "maxRetries",
-            w.active,
-            w.created_at AS "createdAt",
-            w.updated_at AS "updatedAt",
-            w.last_triggered_at AS "lastTriggeredAt",
-            ws.total_deliveries AS "totalDeliveries",
-            ws.successful_deliveries AS "successfulDeliveries",
-            ws.failed_deliveries AS "failedDeliveries",
+            w.id, w.name, w.url, w.auth_type AS "authType",
+            w.auth_username AS "authUsername", w.headers AS "customHeaders",
+            w.events, w.is_active AS "active", w.metadata,
+            w.created_at AS "createdAt", w.updated_at AS "updatedAt",
+            COALESCE(ws.total_deliveries, 0) AS "totalDeliveries",
+            COALESCE(ws.successful_deliveries, 0) AS "successfulDeliveries",
+            COALESCE(ws.failed_deliveries, 0) AS "failedDeliveries",
             ws.success_rate_percent AS "successRate",
-            ws.avg_response_time_ms AS "avgResponseTime"
+            NULL::integer AS "avgResponseTime",
+            ws.last_delivery_at AS "lastTriggeredAt"
           FROM webhooks w
-          LEFT JOIN webhook_stats ws ON w.id = ws.webhook_id
+          LEFT JOIN (${DELIVERY_STATS_SUBQUERY}) ws ON w.id = ws.webhook_id
           WHERE w.id = $1 AND w.tenant_id = $2
         `,
           [id, tenantId],
@@ -270,9 +292,26 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           });
         }
 
+        const row = result.rows[0];
+        const meta = parseMetadata(row.metadata);
+        let eventTypes: string[] = [];
+        try {
+          eventTypes = JSON.parse(row.events || "[]");
+        } catch {
+          eventTypes = [];
+        }
+        delete row.events;
+        delete row.metadata;
+
         return {
           success: true,
-          webhook: result.rows[0],
+          webhook: {
+            ...row,
+            eventTypes,
+            description: meta.description,
+            timeoutSeconds: meta.timeoutSeconds,
+            maxRetries: meta.maxRetries,
+          },
         };
       } catch (error: any) {
         request.log.error(error);
@@ -307,6 +346,8 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
             url: { type: "string" },
             authType: { type: "string" },
             authToken: { type: "string" },
+            authUsername: { type: "string" },
+            authPassword: { type: "string" },
             customHeaders: { type: "object" },
             eventTypes: { type: "array", items: { type: "string" } },
             timeoutSeconds: { type: "integer" },
@@ -322,70 +363,74 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const { id } = request.params as any;
         const user = request.user;
         const tenantId = user.tenantId;
-        const {
-          name,
-          description,
-          url,
-          authType,
-          authToken,
-          customHeaders,
-          eventTypes,
-          timeoutSeconds,
-          maxRetries,
-          active,
-        } = request.body as any;
+        const body = request.body as any;
+
+        // Metadata (description/timeoutSeconds/maxRetries) is merged, not
+        // replaced wholesale, so a partial update doesn't clobber the rest.
+        const existing = await pool.query(
+          "SELECT metadata FROM webhooks WHERE id = $1 AND tenant_id = $2",
+          [id, tenantId],
+        );
+        if (existing.rows.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: "Webhook not found",
+          });
+        }
+        const mergedMetadata: WebhookMetadata = {
+          ...parseMetadata(existing.rows[0].metadata),
+          ...(body.description !== undefined && {
+            description: body.description,
+          }),
+          ...(body.timeoutSeconds !== undefined && {
+            timeoutSeconds: body.timeoutSeconds,
+          }),
+          ...(body.maxRetries !== undefined && { maxRetries: body.maxRetries }),
+        };
 
         const result = await pool.query(
           `
           UPDATE webhooks
           SET
             name = COALESCE($1, name),
-            description = COALESCE($2, description),
-            url = COALESCE($3, url),
-            auth_type = COALESCE($4, auth_type),
-            auth_token = COALESCE($5, auth_token),
-            custom_headers = COALESCE($6, custom_headers),
-            event_types = COALESCE($7, event_types),
-            timeout_seconds = COALESCE($8, timeout_seconds),
-            max_retries = COALESCE($9, max_retries),
-            active = COALESCE($10, active),
+            url = COALESCE($2, url),
+            auth_type = COALESCE($3, auth_type),
+            auth_token = COALESCE($4, auth_token),
+            auth_username = COALESCE($5, auth_username),
+            auth_password = COALESCE($6, auth_password),
+            headers = COALESCE($7, headers),
+            events = COALESCE($8, events),
+            is_active = COALESCE($9, is_active),
+            metadata = $10,
             updated_at = NOW()
           WHERE id = $11 AND tenant_id = $12
           RETURNING
-            id,
-            name,
-            url,
-            auth_type AS "authType",
-            event_types AS "eventTypes",
-            active,
-            updated_at AS "updatedAt"
+            id, name, url, auth_type AS "authType", events,
+            is_active AS "active", updated_at AS "updatedAt"
         `,
           [
-            name,
-            description,
-            url,
-            authType,
-            authToken,
-            customHeaders ? JSON.stringify(customHeaders) : null,
-            eventTypes,
-            timeoutSeconds,
-            maxRetries,
-            active,
+            body.name,
+            body.url,
+            body.authType,
+            body.authToken,
+            body.authUsername,
+            body.authPassword,
+            body.customHeaders ? JSON.stringify(body.customHeaders) : null,
+            body.eventTypes ? JSON.stringify(body.eventTypes) : null,
+            body.active,
+            JSON.stringify(mergedMetadata),
             id,
             tenantId,
           ],
         );
 
-        if (result.rows.length === 0) {
-          return reply.status(404).send({
-            success: false,
-            error: "Webhook not found",
-          });
-        }
+        const webhook = result.rows[0];
+        webhook.eventTypes = JSON.parse(webhook.events);
+        delete webhook.events;
 
         return {
           success: true,
-          webhook: result.rows[0],
+          webhook,
           message: "Webhook updated successfully",
         };
       } catch (error: any) {
@@ -480,7 +525,6 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const user = request.user;
         const tenantId = user.tenantId;
 
-        // Verify webhook belongs to tenant
         const webhookCheck = await pool.query(
           "SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2",
           [id, tenantId],
@@ -493,30 +537,21 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           });
         }
 
-        // Get deliveries
         const result = await pool.query(
           `
           SELECT
-            id,
-            event_type AS "eventType",
-            request_url AS "requestUrl",
-            response_status AS "responseStatus",
-            response_time_ms AS "responseTimeMs",
-            status,
-            attempt_number AS "attemptNumber",
-            max_attempts AS "maxAttempts",
-            error_message AS "errorMessage",
-            sent_at AS "sentAt",
-            completed_at AS "completedAt"
+            id, event_type AS "eventType", status,
+            status_code AS "statusCode", response_body AS "responseBody",
+            error_message AS "errorMessage", attempt_count AS "attemptCount",
+            sent_at AS "sentAt", created_at AS "createdAt"
           FROM webhook_deliveries
           WHERE webhook_id = $1
-          ORDER BY sent_at DESC
+          ORDER BY created_at DESC
           LIMIT $2 OFFSET $3
         `,
           [id, limit, offset],
         );
 
-        // Get total count
         const countResult = await pool.query(
           "SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1",
           [id],
@@ -563,18 +598,12 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const user = request.user;
         const tenantId = user.tenantId;
 
-        // Get webhook
         const webhookResult = await pool.query(
           `
           SELECT
-            id,
-            url,
-            auth_type AS "authType",
-            auth_token AS "authToken",
-            custom_headers AS "customHeaders",
-            secret_key AS "secretKey",
-            timeout_seconds AS "timeoutSeconds",
-            max_retries AS "maxRetries"
+            id, url, auth_type AS "authType", auth_token AS "authToken",
+            auth_username AS "authUsername", auth_password AS "authPassword",
+            headers, secret, metadata
           FROM webhooks
           WHERE id = $1 AND tenant_id = $2
         `,
@@ -588,9 +617,25 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           });
         }
 
-        const webhook = webhookResult.rows[0];
+        const row = webhookResult.rows[0];
+        const meta = parseMetadata(row.metadata);
+        const webhook = {
+          id: row.id,
+          url: row.url,
+          authType: row.authType,
+          authToken: row.authToken,
+          authUsername: row.authUsername,
+          authPassword: row.authPassword,
+          headers: row.headers ? JSON.parse(row.headers) : undefined,
+          secret: row.secret,
+          timeoutSeconds: meta.timeoutSeconds ?? 10,
+          maxRetries: meta.maxRetries ?? 3,
+        };
 
-        // Send test payload
+        // "webhook.test" isn't one of notification_event_type's ten real
+        // values, so the delivery service logs this attempt best-effort
+        // (recordDelivery swallows the enum violation rather than failing
+        // the test call) — see webhook.service.ts.
         const testPayload = {
           event: "webhook.test",
           eventType: "webhook_test",
@@ -655,7 +700,6 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
         const user = request.user;
         const tenantId = user.tenantId;
 
-        // Verify webhook belongs to tenant
         const webhookCheck = await pool.query(
           "SELECT id FROM webhooks WHERE id = $1 AND tenant_id = $2",
           [id, tenantId],
@@ -668,38 +712,27 @@ const webhookRoutes: FastifyPluginAsync = async (server) => {
           });
         }
 
-        // Get statistics
+        // "retrying" isn't a real delivery status (no in-flight state is
+        // persisted — see webhook.service.ts), so retryingDeliveries counts
+        // deliveries that needed more than one attempt instead.
         const result = await pool.query(
           `
           SELECT
-            webhook_name AS name,
-            url,
-            active,
-            total_deliveries AS "totalDeliveries",
-            successful_deliveries AS "successfulDeliveries",
-            failed_deliveries AS "failedDeliveries",
-            retrying_deliveries AS "retryingDeliveries",
-            avg_response_time_ms AS "avgResponseTime",
-            last_delivery_at AS "lastDeliveryAt",
-            success_rate_percent AS "successRate"
-          FROM webhook_stats
-          WHERE webhook_id = $1
+            w.name, w.url, w.is_active AS "active",
+            COALESCE(COUNT(d.id), 0) AS "totalDeliveries",
+            COALESCE(COUNT(d.id) FILTER (WHERE d.status = 'success'), 0) AS "successfulDeliveries",
+            COALESCE(COUNT(d.id) FILTER (WHERE d.status != 'success'), 0) AS "failedDeliveries",
+            COALESCE(COUNT(d.id) FILTER (WHERE d.attempt_count > 1), 0) AS "retryingDeliveries",
+            NULL::integer AS "avgResponseTime",
+            MAX(d.sent_at) AS "lastDeliveryAt",
+            ROUND(100.0 * COUNT(d.id) FILTER (WHERE d.status = 'success') / NULLIF(COUNT(d.id), 0), 2) AS "successRate"
+          FROM webhooks w
+          LEFT JOIN webhook_deliveries d ON d.webhook_id = w.id
+          WHERE w.id = $1
+          GROUP BY w.id, w.name, w.url, w.is_active
         `,
           [id],
         );
-
-        if (result.rows.length === 0) {
-          return {
-            success: true,
-            stats: {
-              totalDeliveries: 0,
-              successfulDeliveries: 0,
-              failedDeliveries: 0,
-              retryingDeliveries: 0,
-              successRate: 0,
-            },
-          };
-        }
 
         return {
           success: true,
