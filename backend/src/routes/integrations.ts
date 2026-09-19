@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { createSlackProviderService } from "../services/slack-provider.service";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
 
 // Validation schemas
 const slackOAuthCallbackSchema = z.object({
@@ -50,7 +51,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     };
   }>("/integrations/slack/install", async (request, reply) => {
     try {
-      const { tenantId } = request.query;
+      const tenantId = getTenantId(request);
 
       // Generate state parameter to verify the callback
       const state = Buffer.from(
@@ -174,7 +175,8 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const { tenantId, channel } = request.body;
+        const tenantId = getTenantId(request);
+        const { channel } = request.body;
 
         // Test connection
         const result = await slackService.testConnection(tenantId, channel);
@@ -207,7 +209,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     };
   }>("/integrations/slack/status", async (request, reply) => {
     try {
-      const { tenantId } = request.query;
+      const tenantId = getTenantId(request);
 
       const installation = slackService.getInstallation(tenantId);
 
@@ -245,7 +247,7 @@ export default async function integrationRoutes(fastify: FastifyInstance) {
     };
   }>("/integrations/slack/uninstall", async (request, reply) => {
     try {
-      const { tenantId } = request.body;
+      const tenantId = getTenantId(request);
 
       await slackService.removeInstallation(tenantId);
 

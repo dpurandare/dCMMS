@@ -9,6 +9,7 @@ import { alerts } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { createAlertNotificationHandler } from "../services/alert-notification-handler.service";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
 
 // Validation schemas
 const acknowledgeAlertSchema = z.object({
@@ -66,7 +67,9 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
     try {
-      const { tenantId, siteId, assetId, severity, status } = request.query;
+      // Tenant comes from the token, never the query string (REV-020).
+      const tenantId = getTenantId(request);
+      const { siteId, assetId, severity, status } = request.query;
       const limit = parseInt(request.query.limit || "50");
       const offset = parseInt(request.query.offset || "0");
 

@@ -5,12 +5,11 @@ import { documentEmbeddings } from "../db/schema";
 import { GoogleGenerativeAI, TaskType } from "@google/generative-ai";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { optionalSecret } from "../config/env";
+import { redisConnectionOptions } from "../config/redis";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pdfParse = require("pdf-parse");
 
-const connection = {
-    url: process.env.REDIS_URL || "redis://localhost:6379",
-};
+const connection = redisConnectionOptions();
 
 export const ingestionQueue = new Queue("ingestion-queue", { connection });
 

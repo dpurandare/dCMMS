@@ -586,15 +586,101 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **`style-src` keeps `'unsafe-inline'`:** Next emits inline `<style>` that
     nonces do not reach. Materially weaker exposure than the `script-src` case.
   - **Status:** ✅ COMPLETE
-- [ ] **REV-020** - Tenant isolation audit 🟠 **P1**
-  - [ ] 16 route files and 28 service files contain no reference to `tenantId` at all
-  - [ ] For all 39 route files, confirm every query is scoped by `tenantId` taken **from the JWT**, never from the request body or params
-  - [ ] Fix `backend/src/routes/notifications.ts:513` — `tenantId: "default-tenant-id" // TODO: Get from auth context`
-  - [ ] Write a cross-tenant IDOR test per resource type (work orders, assets, sites, reports, notifications, crews, permits)
-  - [ ] Evaluate Postgres row-level security as a defence in depth
-  - **Priority:** 🟠 P1 — highest-consequence bug class available in a multi-tenant CMMS, currently untested
-  - **Estimated:** 3 days
+- [x] **REV-020** - Tenant isolation audit 🟠 **P1** ⚠️ **PARTIAL**
+  - [x] For all route files, confirm every query is scoped by `tenantId` taken **from the JWT**, never from the request body or params
+  - [x] Fix `backend/src/routes/notifications.ts:513` — `tenantId: "default-tenant-id" // TODO: Get from auth context`
+  - [x] Write a cross-tenant IDOR test per resource type
+  - [ ] Evaluate Postgres row-level security as defence in depth — assessed, not implemented (see below)
+  - **Priority:** 🟠 P1 — highest-consequence bug class available in a multi-tenant CMMS
+  - **Estimated:** 3 days · **Actual:** ~3 hours
   - **Verify:** the IDOR test suite passes: tenant A receives 403/404, never tenant B's rows.
+
+  ### A live cross-tenant data leak, exploited and fixed
+
+  `routes/alerts.ts:69` read the tenant from the query string and filtered on it:
+
+  ```ts
+  const { tenantId, siteId, assetId, severity, status } = request.query;
+  const conditions = [eq(alerts.tenantId, tenantId)];
+  ```
+
+  Exploited against the running stack, authenticated as the default tenant's
+  admin:
+
+  ```
+  $ curl "localhost:3001/api/v1/alerts?tenantId=4f8cabba-…" -H "Authorization: Bearer $TOKEN"
+  {"alerts":[{"tenantId":"4f8cabba-…","alertId":"VICTIM-SECRET-001",
+              "title":"CONFIDENTIAL: Victim Corp turbine failure", …}]}
+  ```
+
+  Any authenticated user of any tenant could read any other tenant's alerts by
+  changing one query parameter. This is the row the withdrawn audit marked
+  "Authorization Bypass ✅ PASS — Tenant isolation enforced" (REV-024).
+
+  After the fix, the same request returns only the caller's own tenant:
+
+  ```
+  alerts returned: 1 | titles: ['Our own alert']     # own tenant, no param
+  alerts returned: 1 | titles: ['Our own alert']     # with the spoofed param
+  victim-tenant rows leaked: 0
+  ```
+
+  - **Seven call sites fixed**, all now going through one helper,
+    `src/utils/tenant.ts` → `getTenantId(request)`, which reads the verified JWT
+    and throws if a route is missing authentication:
+    - `alerts.ts:69` — the exploitable one
+    - `integrations.ts:53, 177, 210, 248` — Slack install/test/status/uninstall,
+      all taking the tenant from query or body. `/uninstall` would have let any
+      authenticated user remove another tenant's Slack integration.
+    - `notifications.ts:356` — history listing
+    - `notifications.ts:513` — the hardcoded `"default-tenant-id"`
+  - **Scope correction:** the review said "16 route files and 28 service files
+    contain no reference to `tenantId`". Of those 16 route files, **13 are never
+    imported into `server.ts` at all** — they are dead code, not live holes. The
+    three registered ones are `health` and `csrf` (no tenant data) and
+    `analytics-admin`. The exact figures: **39 route files on disk, 23
+    registered, 16 never imported** (the review said 14).
+  - **`analytics-admin` needs its own look.** It is registered, has no tenant
+    scoping, and executes caller-supplied ClickHouse queries. Filed as REV-020a.
+  - **Test suite:** `backend/tests/security/tenant-isolation.spec.ts`, 8 tests
+    across alerts, work orders, assets, sites and notification history, covering
+    both the spoofed-parameter vector and plain listing leakage.
+
+    **The suite was verified by reintroducing the bug**, because a green test
+    that cannot fail is worth nothing:
+    ```
+    # with the vulnerability restored
+    ✕ does not widen GET /alerts to another tenant
+    Tests: 1 failed, 7 passed
+    # with the fix
+    Tests: 8 passed
+    ```
+  - **Row-level security — assessed, not adopted now.** RLS would make this class
+    of bug structurally impossible rather than a matter of remembering
+    `getTenantId`. It needs a per-request `SET LOCAL app.tenant_id`, which means
+    routing every query through a transaction-scoped connection; drizzle's pool
+    does not do that today. It is the right long-term answer and a poor thing to
+    bolt on mid-review. Filed as REV-020b.
+  - **Status:** ⚠️ PARTIAL — the leak is closed and covered by tests; RLS (REV-020b) and `analytics-admin` (REV-020a) remain
+
+- [ ] **REV-020a** - Tenant-scope or remove `analytics-admin` 🟠 **P1**
+  - [ ] `routes/analytics-admin.ts` is registered at `/api/v1`, has no `tenantId` reference anywhere, and passes a caller-supplied `query` string to a ClickHouse client
+  - [ ] Decide: scope it to the caller's tenant, restrict it to `super_admin`, or remove it
+  - [ ] If it stays, the query must not be free-form caller input
+  - **Priority:** 🟠 P1
+  - **Estimated:** 4 hours
+  - **Split from:** REV-020
+  - **Verify:** a tenant_admin cannot read another tenant's analytics rows through this route.
+  - **Status:** 🔴 Not Started
+
+- [ ] **REV-020b** - Row-level security as defence in depth 🟡 **P2**
+  - [ ] Enable RLS on every tenant-scoped table with a policy on `current_setting('app.tenant_id')`
+  - [ ] Set it per request from the JWT, which requires a transaction-scoped connection rather than a bare pool checkout
+  - [ ] Keep `getTenantId` as the application-level guard; RLS is the backstop for the next route that forgets it
+  - **Priority:** 🟡 P2
+  - **Estimated:** 3 days
+  - **Split from:** REV-020
+  - **Verify:** with the application guard deliberately removed from one route, the IDOR test still passes.
   - **Status:** 🔴 Not Started
 
 - [ ] **REV-021** - Unify the two backend RBAC vocabularies 🟠 **P1**
