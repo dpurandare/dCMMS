@@ -1,11 +1,11 @@
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci
 COPY backend/ .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:26-alpine
 # Install PostgreSQL client for pg_isready
 RUN apk add --no-cache postgresql-client
 
