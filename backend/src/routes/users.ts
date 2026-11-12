@@ -133,7 +133,8 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const user = await UserService.getUserProfile(id);
+      const { tenantId } = request.user as { tenantId: string };
+      const user = await UserService.getUserProfile(id, tenantId);
 
       if (!user) {
         return reply.status(404).send({
@@ -167,7 +168,11 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       const { id } = request.params as { id: string };
 
-      await UserService.delete(id);
+      const { tenantId } = request.user as { tenantId: string };
+      const deleted = await UserService.delete(id, tenantId);
+      if (!deleted) {
+        return reply.status(404).send({ statusCode: 404, error: "Not Found", message: "User not found" });
+      }
       return reply.code(204).send();
     },
   );
@@ -202,7 +207,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const user = request.user;
-      const profile = await UserService.getUserProfile(user.id);
+      const profile = await UserService.getUserProfile(user.id, user.tenantId);
 
       if (!profile) {
         return reply.status(404).send({
@@ -245,11 +250,16 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
+      const { tenantId } = request.user as { tenantId: string };
 
       const updatedUser = await UserService.updateProfile(
         id,
+        tenantId,
         request.body as any,
       );
+      if (!updatedUser) {
+        return reply.status(404).send({ statusCode: 404, error: "Not Found", message: "User not found" });
+      }
       return updatedUser;
     },
   );

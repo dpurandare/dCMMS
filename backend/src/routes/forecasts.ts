@@ -7,6 +7,8 @@ import {
 import { z } from "zod";
 import { forecastService } from "../services/forecast.service";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
+import { assertInTenant } from "../utils/ownership";
 
 const forecastRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
@@ -65,6 +67,8 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       const { siteId, assetId, forecastHorizonHours, modelType, energyType } =
         request.body as any;
+      await assertInTenant("site", siteId, getTenantId(request));
+      await assertInTenant("asset", assetId, getTenantId(request));
 
       const forecasts = await forecastService.generateForecast({
         siteId,
@@ -137,6 +141,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
     async (request, reply) => {
       const { siteId } = request.params as any;
       const { assetId, startDate, endDate, activeOnly } = request.query as any;
+      await assertInTenant("site", siteId, getTenantId(request));
 
       const forecasts = await forecastService.getForecasts(
         siteId,
@@ -238,6 +243,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
         periodEnd,
         forecastHorizonHours,
       } = request.body as any;
+      await assertInTenant("site", siteId, getTenantId(request));
 
       const metrics = await forecastService.calculateAccuracyMetrics(
         siteId,

@@ -6,7 +6,7 @@ import {
   assets,
   alerts,
 } from "../db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { ClickHouseClient } from "@clickhouse/client";
 import { createClickhouseClient } from "../config/clickhouse";
 
@@ -57,15 +57,20 @@ export class ComplianceTemplateService {
   /**
    * Get all templates (optionally filtered by type)
    */
-  async getTemplates(reportType?: string): Promise<ComplianceTemplate[]> {
+  async getTemplates(
+    reportType: string | undefined,
+    tenantId: string,
+  ): Promise<ComplianceTemplate[]> {
     try {
       const templates = await db.query.complianceReportTemplates.findMany({
-        where: reportType
-          ? and(
-              eq(complianceReportTemplates.reportType, reportType),
-              eq(complianceReportTemplates.isActive, true),
-            )
-          : eq(complianceReportTemplates.isActive, true),
+        // `tenant_id` is nullable: NULL is a system-wide template, visible to everyone; anything
+        // else is visible to its own tenant only. This used to take no tenant at all and listed
+        // every tenant's custom templates to every caller.
+        where: and(
+          eq(complianceReportTemplates.isActive, true),
+          reportType ? eq(complianceReportTemplates.reportType, reportType) : undefined,
+          this.visibleTo(tenantId),
+        ),
         orderBy: (complianceReportTemplates, { asc }) => [
           asc(complianceReportTemplates.name),
         ],
@@ -81,10 +86,24 @@ export class ComplianceTemplateService {
   /**
    * Get single template by ID
    */
-  async getTemplate(templateId: string): Promise<ComplianceTemplate | null> {
+  /** System templates (NULL tenant) plus the caller's own. */
+  private visibleTo(tenantId: string) {
+    return or(
+      isNull(complianceReportTemplates.tenantId),
+      eq(complianceReportTemplates.tenantId, tenantId),
+    );
+  }
+
+  async getTemplate(
+    templateId: string,
+    tenantId: string,
+  ): Promise<ComplianceTemplate | null> {
     try {
       const template = await db.query.complianceReportTemplates.findFirst({
-        where: eq(complianceReportTemplates.templateId, templateId),
+        where: and(
+          eq(complianceReportTemplates.templateId, templateId),
+          this.visibleTo(tenantId),
+        ),
       });
 
       if (!template) {
@@ -117,7 +136,7 @@ export class ComplianceTemplateService {
     );
 
     try {
-      const template = await this.getTemplate(templateId);
+      const template = await this.getTemplate(templateId, tenantId);
 
       if (!template) {
         throw new Error(`Template not found: ${templateId}`);

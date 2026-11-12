@@ -73,6 +73,7 @@ export class ComplianceReportGenerationService {
       // Get template
       const template = await this.templateService.getTemplate(
         request.templateId,
+        tenantId,
       );
 
       if (!template) {

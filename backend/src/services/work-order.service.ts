@@ -20,6 +20,7 @@ import {
   gt,
 } from "drizzle-orm";
 import { WorkOrderStateMachine, WorkOrderStatus } from "./work-order-state";
+import { assertInTenant } from "../utils/ownership";
 
 /**
  * A client-caused failure (rejected transition, missing record). Carrying `statusCode`
@@ -122,7 +123,20 @@ export class WorkOrderService {
     return `${prefix} -${randomSuffix} `;
   }
 
+  /** siteId / assetId / assignedTo / assignedCrewId must all be this tenant's own rows. */
+  private static async assertReferencesOwned(
+    tenantId: string,
+    data: { siteId?: string | null; assetId?: string | null; assignedTo?: string | null; assignedCrewId?: string | null },
+  ) {
+    await assertInTenant("site", data.siteId, tenantId);
+    await assertInTenant("asset", data.assetId, tenantId);
+    await assertInTenant("user", data.assignedTo, tenantId);
+    await assertInTenant("crew", data.assignedCrewId, tenantId);
+  }
+
   static async create(data: CreateWorkOrderData) {
+    // Every resource a work order points at must belong to the same tenant.
+    await this.assertReferencesOwned(data.tenantId, data as any);
     const workOrderId = await this.generateWorkOrderId(data.tenantId);
 
     const [newWorkOrder] = await db
@@ -264,6 +278,7 @@ export class WorkOrderService {
   static async update(id: string, tenantId: string, data: UpdateWorkOrderData) {
     // Check if exists
     const existing = await this.getById(id, tenantId);
+    await this.assertReferencesOwned(tenantId, data as any);
 
     // A status change must satisfy the same rules however it arrives (PATCH or
     // /transition): the state machine AND the safety gate. Previously only
@@ -464,6 +479,7 @@ export class WorkOrderService {
     data: { partId: string; quantity: number },
   ) {
     const wo = await this.getById(workOrderId, tenantId);
+    await assertInTenant("part", data.partId, tenantId);
 
     const [part] = await db
       .insert(workOrderParts)
@@ -504,6 +520,7 @@ export class WorkOrderService {
     data: { userId: string; hours: number; description?: string },
   ) {
     const wo = await this.getById(workOrderId, tenantId);
+    await assertInTenant("user", data.userId, tenantId);
 
     const [labor] = await db
       .insert(workOrderLabor)

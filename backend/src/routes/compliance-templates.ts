@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { createComplianceTemplateService } from "../services/compliance-template.service";
 import { authorize } from "../middleware/authorize";
+import { getTenantId } from "../utils/tenant";
 
 // Validation schemas
 const autoPopulateSchema = z.object({
@@ -58,7 +59,7 @@ export default async function complianceTemplateRoutes(
       try {
         const { reportType } = request.query;
 
-        const templates = await complianceService.getTemplates(reportType);
+        const templates = await complianceService.getTemplates(reportType, getTenantId(request));
 
         return reply.send({
           count: templates.length,
@@ -93,7 +94,7 @@ export default async function complianceTemplateRoutes(
       try {
         const { templateId } = request.params;
 
-        const template = await complianceService.getTemplate(templateId);
+        const template = await complianceService.getTemplate(templateId, getTenantId(request));
 
         if (!template) {
           return reply.status(404).send({
@@ -147,7 +148,7 @@ export default async function complianceTemplateRoutes(
         const { siteId, startDate, endDate } = request.body;
 
         // Verify template exists
-        const template = await complianceService.getTemplate(templateId);
+        const template = await complianceService.getTemplate(templateId, getTenantId(request));
 
         if (!template) {
           return reply.status(404).send({
@@ -214,7 +215,7 @@ export default async function complianceTemplateRoutes(
         const { reportData } = request.body;
 
         // Get template
-        const template = await complianceService.getTemplate(templateId);
+        const template = await complianceService.getTemplate(templateId, getTenantId(request));
 
         if (!template) {
           return reply.status(404).send({
@@ -289,7 +290,7 @@ export default async function complianceTemplateRoutes(
         const { siteId, startDate, endDate, manualData } = request.body;
 
         // Get template
-        const template = await complianceService.getTemplate(templateId);
+        const template = await complianceService.getTemplate(templateId, getTenantId(request));
 
         if (!template) {
           return reply.status(404).send({

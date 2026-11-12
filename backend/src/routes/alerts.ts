@@ -10,6 +10,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { createAlertNotificationHandler } from "../services/alert-notification-handler.service";
 import { authorize } from "../middleware/authorize";
 import { getTenantId } from "../utils/tenant";
+import { isInTenant } from "../utils/ownership";
 
 // Validation schemas
 const acknowledgeAlertSchema = z.object({
@@ -156,7 +157,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
       const { alertId } = request.params;
 
       const alert = await db.query.alerts.findFirst({
-        where: eq(alerts.id, alertId),
+        where: and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))),
         with: {
           site: true,
           asset: true,
@@ -209,8 +210,11 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       try {
+        // The tenant is the caller's, from the verified token. It used to be read from the
+        // request body, so any user could create alerts in (and fire notifications for)
+        // another tenant.
+        const tenantId = getTenantId(request);
         const {
-          tenantId,
           siteId,
           assetId,
           title,
@@ -219,6 +223,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
           ruleId,
           metadata,
         } = request.body;
+        if (
+          !(await isInTenant("site", siteId, tenantId)) ||
+          !(await isInTenant("asset", assetId, tenantId))
+        ) {
+          return reply.status(404).send({ error: "Site or asset not found" });
+        }
 
         // Generate alert ID
         const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -293,11 +303,15 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { alertId } = request.params;
-        const { userId, comment } = request.body;
+        // Who acted is the authenticated caller, never the body's `userId` (still accepted by the
+        // schema for existing clients, but ignored): it used to let any user record an
+        // acknowledgement / resolution / suppression as someone else.
+        const { comment } = request.body;
+        const userId = (request.user as { id: string }).id;
 
         // Get alert
         const alert = await db.query.alerts.findFirst({
-          where: eq(alerts.id, alertId),
+          where: and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))),
         });
 
         if (!alert) {
@@ -338,7 +352,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
             }),
             updatedAt: new Date(),
           })
-          .where(eq(alerts.id, alertId))
+          .where(and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))))
           .returning();
 
         fastify.log.info({ alertId, userId }, "Alert acknowledged");
@@ -392,11 +406,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { alertId } = request.params;
-        const { userId, comment, resolution } = request.body;
+        const { comment, resolution } = request.body;
+        const userId = (request.user as { id: string }).id;
 
         // Get alert
         const alert = await db.query.alerts.findFirst({
-          where: eq(alerts.id, alertId),
+          where: and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))),
         });
 
         if (!alert) {
@@ -426,7 +441,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
             }),
             updatedAt: new Date(),
           })
-          .where(eq(alerts.id, alertId))
+          .where(and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))))
           .returning();
 
         fastify.log.info({ alertId, userId }, "Alert resolved");
@@ -480,11 +495,12 @@ export default async function alertRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { alertId } = request.params;
-        const { userId, reason, durationMinutes = 60 } = request.body;
+        const { reason, durationMinutes = 60 } = request.body;
+        const userId = (request.user as { id: string }).id;
 
         // Get alert
         const alert = await db.query.alerts.findFirst({
-          where: eq(alerts.id, alertId),
+          where: and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))),
         });
 
         if (!alert) {
@@ -513,7 +529,7 @@ export default async function alertRoutes(fastify: FastifyInstance) {
             }),
             updatedAt: new Date(),
           })
-          .where(eq(alerts.id, alertId))
+          .where(and(eq(alerts.id, alertId), eq(alerts.tenantId, getTenantId(request))))
           .returning();
 
         fastify.log.info(

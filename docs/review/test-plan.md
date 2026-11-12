@@ -75,20 +75,38 @@ hierarchy-specific logic; full CRUD (update) isn't separately tested.
 
 ## 4. Tenant isolation on every resource
 
-**Status: ⚠️ partial, actively maintained — the best-covered of the six.**
-`backend/tests/security/tenant-isolation.spec.ts`, expanded three times this
-session as new cross-tenant bugs were found and fixed (alerts/notifications,
-`ml-features` asset ownership, `genai` job status ownership — 10 tests
-total). This is real, evidenced coverage, but "every resource" is not
-literal — it covers the resources where a bug was actually found. A
-systematic pass asserting every route's queries are tenant-scoped is
-REV-029's job (per-route review), which flagged its own remaining gaps
-(`routes/weather.ts`, inconsistent CSRF — unrelated to tenancy specifically)
-rather than this test file's.
+**Status: ✅ covered systematically (2026-11-12).** Two layers:
+
+- `backend/tests/security/tenant-sweep.spec.ts` (with `tests/helpers/tenant-world.ts`) —
+  seeds all 37 tables for two tenants, then has tenant B's admin attack tenant A's
+  real rows through **every one of the 149 routes** (7,042 requests): A's ids in
+  every path position, A's natural keys, query strings, and request bodies
+  generated from each route's own schema. Detects read leaks (response contains an
+  A id or canary) and write leaks (an A row modified/deleted, a new row pointing at
+  A, or one of B's rows re-pointed at A). Own throwaway database, ~25s; positive
+  control and a body-generator coverage check keep it from passing vacuously.
+- `tenant-isolation.spec.ts` — 19 targeted tests: the specific bugs found by
+  reading code earlier, plus 9 for the shapes the sweep cannot show (a delete that
+  foreign keys would otherwise mask; mass assignment that stays inside the
+  attacker's own tenant).
+
+It found **31 defects on the original code, 0 after the fixes** — an unscoped
+`PUT /users/:id` that also mass-assigned `role`/`tenantId`/`passwordHash`,
+`POST /alerts` taking the tenant from the request body, alerts-by-id with no tenant
+filter, forged acknowledging users, device-token hijack, and cross-tenant
+reference injection across crews, work orders, forecasts and weather. See REV-038
+in the tracker for the full list and the three times the probe itself had to be
+corrected.
+
+**Not covered** (→ REV-065): multipart uploads, Slack/auth routes, a `super_admin`
+attacker, more than one row per table, differently-named foreign-key body fields,
+non-HTTP ingestion — and intra-tenant privacy (colleague-to-colleague), which is a
+different question from tenant isolation.
 
 ```
-$ npx jest tests/security/tenant-isolation.spec.ts
-Tests: 10 passed, 10 total
+$ npx jest tests/security
+tenant-sweep: 5 passed   tenant-isolation: 19 passed
+(against the original source: sweep 31 findings; 9 of the 19 fail)
 ```
 
 ## 5. Permission enforcement per role, all 6 roles
@@ -140,17 +158,18 @@ Tests: 11 passed, 11 total
 | 1 | Login / refresh / logout | ✅ | 11 (new) |
 | 2 | Work order lifecycle + invalid-transition rejection | ✅ | 74 (new) + 4 (repaired) |
 | 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
-| 4 | Tenant isolation | ⚠️ | 10 (expanded 3× this session) |
+| 4 | Tenant isolation | ✅ | sweep (149 routes, 7,042 requests) + 19 targeted |
 | 5 | Permission enforcement, 6 roles | ✅ | 60 (new) |
 | 6 | Migration up | ✅ | 11 (new) |
 
-**Where this stands (2026-11-12):** four of six paths are covered (1, 2, 5, 6) and
-two are partial (3, 4). Writing the tests is what found the bugs, in each case
+**Where this stands (2026-11-12):** five of six paths are covered (1, 2, 4, 5, 6) and
+one is partial (3). Writing the tests is what found the bugs, in each case
 bugs that were live and that no earlier review had surfaced: logout never
 revoked a session (path 1); a safety-gate bypass and every invalid transition
 returning HTTP 500 (path 2); a read-only role able to delete work orders and
 assets (path 5). Path 6 found no drift, but a first version of it missed a
 deleted index, found only by deliberately breaking the migrations. What remains
-of REV-038: asset *update* behaviour (path 3) and a systematic every-route
-tenant sweep (path 4). The product decisions the RBAC work surfaced (REV-064)
+of REV-038: asset *update* behaviour (path 3). Path 4's sweep found the most
+serious defects of the whole review so far (cross-tenant account modification with
+mass assignment of `role`). The product decisions the RBAC work surfaced (REV-064)
 were made and implemented.

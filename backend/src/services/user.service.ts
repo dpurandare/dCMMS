@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { db } from "../db";
 import { users } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 const SALT_ROUNDS = 10;
 
@@ -9,7 +9,7 @@ export class UserService {
   /**
    * Get user profile by ID
    */
-  static async getUserProfile(userId: string) {
+  static async getUserProfile(userId: string, tenantId: string) {
     const [user] = await db
       .select({
         id: users.id,
@@ -24,7 +24,7 @@ export class UserService {
         createdAt: users.createdAt,
       })
       .from(users)
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
       .limit(1);
 
     return user || null;
@@ -35,6 +35,7 @@ export class UserService {
    */
   static async updateProfile(
     userId: string,
+    tenantId: string,
     data: {
       firstName?: string;
       lastName?: string;
@@ -43,13 +44,20 @@ export class UserService {
       phone?: string;
     },
   ) {
+    // Allow-list. This used to be `...data` over an unvalidated request body, so
+    // `{"role":"super_admin"}`, `{"tenantId":...}` or `{"passwordHash":...}` were
+    // written straight into the row.
+    const { firstName, lastName, email, username, phone } = data ?? {};
+    const profile = Object.fromEntries(
+      Object.entries({ firstName, lastName, email, username, phone }).filter(([, v]) => v !== undefined),
+    );
     const [updatedUser] = await db
       .update(users)
       .set({
-        ...data,
+        ...profile,
         updatedAt: new Date(),
       })
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
       .returning({
         id: users.id,
         tenantId: users.tenantId,
@@ -205,10 +213,10 @@ export class UserService {
   /**
    * Delete a user
    */
-  static async delete(userId: string) {
+  static async delete(userId: string, tenantId: string) {
     const [deletedUser] = await db
       .delete(users)
-      .where(eq(users.id, userId))
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
       .returning({ id: users.id });
 
     return deletedUser;

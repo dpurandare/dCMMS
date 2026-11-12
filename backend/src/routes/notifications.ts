@@ -9,6 +9,7 @@ import { notificationPreferences, notificationHistory } from "../db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { authorize } from "../middleware/authorize";
 import { getTenantId } from "../utils/tenant";
+import { isInTenant } from "../utils/ownership";
 
 // Validation schemas
 const notificationPreferenceSchema = z.object({
@@ -68,6 +69,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { userId } = request.params;
+        if (!(await isInTenant("user", userId, getTenantId(request)))) {
+          return reply.status(404).send({ error: "User not found" });
+        }
 
         // Get existing preferences
         const preferences = await db.query.notificationPreferences.findMany({
@@ -110,6 +114,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { userId } = request.params;
+        if (!(await isInTenant("user", userId, getTenantId(request)))) {
+          return reply.status(404).send({ error: "User not found" });
+        }
         const { preferences: newPreferences } = request.body;
 
         // Delete existing preferences
@@ -178,6 +185,9 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         const { userId } = request.params;
+        if (!(await isInTenant("user", userId, getTenantId(request)))) {
+          return reply.status(404).send({ error: "User not found" });
+        }
         const limit = parseInt(request.query.limit || "50");
         const offset = parseInt(request.query.offset || "0");
         const {
@@ -429,6 +439,11 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       try {
         const { userId, token, deviceType, deviceId, appVersion } =
           request.body;
+        // A push token belongs to the device owner. The body's userId used to be trusted, so any
+        // user could register their device against someone else and receive their notifications.
+        if (userId !== (request.user as { id: string }).id) {
+          return reply.status(403).send({ error: "Cannot register a device token for another user" });
+        }
 
         // Import push notification service
         const { createPushNotificationService } =

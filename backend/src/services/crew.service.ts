@@ -1,3 +1,4 @@
+import { assertInTenant } from "../utils/ownership";
 import { db } from "../db";
 import { crews, crewMembers } from "../db/schema";
 import { eq, and, desc, asc, like, sql } from "drizzle-orm";
@@ -28,6 +29,8 @@ export interface CrewPaginationParams {
 
 export class CrewService {
   static async create(data: CreateCrewData) {
+    // A crew may only point at a site of the creator's own tenant.
+    await assertInTenant("site", data.siteId, data.tenantId);
     const [crew] = await db
       .insert(crews)
       .values({
@@ -107,6 +110,7 @@ export class CrewService {
 
   static async update(id: string, tenantId: string, data: UpdateCrewData) {
     const existing = await this.getById(id, tenantId);
+    await assertInTenant("site", (data as any).siteId, tenantId);
 
     const updateData: any = { ...data, updatedAt: new Date() };
     if (data.metadata) {
@@ -138,6 +142,8 @@ export class CrewService {
 
   static async addMember(id: string, tenantId: string, userId: string, isLeader: boolean = false) {
     const crew = await this.getById(id, tenantId);
+    // The user being added must belong to this tenant too.
+    await assertInTenant("user", userId, tenantId);
 
     // Check if user is already a member
     const existingMember = await db.query.crewMembers.findFirst({

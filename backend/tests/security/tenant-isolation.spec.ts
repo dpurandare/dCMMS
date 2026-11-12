@@ -11,6 +11,7 @@
  */
 import { FastifyInstance } from "fastify";
 import bcrypt from "bcrypt";
+import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 
 import { buildServer } from "../../src/server";
@@ -50,7 +51,10 @@ describe("cross-tenant isolation", () => {
       })
       .returning();
 
-    const email = `admin@${slug}.test`;
+    // Unique per run: login is throttled per account in Redis (REV-022), and that state outlives the
+    // test run. With fixed emails, one earlier run that recorded failed logins locked this spec out
+    // of every later run with a 429 and no hint why.
+    const email = `admin-${randomUUID().slice(0, 8)}@${slug}.test`;
     const [user] = await db
       .insert(users)
       .values({
@@ -104,7 +108,8 @@ describe("cross-tenant isolation", () => {
       url: "/api/v1/auth/login",
       payload: { email, password: PASSWORD },
     });
-    expect(response.statusCode).toBe(200);
+    // Include the body: a bare "expected 200" hides whether this was a 401, a 429, or a wiped table.
+    expect({ status: response.statusCode, body: response.body.slice(0, 200) }).toMatchObject({ status: 200 });
     return response.json().accessToken;
   }
 
@@ -243,6 +248,139 @@ describe("cross-tenant isolation", () => {
       // lock, which makes remove() fail with "locked by another worker" —
       // that's a race in test cleanup, not a failure of the assertion above.
       await job.remove().catch(() => undefined);
+    });
+  });
+
+  /**
+   * Found by tests/security/tenant-sweep.spec.ts (REV-038). The sweep proves nothing leaks
+   * across tenants; these pin the specific shapes it cannot show: a delete that FK constraints
+   * would otherwise mask, and mass-assignment that stays inside the attacker's own tenant.
+   */
+  describe("user administration and alerts across tenants", () => {
+    async function mutatingHeaders(email: string) {
+      const res = await app.inject({ method: "POST", url: "/api/v1/auth/login", payload: { email, password: PASSWORD } });
+      expect(res.statusCode).toBe(200);
+      const { accessToken, csrfToken } = res.json();
+      return { authorization: `Bearer ${accessToken}`, "x-csrf-token": csrfToken };
+    }
+
+    async function freshUser(tenantId: string, tag: string) {
+      const [u] = await db.insert(users).values({
+        tenantId, email: `${tag}-${Date.now()}@victim.test`, username: `${tag}-${Date.now()}`,
+        firstName: "Victim", lastName: "User", role: "technician",
+        passwordHash: await bcrypt.hash(PASSWORD, 4),
+      }).returning();
+      return u;
+    }
+
+    it("does not let another tenant's admin read a user", async () => {
+      const res = await app.inject({
+        method: "GET", url: `/api/v1/users/${alice.userId}`,
+        headers: { authorization: `Bearer ${mallory.token}` },
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.body).not.toContain("alice-corp");
+    });
+
+    it("does not let another tenant's admin modify a user", async () => {
+      const headers = await mutatingHeaders(mallory.email);
+      const res = await app.inject({
+        method: "PUT", url: `/api/v1/users/${alice.userId}`, headers,
+        payload: { firstName: "HACKED" },
+      });
+      expect(res.statusCode).toBe(404);
+      const [row] = await db.select().from(users).where(eq(users.id, alice.userId));
+      expect(row.firstName).not.toBe("HACKED");
+    });
+
+    it("does not let another tenant's admin DELETE a user", async () => {
+      // A user nothing references, so a missing tenant check really deletes the row instead of
+      // failing on a foreign key (which is what hid this on the seeded users).
+      const victim = await freshUser(alice.id, "deletable");
+      const headers = await mutatingHeaders(mallory.email);
+      const res = await app.inject({ method: "DELETE", url: `/api/v1/users/${victim.id}`, headers });
+      expect(res.statusCode).toBe(404);
+      const rows = await db.select().from(users).where(eq(users.id, victim.id));
+      expect(rows).toHaveLength(1);
+      await db.delete(users).where(eq(users.id, victim.id));
+    });
+
+    it("ignores role / tenantId / passwordHash in a profile update (mass assignment)", async () => {
+      const headers = await mutatingHeaders(mallory.email);
+      const [before] = await db.select().from(users).where(eq(users.id, mallory.userId));
+      const res = await app.inject({
+        method: "PUT", url: `/api/v1/users/${mallory.userId}`, headers,
+        payload: { firstName: "Renamed", role: "super_admin", tenantId: alice.id, passwordHash: "x", isActive: false },
+      });
+      expect(res.statusCode).toBe(200);
+      const [after] = await db.select().from(users).where(eq(users.id, mallory.userId));
+      expect(after.firstName).toBe("Renamed");           // the allowed field applied
+      expect(after.role).toBe(before.role);               // none of these did
+      expect(after.tenantId).toBe(mallory.id);
+      expect(after.passwordHash).toBe(before.passwordHash);
+      expect(after.isActive).toBe(before.isActive);
+    });
+
+    it("does not let another tenant read or act on an alert by id", async () => {
+      const [aliceAlert] = await db.select().from(alerts).where(eq(alerts.alertId, "alice-corp-alert"));
+      const headers = await mutatingHeaders(mallory.email);
+
+      const read = await app.inject({ method: "GET", url: `/api/v1/alerts/${aliceAlert.id}`, headers });
+      expect(read.statusCode).toBe(404);
+      expect(read.body).not.toContain("confidential");
+
+      for (const action of ["acknowledge", "resolve", "suppress"]) {
+        const res = await app.inject({
+          method: "POST", url: `/api/v1/alerts/${aliceAlert.id}/${action}`, headers,
+          payload: { userId: mallory.userId, reason: "x" },
+        });
+        expect(res.statusCode).toBe(404);
+      }
+      const [after] = await db.select().from(alerts).where(eq(alerts.id, aliceAlert.id));
+      expect(after.status).toBe("active");
+    });
+
+    it("creates an alert in the CALLER's tenant even if the body names another", async () => {
+      const headers = await mutatingHeaders(mallory.email);
+      const res = await app.inject({
+        method: "POST", url: "/api/v1/alerts", headers,
+        payload: { tenantId: alice.id, siteId: mallory.siteId, title: "forged-into-alice", severity: "low" },
+      });
+      expect([200, 201]).toContain(res.statusCode);
+      const rows = await db.select().from(alerts).where(eq(alerts.title, "forged-into-alice"));
+      expect(rows).toHaveLength(1);
+      expect(rows[0].tenantId).toBe(mallory.id);
+      await db.delete(alerts).where(eq(alerts.title, "forged-into-alice"));
+    });
+
+    it("records an acknowledgement as the CALLER, not whoever the body names", async () => {
+      const [own] = await db.select().from(alerts).where(eq(alerts.alertId, "mallory-corp-alert"));
+      const headers = await mutatingHeaders(mallory.email);
+      const res = await app.inject({
+        method: "POST", url: `/api/v1/alerts/${own.id}/acknowledge`, headers,
+        payload: { userId: alice.userId },
+      });
+      expect(res.statusCode).toBe(200);
+      const [after] = await db.select().from(alerts).where(eq(alerts.id, own.id));
+      expect(after.acknowledgedBy).toBe(mallory.userId);
+    });
+
+    it("refuses to register a device token against another user", async () => {
+      const headers = await mutatingHeaders(mallory.email);
+      const res = await app.inject({
+        method: "POST", url: "/api/v1/users/device-token", headers,
+        payload: { userId: alice.userId, token: "x".repeat(20), deviceType: "ios" },
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("does not let another tenant attach its own rows to a foreign site / user", async () => {
+      const headers = await mutatingHeaders(mallory.email);
+      const crew = await app.inject({
+        method: "POST", url: "/api/v1/crews", headers,
+        payload: { name: "injected", siteId: alice.siteId },
+      });
+      expect(crew.statusCode).toBe(404);
     });
   });
 

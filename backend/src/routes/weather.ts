@@ -1,4 +1,6 @@
 import { FastifyPluginAsync } from "fastify";
+import { isInTenant } from "../utils/ownership";
+import { getTenantId } from "../utils/tenant";
 import { authorize } from "../middleware/authorize";
 import { weatherAPIService } from "../services/weather-api.service";
 
@@ -38,6 +40,9 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
+      if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+        return reply.status(404).send({ error: "Site not found" });
+      }
 
       // In production, fetch site lat/lon from database
       // For now, using placeholder coordinates
@@ -92,6 +97,9 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
+      if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+        return reply.status(404).send({ error: "Site not found" });
+      }
 
       // In production, fetch site lat/lon from database
       const siteLocation = {
@@ -159,6 +167,9 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
+      if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+        return reply.status(404).send({ error: "Site not found" });
+      }
       const { startDate, endDate, forecastType } = request.query as {
         startDate: string;
         endDate: string;
@@ -209,6 +220,9 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
+      if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+        return reply.status(404).send({ error: "Site not found" });
+      }
 
       const forecast = await weatherAPIService.getLatestWeatherForecast(siteId);
 
@@ -252,6 +266,9 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
+      if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+        return reply.status(404).send({ error: "Site not found" });
+      }
 
       // In production, fetch site lat/lon from database
       const siteLocation = {
