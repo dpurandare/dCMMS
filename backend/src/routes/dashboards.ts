@@ -79,6 +79,7 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           isDefault: z.boolean().optional(),
         }),
       },
+      preHandler: [authorize({ permissions: ["create:dashboards"] })],
     },
     async (request) => {
       const { tenantId, id: userId } = request.user as UserPayload;
@@ -105,6 +106,7 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           isDefault: z.boolean().optional(),
         }),
       },
+      preHandler: [authorize({ permissions: ["update:dashboards"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -130,6 +132,7 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
           id: z.string().uuid(),
         }),
       },
+      preHandler: [authorize({ permissions: ["delete:dashboards"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };

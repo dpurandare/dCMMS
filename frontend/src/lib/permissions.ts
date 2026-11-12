@@ -71,6 +71,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:ml-features",
     "use:genai",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
     "manage:webhooks",
   ],
 
@@ -132,6 +134,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:ml-features",
     "use:genai",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
     "manage:webhooks",
   ],
 
@@ -174,6 +178,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:ml-features",
     "use:genai",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
   ],
 
   technician: [

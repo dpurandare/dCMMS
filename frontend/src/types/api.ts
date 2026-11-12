@@ -551,7 +551,9 @@ export type Permission =
   | "read:forecasts"
   | "use:genai"
   | "read:telemetry"
-  | "manage:webhooks";
+  | "manage:webhooks"
+  | "generate:forecasts"
+  | "ingest:telemetry";
 
 export interface UserPermissions {
   role: UserRole;

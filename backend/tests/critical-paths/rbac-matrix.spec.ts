@@ -76,31 +76,26 @@ const READ_ONLY_POSTS: Key[] = [
 ];
 
 /**
- * Viewer can still write here. Each needs a product decision on WHICH
- * permission should guard it (the vocabulary has no obvious one) -- not a
- * mechanical fix. Tracked under REV-038 in TasksTracking/15_Review_Remediation.md.
+ * Routes where the viewer can still write, pending a decision (REV-064).
+ * EMPTY since the decisions were made on 2026-11-12; kept as a ratchet so a
+ * newly added unguarded route has to be listed here, visibly, with a reason --
+ * or, better, guarded. Entries are `'METHOD /route': 'why it is open'`.
  */
-const KNOWN_VIEWER_GAPS: Record<Key, string> = {
-    'POST /api/v1/dashboards': 'no authorize(); create:dashboards exists but may be meant to be per-user',
-    'PUT /api/v1/dashboards/:id': 'no authorize()',
-    'DELETE /api/v1/dashboards/:id': 'no authorize()',
-    'POST /api/v1/forecasts/generation/generate': 'guarded by read:forecasts; no write permission exists',
-    'PUT /api/v1/forecasts/generation/:forecastId/actual': 'guarded by read:forecasts; no write permission exists',
-    'POST /api/v1/forecasts/accuracy/calculate': 'guarded by read:forecasts; no write permission exists',
-    'POST /api/v1/telemetry': 'guarded by read:telemetry; ingestion may be machine-to-machine',
-    'POST /api/v1/weather/refresh/:siteId': 'no authorize(); triggers an external fetch',
-    'POST /api/v1/ml-inference/predictions/cache/clear': 'no authorize()',
-    'POST /api/v1/model-governance/register': 'no authorize(); no model-governance permissions exist',
-    'PUT /api/v1/model-governance/:modelId/stage': 'no authorize()',
-    'POST /api/v1/model-governance/:modelId/approval/request': 'no authorize()',
-    'POST /api/v1/model-governance/:modelId/approval/approve': 'no authorize() -- any user can approve a model',
-    'POST /api/v1/model-governance/:modelId/approval/reject': 'no authorize()',
-    'PUT /api/v1/model-governance/:modelId/checklist/:itemId': 'no authorize()',
-    'POST /api/v1/model-governance/:modelId/documentation': 'no authorize()',
-    'POST /api/v1/model-governance/:modelId/retire': 'no authorize()',
-    'POST /api/v1/model-governance/:modelId/incidents': 'no authorize()',
-    'PUT /api/v1/model-governance/incidents/:incidentId': 'no authorize()',
-};
+const KNOWN_VIEWER_GAPS: Record<Key, string> = {};
+
+/** Routes limited to super_admin and tenant_admin (authorize({ adminOnly: true })). */
+const ADMIN_ONLY: Key[] = [
+    'POST /api/v1/model-governance/register',
+    'PUT /api/v1/model-governance/:modelId/stage',
+    'POST /api/v1/model-governance/:modelId/approval/request',
+    'POST /api/v1/model-governance/:modelId/approval/approve',
+    'POST /api/v1/model-governance/:modelId/approval/reject',
+    'PUT /api/v1/model-governance/:modelId/checklist/:itemId',
+    'POST /api/v1/model-governance/:modelId/documentation',
+    'POST /api/v1/model-governance/:modelId/retire',
+    'POST /api/v1/model-governance/:modelId/incidents',
+    'PUT /api/v1/model-governance/incidents/:incidentId',
+];
 
 /** The permission(s) each core route must require. A list means ANY of them. */
 const INTENT: Record<Key, Permission[]> = {
@@ -137,6 +132,16 @@ const INTENT: Record<Key, Permission[]> = {
     'POST /api/v1/permits': ['create:permits'],
     'PATCH /api/v1/permits/:id': ['update:permits'],
     'DELETE /api/v1/permits/:id': ['delete:permits'],
+    // decided under REV-064 (2026-11-12)
+    'POST /api/v1/dashboards': ['create:dashboards'],
+    'PUT /api/v1/dashboards/:id': ['update:dashboards'],
+    'DELETE /api/v1/dashboards/:id': ['delete:dashboards'],
+    'POST /api/v1/forecasts/generation/generate': ['generate:forecasts'],
+    'PUT /api/v1/forecasts/generation/:forecastId/actual': ['generate:forecasts'],
+    'POST /api/v1/forecasts/accuracy/calculate': ['generate:forecasts'],
+    'POST /api/v1/telemetry': ['ingest:telemetry'],
+    'POST /api/v1/weather/refresh/:siteId': ['update:sites'],
+    'POST /api/v1/ml-inference/predictions/cache/clear': ['manage:system'],
     // reports and compliance: these were guarded only by the READ permission
     'POST /api/v1/reports': ['create:reports'],
     'PUT /api/v1/reports/:id': ['create:reports'],
@@ -212,6 +217,17 @@ describe('permission enforcement per role', () => {
             const need = INTENT[k];
             for (const role of ROLES) {
                 const shouldReach = hasAnyPermission(role, need);
+                expect({ route: k, role, reached: reached(k, role) })
+                    .toEqual({ route: k, role, reached: shouldReach });
+            }
+        });
+    });
+
+    describe('ADMIN_ONLY: reachable by super_admin and tenant_admin and nobody else', () => {
+        it.each(ADMIN_ONLY)('%s', (k) => {
+            expect(status.has(k)).toBe(true);
+            for (const role of ROLES) {
+                const shouldReach = role === 'super_admin' || role === 'tenant_admin';
                 expect({ route: k, role, reached: reached(k, role) })
                     .toEqual({ route: k, role, reached: shouldReach });
             }

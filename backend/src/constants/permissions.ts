@@ -97,7 +97,10 @@ export type Permission =
   // Telemetry
   | "read:telemetry"
   // Webhooks
-  | "manage:webhooks";
+  | "manage:webhooks"
+  // Write-side counterparts of read:forecasts / read:telemetry
+  | "generate:forecasts"
+  | "ingest:telemetry";
 
 /**
  * Role-based Permission Matrix
@@ -165,6 +168,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "update:permits",
     "delete:permits",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
     "manage:webhooks",
   ],
 
@@ -226,6 +231,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "update:permits",
     "delete:permits",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
     "manage:webhooks",
   ],
 
@@ -268,6 +275,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "update:alerts",
     "update:permits",
     "read:telemetry",
+    "generate:forecasts",
+    "ingest:telemetry",
   ],
 
   technician: [

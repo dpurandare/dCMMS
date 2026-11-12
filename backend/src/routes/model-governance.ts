@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import { authorize } from "../middleware/authorize";
 import {
   ModelGovernanceService,
   ModelDocumentation,
@@ -35,7 +36,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -99,7 +100,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -158,7 +159,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -216,7 +217,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -277,7 +278,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -335,7 +336,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -391,7 +392,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           type: "object",
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -482,7 +483,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -556,7 +557,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {
@@ -620,7 +621,7 @@ const modelGovernanceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {

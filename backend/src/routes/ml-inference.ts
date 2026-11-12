@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import { authorize } from "../middleware/authorize";
 import { MLInferenceService } from "../services/ml-inference.mock";
 
 const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
@@ -140,7 +141,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
         tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["manage:system"] })],
     },
     async (request, reply) => {
       try {

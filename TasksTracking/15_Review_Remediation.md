@@ -51,8 +51,8 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 19 | 16 | ⚠️ In Progress |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
-| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 0 | 🛑 BLOCKED on Deepak |
-| **TOTAL** | | **76** | **33** | **43%** |
+| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 1 | 🛑 3 BLOCKED on Deepak (REV-064 done) |
+| **TOTAL** | | **76** | **34** | **45%** |
 
 **By severity:** 🔴 P0: 6 · 🟠 P1: 33 · 🟡 P2: 21 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19; REV-025b and REV-027b split from REV-025/REV-027 on 2026-09-19; REV-061/062/063 added on 2026-09-19 as deferred product decisions, not remediation — see "DEFERRED — Real Feature Decisions" below Phase 4)_
 
@@ -1458,12 +1458,12 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     2. **Every rejected transition returned HTTP 500.** The service threw a bare `Error`, which the global handler maps to 500, so a caller's invalid request looked like a server fault (and would page anyone alerting on 5xx). 48 of the 64 matrix cells hit this. Now 409 for an invalid transition, 403 for a safety refusal, 404 for a missing work order / task / part (including another tenant's work order). `tests/e2e/permits.e2e.test.ts` had asserted `toBe(500)` for the safety refusal — i.e. the bug was recorded as expected behaviour; updated to 403.
     3. Test-infrastructure: the server's 100 req/min rate limit made any matrix-style spec fail with misleading errors past the 100th request; `tests/setup.ts` now raises it for tests only.
     Also worth knowing: `permits.valid_*` are `timestamp WITHOUT time zone`; drizzle reads/writes UTC wall-clock but a raw `Date` handed to `pg` is written as *local* wall-clock, so on a non-UTC machine test-inserted permits are skewed by the UTC offset. The spec writes UTC wall-clock explicitly.
-  - [x] **Path 5 (permission enforcement per role) now covered: `backend/tests/critical-paths/rbac-matrix.spec.ts`, 41 tests.** It probes every mutating route (83) as each of the 6 roles. Fastify validates the body *before* `preHandler`, so a probe sending `{}` can't tell "denied" from "bad body"; the spec therefore strips route schemas (file-scoped mock) so the status reflects authorization alone. **Found a pattern of broken authorization, not a one-off:**
+  - [x] **Path 5 (permission enforcement per role) now covered: `backend/tests/critical-paths/rbac-matrix.spec.ts` (41 tests when written; 60 after REV-064).** It probes every mutating route (83) as each of the 6 roles. Fastify validates the body *before* `preHandler`, so a probe sending `{}` can't tell "denied" from "bad body"; the spec therefore strips route schemas (file-scoped mock) so the status reflects authorization alone. **Found a pattern of broken authorization, not a one-off:**
     - **No `authorize()` at all (any authenticated user, incl. read-only `viewer`):** assets create/update/delete + tags (5); work-order delete and all sub-resources — tasks, parts, labor, attachments (10). A viewer could delete work orders and assets.
     - **A read permission guarding a write (privilege inversion):** reports create/update/delete and compliance report create/status-change were guarded only by `read:reports` / `read:compliance`, so `viewer` could write where `technician` (more privileged, lacking the read permission) could not.
     - **Fixed** for all of the above, using existing permissions (assets → `create/update/delete:assets`; work orders → `update/delete:work-orders`; reports → `create:reports`; compliance → `create:compliance` / `submit|approve:compliance`). 19 of the 41 tests fail against the original routes and pass after.
     - **Behaviour change to know about:** `site_manager` can no longer create or delete assets (the permission table gives them `update:assets` only), and `operator`/`viewer` can no longer create/edit/delete reports. This follows the permission table, which is the declared source of truth; the frontend was not checked for UI that assumed otherwise.
-    - **Not fixed — needs a decision → REV-064** (19 routes: model-governance, dashboards, forecasts, telemetry ingest, weather refresh, ml-inference cache clear). Ratcheted in the spec, not hidden.
+    - **Left for a decision at the time → REV-064, since resolved** (19 routes: model-governance, dashboards, forecasts, telemetry ingest, weather refresh, ml-inference cache clear) — see REV-064 for what was decided and done. The spec is now 60 tests.
     - Process note: my *first* probe was wrong. It called `/auth/logout` mid-loop; logout deletes the caller's CSRF token, so every later request 403'd for the wrong reason and the matrix looked plausible and was false. Caught by cross-checking two probes that disagreed. Recorded in the spec header so it isn't repeated.
   - [x] **Path 6 (migration up from nothing) now covered: `backend/tests/critical-paths/migrations.spec.ts`, 11 tests.** Builds a throwaway database, runs the real `./drizzle` migrations, and compares what Postgres contains against what `schema.ts` declares — tables, columns, nullability, enums (and their values), declared indexes — with no hard-coded table count to maintain. Also: every migration in the journal is recorded as applied; re-running is a no-op; a deliberately broken migration makes the migrator throw rather than report success (the original failure mode was silence); `refresh_tokens` exists. Does not touch the shared `dcmms_test` database. No drift found — the schema and migrations agree today; this makes sure they keep agreeing.
     - **A hole I found in my own first version, via mutation testing:** comparing to `schema.ts` could not see the hand-written indexes and triggers in `0002_indexes_and_triggers.sql` (not declared in `schema.ts`), so deleting a `CREATE INDEX` from the migration left the spec green. Fixed by pinning the measured counts (53 secondary indexes, 30 triggers) and checking every index named in the SQL exists. Update the pinned numbers in the same commit if a migration is changed on purpose.
@@ -1800,17 +1800,29 @@ code. Nothing here is scheduled into a phase until a decision lands.
   - **Depends on:** Deepak's call
   - **Status:** 🛑 BLOCKED — awaiting decision
 
-- [ ] **REV-064** - Decide the authorization policy for 19 routes a read-only `viewer` can still write to 🛑 **BLOCKED**
-  - [ ] Found by the REV-038 RBAC probe (`backend/tests/critical-paths/rbac-matrix.spec.ts`). Mechanical fixes (assets, work orders, reports, compliance) were applied in the same change; **these remain because the permission vocabulary has no obvious answer**, so each needs a decision on *which* permission should guard it, not a rote `authorize()` call:
-    - **model-governance (10 routes)** — no `authorize()` at all: any authenticated user, including `viewer`, can register, stage, **approve**, reject and retire a model. No `*:models` permissions exist. (Note REV-027a: this module is an honestly-labelled mock, which lowers urgency but not the shape of the gap.)
-    - **dashboards (3)** — create/update/delete unguarded. `create/update/delete:dashboards` exist, but if dashboards are personal (per-user) a viewer creating their own may be intended — then the missing check is *ownership*, not role.
-    - **forecasts (3)** — generate / record actuals / calculate accuracy are guarded by `read:forecasts`. No write permission exists.
-    - **telemetry ingest (1)** — guarded by `read:telemetry`. Ingestion may be machine-to-machine (API key / device token), in which case a *user* role check is the wrong control entirely.
-    - **weather refresh (1)** — unguarded, triggers an external fetch. **ml-inference cache clear (1)** — unguarded.
-  - [ ] Once decided: add the guard, then **delete the route's entry from `KNOWN_VIEWER_GAPS`** in the spec. The spec fails on a *new* gap and also on a fixed-but-still-listed one, so the list can only shrink.
-  - **Priority:** 🟠 P1 — until decided, a read-only account can approve a model and clear caches
-  - **Depends on:** Deepak's call (and REV-018a, if the answer involves CSRF on these routes)
-  - **Status:** 🛑 BLOCKED — awaiting decision
+- [x] **REV-064** - Decide the authorization policy for 19 routes a read-only `viewer` could still write to ✅ **COMPLETE** (decided and implemented 2026-11-12)
+  - [x] **Decisions (Deepak, 2026-11-12) and what was done:**
+    - **model-governance (10 routes) → admin-only for now** (`authorize({ adminOnly: true })`: super_admin, tenant_admin). It is a labelled mock; no new vocabulary. **Revisit with REV-056** when the real ML design exists — admin-only is an interim, not a design.
+    - **dashboards (3) → existing `create/update/delete:dashboards`**, matching what the frontend's own permission table already assumed (operator/technician/viewer read-only; site_manager+ create/edit; admins delete).
+    - **forecasts (3) + telemetry ingest (1) → two NEW permissions**, `generate:forecasts` and `ingest:telemetry`, granted to super_admin, tenant_admin, site_manager. Added to the backend table, the `Permission` types, and the frontend mirror (`frontend/src/lib/permissions.ts`, `types/api.ts`); the frontend's `permission-parity` test confirms the two sides agree.
+    - **weather refresh → `update:sites`; ML-inference cache clear → `manage:system`** (both existing).
+  - [ ] **Not done — optional follow-up the decision deliberately left out:** dashboards still have no *ownership* check. `createdBy` is recorded, but `update`/`delete` never compare it, so a site_manager can edit a colleague's dashboard. Role-gating (done) and ownership (not done) are different controls.
+  - [ ] **Not verified:** whether any frontend screen calls these endpoints as a role that no longer has access (e.g. an operator generating forecasts). The permission tables agree, but no UI walkthrough was done. Worth a look before a demo.
+  - **Behaviour changes:** `operator` can no longer generate forecasts or ingest telemetry over HTTP (it could when guarded by the read permission); `operator`/`technician`/`viewer` can no longer create/edit dashboards; non-admins can no longer touch model-governance writes.
+  - **Priority:** 🟠 P1
+  - **Evidence:**
+    ```
+    $ npx jest tests/critical-paths/rbac-matrix.spec.ts
+    Tests: 60 passed, 60 total
+    With the 19 route guards stashed (permissions kept): 20 failed, 40 passed —
+    the 19 routes + the viewer-is-read-only invariant. KNOWN_VIEWER_GAPS is now
+    empty; it stays as a ratchet so a new unguarded route must be listed with a
+    reason or, better, guarded.
+    Full backend suite: Tests: 2 failed, 217 passed, 219 total (same 4
+    pre-existing failing suites).
+    $ cd frontend && npx jest src/__tests__/rbac  ->  25 passed
+    ```
+  - **Status:** ✅ COMPLETE
 
 **Not carried here — no decision needed:** Slack notifications (a real, working,
 already-registered integration exists at `routes/integrations.ts` +

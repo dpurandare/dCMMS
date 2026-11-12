@@ -60,7 +60,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const { siteId, assetId, forecastHorizonHours, modelType, energyType } =
@@ -180,7 +180,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const { forecastId } = request.params as any;
@@ -227,7 +227,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const {

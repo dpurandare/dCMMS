@@ -115,7 +115,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["ingest:telemetry"] })],
     },
     async (request, reply) => {
       const events = request.body as any[];

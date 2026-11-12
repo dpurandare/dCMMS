@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import { authorize } from "../middleware/authorize";
 import { weatherAPIService } from "../services/weather-api.service";
 
 const weatherRoutes: FastifyPluginAsync = async (server) => {
@@ -247,7 +248,7 @@ const weatherRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [server.authenticate, authorize({ permissions: ["update:sites"] })],
     },
     async (request, reply) => {
       const { siteId } = request.params as { siteId: string };
