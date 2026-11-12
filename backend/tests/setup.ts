@@ -19,6 +19,10 @@ process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only-not-used-anywhere
 process.env.CLICKHOUSE_PASSWORD = 'clickhouse_password_dev';
 process.env.QUESTDB_PASSWORD = 'quest';
 process.env.LOG_LEVEL = 'error'; // Suppress logs during tests
+// The server rate-limits to 100 req/min by default (src/server.ts). Matrix-style
+// specs fire hundreds of in-process requests; past the 100th every call came back
+// 429 and surfaced as a misleading failure in unrelated setup code.
+process.env.RATE_LIMIT_MAX = process.env.RATE_LIMIT_MAX || '1000000';
 
 // Extend Jest matchers
 expect.extend({

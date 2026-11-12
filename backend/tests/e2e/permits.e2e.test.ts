@@ -138,7 +138,9 @@ describe('Permits & Safety Gates E2E', () => {
                 payload: { status: "in_progress" }
             });
 
-            expect(failRes.statusCode).toBe(500); // Should fail
+            // A safety-gate refusal is a client error (403), not a server fault. This used
+            // to assert 500, which simply recorded the bare-Error behaviour as correct.
+            expect(failRes.statusCode).toBe(403);
             expect(JSON.parse(failRes.body).message).toContain("Active Permit required");
         });
 

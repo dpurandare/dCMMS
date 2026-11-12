@@ -46,7 +46,10 @@ Tests: 11 passed, 11 total
 
 ## 2. Work order: create → assign → complete → close
 
-**Status: ⚠️ partial.** `backend/tests/e2e/work-orders.e2e.test.ts`
+**Status: ✅ covered (2026-11-12).** `backend/tests/critical-paths/work-order-lifecycle.spec.ts`
+(74 tests) covers the full lifecycle, the whole 8x8 transition matrix, the permit
+safety gate, and the tenant boundary — and found three defects, see REV-038 in
+the tracker. The older `backend/tests/e2e/work-orders.e2e.test.ts`
 covers create, one status transition, and task/part management (4 tests,
 **passing as of 2026-11-12** — they had been failing since before the review
 because the specs never sent the `x-csrf-token` header; see
@@ -118,7 +121,7 @@ test to write — just not written yet.
 | # | Path | Status | Tests |
 | - | ---- | :----: | ----- |
 | 1 | Login / refresh / logout | ✅ | 11 (new) |
-| 2 | Work order lifecycle + invalid-transition rejection | ⚠️ | 4 (repaired; rejection paths still untested) |
+| 2 | Work order lifecycle + invalid-transition rejection | ✅ | 74 (new) + 4 (repaired) |
 | 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
 | 4 | Tenant isolation | ⚠️ | 10 (expanded 3× this session) |
 | 5 | Permission enforcement, 6 roles | 🔴 | 0 |

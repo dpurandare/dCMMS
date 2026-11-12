@@ -21,6 +21,21 @@ import {
 } from "drizzle-orm";
 import { WorkOrderStateMachine, WorkOrderStatus } from "./work-order-state";
 
+/**
+ * A client-caused failure (rejected transition, missing record). Carrying `statusCode`
+ * makes the global error handler return it; a bare `Error` always became HTTP 500.
+ */
+export class WorkOrderError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "WorkOrderError";
+  }
+}
+
+
 export interface CreateWorkOrderData {
   tenantId: string;
   title: string;
@@ -240,7 +255,7 @@ export class WorkOrderService {
     });
 
     if (!workOrder) {
-      throw new Error("Work Order not found");
+      throw new WorkOrderError(404, "Work Order not found");
     }
 
     return workOrder;
@@ -250,17 +265,12 @@ export class WorkOrderService {
     // Check if exists
     const existing = await this.getById(id, tenantId);
 
-    // If status change requested, validate via State Machine
+    // A status change must satisfy the same rules however it arrives (PATCH or
+    // /transition): the state machine AND the safety gate. Previously only
+    // /transition enforced the permit gate, so PATCH {status:"in_progress"}
+    // started critical work with no permit.
     if (data.status && data.status !== existing.status) {
-      const canTransition = WorkOrderStateMachine.isValidTransition(
-        existing.status as WorkOrderStatus,
-        data.status,
-      );
-      if (!canTransition) {
-        throw new Error(
-          `Invalid status transition from ${existing.status} to ${data.status} `,
-        );
-      }
+      await this.assertTransitionAllowed(existing, data.status);
 
       // Add audit, hooks, etc here if needed
     }
@@ -313,40 +323,55 @@ export class WorkOrderService {
     return true;
   }
 
-  static async transitionStatus(id: string, tenantId: string, action: string) {
-    // Get current work order to check current status
-    const wo = await this.getById(id, tenantId);
+  /**
+   * Single gate for every status change. Throws a client error (4xx), never a
+   * bare Error -- a rejected transition is the caller's mistake, not a server
+   * fault, and a bare Error surfaces as HTTP 500.
+   */
+  private static async assertTransitionAllowed(
+    wo: { id: string; status: string; priority: string; type: string },
+    nextStatus: WorkOrderStatus,
+  ) {
+    const currentStatus = wo.status as WorkOrderStatus;
 
     // 🔒 CRITICAL: Enforce state machine validation
-    const currentStatus = wo.status as WorkOrderStatus;
-    const nextStatus = action as WorkOrderStatus;
-
     if (!WorkOrderStateMachine.isValidTransition(currentStatus, nextStatus)) {
-      const allowedTransitions = WorkOrderStateMachine.getAllowedTransitions(currentStatus);
-      throw new Error(
+      const allowedTransitions =
+        WorkOrderStateMachine.getAllowedTransitions(currentStatus);
+      throw new WorkOrderError(
+        409,
         `Invalid state transition: Cannot transition from '${currentStatus}' to '${nextStatus}'. ` +
-        `Allowed transitions: ${allowedTransitions.join(", ")}`
+          `Allowed transitions: ${allowedTransitions.join(", ") || "none"}`,
       );
     }
 
     // Safety Gate: Critical or Emergency WOs require an Active Permit when starting work
-    if (action === "in_progress") {
+    if (nextStatus === "in_progress") {
       if (wo.priority === "critical" || wo.type === "emergency") {
         const activePermit = await db.query.permits.findFirst({
           where: and(
-            eq(permits.workOrderId, id),
+            eq(permits.workOrderId, wo.id),
             eq(permits.status, "active"),
             gt(permits.validUntil, new Date()),
           ),
         });
 
         if (!activePermit) {
-          throw new Error(
+          throw new WorkOrderError(
+            403,
             "Safety Violation: Active Permit required for Critical/Emergency work.",
           );
         }
       }
     }
+  }
+
+  static async transitionStatus(id: string, tenantId: string, action: string) {
+    // Get current work order to check current status
+    const wo = await this.getById(id, tenantId);
+
+    const nextStatus = action as WorkOrderStatus;
+    await this.assertTransitionAllowed(wo, nextStatus);
 
     return this.update(id, tenantId, { status: nextStatus });
   }
@@ -392,7 +417,7 @@ export class WorkOrderService {
     });
 
     if (!task || task.workOrder.tenantId !== tenantId) {
-      throw new Error("Task not found");
+      throw new WorkOrderError(404, "Task not found");
     }
 
     const updateData: any = { ...data, updatedAt: new Date() };
@@ -422,7 +447,7 @@ export class WorkOrderService {
     });
 
     if (!task || task.workOrder.tenantId !== tenantId) {
-      throw new Error("Task not found");
+      throw new WorkOrderError(404, "Task not found");
     }
 
     await db.delete(workOrderTasks).where(eq(workOrderTasks.id, taskId));
@@ -460,7 +485,7 @@ export class WorkOrderService {
     });
 
     if (!wp || wp.workOrder.tenantId !== tenantId) {
-      throw new Error("Work order part not found");
+      throw new WorkOrderError(404, "Work order part not found");
     }
 
     await db
