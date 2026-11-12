@@ -1,11 +1,12 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 import { permits } from '../../src/db/schema';
 
 describe('Permits & Safety Gates E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
     let siteId: string;
     let assetId: string;
@@ -36,18 +37,13 @@ describe('Permits & Safety Gates E2E', () => {
         userId = user.id;
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: { email: 'admin@dcmms.local', password: 'password123' }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: { name: 'Permit Site', siteId: 'PER-SITE' }
         });
         siteId = JSON.parse(siteRes.body).id;
@@ -56,7 +52,7 @@ describe('Permits & Safety Gates E2E', () => {
         const assetRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: { siteId, name: 'Permit Asset', type: 'inverter', status: 'operational' }
         });
         assetId = JSON.parse(assetRes.body).id;
@@ -68,7 +64,7 @@ describe('Permits & Safety Gates E2E', () => {
             const woRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     title: "Dangerous Work",
                     type: "corrective",
@@ -82,7 +78,7 @@ describe('Permits & Safety Gates E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/permits',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     workOrderId: woId,
                     type: "hot_work",
@@ -101,7 +97,7 @@ describe('Permits & Safety Gates E2E', () => {
             const listRes = await server.inject({
                 method: 'GET',
                 url: '/api/v1/permits',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(listRes.statusCode).toBe(200);
             expect(JSON.parse(listRes.body).data).toHaveLength(1);
@@ -114,7 +110,7 @@ describe('Permits & Safety Gates E2E', () => {
             const woRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     title: "Critical Job",
                     type: "preventive",
@@ -130,7 +126,7 @@ describe('Permits & Safety Gates E2E', () => {
             await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/transition`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "open" }
             });
 
@@ -138,7 +134,7 @@ describe('Permits & Safety Gates E2E', () => {
             const failRes = await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/transition`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "in_progress" }
             });
 
@@ -151,7 +147,7 @@ describe('Permits & Safety Gates E2E', () => {
             const woRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     title: "Emergency Fix",
                     type: "emergency", // EMERGENCY!
@@ -165,7 +161,7 @@ describe('Permits & Safety Gates E2E', () => {
             await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/transition`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "open" }
             });
 
@@ -173,7 +169,7 @@ describe('Permits & Safety Gates E2E', () => {
             const permitRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/permits',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     workOrderId: woId,
                     type: "electrical",
@@ -187,7 +183,7 @@ describe('Permits & Safety Gates E2E', () => {
             await server.inject({
                 method: 'PATCH',
                 url: `/api/v1/permits/${permitId}`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "active" }
             });
 
@@ -195,7 +191,7 @@ describe('Permits & Safety Gates E2E', () => {
             const successRes = await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/transition`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "in_progress" }
             });
 

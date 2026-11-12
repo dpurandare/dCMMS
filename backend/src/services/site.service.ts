@@ -84,7 +84,8 @@ export class SiteService {
     const offset = (page - 1) * limit;
 
     // Build where conditions
-    const conditions = [eq(sites.tenantId, tenantId)];
+    // Soft-deleted sites (is_active = false) must not appear in listings.
+    const conditions = [eq(sites.tenantId, tenantId), eq(sites.isActive, true)];
 
     if (filters.search) {
       conditions.push(
@@ -137,7 +138,14 @@ export class SiteService {
     const [site] = await db
       .select()
       .from(sites)
-      .where(and(eq(sites.id, id), eq(sites.tenantId, tenantId)))
+      .where(
+        and(
+          eq(sites.id, id),
+          eq(sites.tenantId, tenantId),
+          // Soft-deleted sites are treated as not found.
+          eq(sites.isActive, true),
+        ),
+      )
       .limit(1);
 
     if (!site) {
@@ -211,7 +219,7 @@ export class SiteService {
   }
 
   /**
-   * Delete site (hard delete)
+   * Delete site (soft delete: sets is_active = false; reads exclude inactive sites)
    */
   static async delete(id: string, tenantId: string) {
     // Check if site has assets

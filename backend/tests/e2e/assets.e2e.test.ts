@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Assets API E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
     let siteId: string;
 
@@ -34,21 +35,13 @@ describe('Assets API E2E', () => {
         await db.insert('users', user);
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create a Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 name: 'Asset Test Site',
                 siteId: 'SITE-TEST'
@@ -62,7 +55,7 @@ describe('Assets API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     siteId,
                     name: 'Inverter 1',
@@ -93,13 +86,13 @@ describe('Assets API E2E', () => {
             await server.inject({
                 method: 'POST',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { siteId, name: 'Asset A', type: 'panel' }
             });
             await server.inject({
                 method: 'POST',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { siteId, name: 'Asset B', type: 'inverter' }
             });
         });
@@ -108,7 +101,7 @@ describe('Assets API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -127,7 +120,7 @@ describe('Assets API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(res.statusCode).toBe(200);
         });
@@ -140,7 +133,7 @@ describe('Assets API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { siteId, name: 'To Be Retired', type: 'sensor' }
             });
             assetId = JSON.parse(res.body).id;
@@ -150,7 +143,7 @@ describe('Assets API E2E', () => {
             const res = await server.inject({
                 method: 'DELETE',
                 url: `/api/v1/assets/${assetId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -159,7 +152,7 @@ describe('Assets API E2E', () => {
             const getRes = await server.inject({
                 method: 'GET',
                 url: `/api/v1/assets/${assetId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(getRes.statusCode).toBe(200);
             const body = JSON.parse(getRes.body);

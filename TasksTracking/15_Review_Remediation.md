@@ -1452,6 +1452,8 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     1. `POST /auth/logout`'s schema required a body object even with no required fields; a request with *no body at all* (what the real frontend actually sends) failed validation before auth even ran. **Logout was broken for every real user.** Fixed with `nullable: true`.
     2. **`RefreshTokenService.revokeAllUserTokens()` — called by logout and by token-theft detection — had `eq(refreshTokens.revokedAt, null as any)` in its WHERE clause.** In SQL, `column = NULL` never matches any row; the correct form is `IS NULL`. The `UPDATE` always affected zero rows. **Every logout, ever, has left all of that user's refresh tokens fully valid until natural 7-day expiry** — logout has never actually revoked a session. Same bug found and fixed in the unused `getUserActiveTokens()`. Fixed with `isNull()`. This is a genuine security finding, not a test-writing footnote — flagging it as the most consequential single thing found in this entire Phase 2 pass alongside the SSRF (REV-029) and the three cross-tenant IDORs.
   - [ ] Work order lifecycle, asset hierarchy, permission-per-role, migration-up — status documented honestly in `test-plan.md`; not brought to completion this session (permission-per-role and migration-up have zero coverage and are realistically 2-3 more days, matching most of this task's original 1-week estimate).
+  - [x] **Backend e2e specs repaired (2026-11-12).** The "403 where 201 expected" failures noted under REV-037 were a test-side bug, not a product one: login returns a `csrfToken` that the frontend sends back as `x-csrf-token`, and `csrfProtection` (applied in 16 route files) 403s any POST/PUT/PATCH/DELETE without it. None of the 7 e2e specs sent it, so each spec's own setup (`POST /sites`) 403'd, `siteId` was undefined, and the failure surfaced as a misleading `400 siteId Required` further down. Added `backend/tests/helpers/auth.ts` (`loginHeaders()`) and applied it to all 7 specs. Also fixed spec drift in `work-orders.e2e.test.ts` (`parts` insert used non-existent `quantity`/`unitCost` columns; parts API takes `quantity`, not `quantityRequired`). **Real product bug found by the repaired suite:** `DELETE /sites/:id` soft-deletes (`is_active = false`) but neither `SiteService.getById` nor `SiteService.list` ever filtered on `is_active`, so a "deleted" site stayed readable and listed. Fixed in `site.service.ts`; test extended to assert absence from the listing too.
+  - [ ] **Still not done for path 2:** the work-order *state machine's rejection paths* (e.g. `draft → closed`) and the full lifecycle through `close` — the existing 4 tests only cover create, one transition, tasks, parts.
   - [ ] Run against a real Postgres in CI — **the "in CI" half is out of scope by standing decision** (no CI gate right now). Everything above runs against a real Postgres locally (`tests/global-setup.ts` migrates `dcmms_test`), which is this project's substitute per that decision.
   - **Priority:** 🟠 P1
   - **Estimated:** 1 week · **Actual:** ~1.5 hours for what's done here
@@ -1460,6 +1462,16 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Verify:** all six suites pass in CI on a PR. — **not met**: no CI gate exists (standing decision), and only 1 of 6 paths is fully covered. The one path that is covered passes locally, evidenced below.
   - **Evidence:**
     ```
+    2026-11-12, e2e repair:
+    before: $ npx jest tests/e2e  ->  Tests: 23 failed, 7 passed, 30 total
+    after:  $ npx jest tests/e2e  ->  Tests: 30 passed, 30 total (7 suites)
+    full backend suite: Tests: 2 failed, 72 passed, 74 total (was 45 passing).
+    Remaining 4 failing suites are pre-existing, confirmed identical with
+    changes stashed: analytics-trends (2 tests, 500), unit/example.spec
+    (missing custom matchers), and src/__tests__/csrf.test.ts +
+    csrf-integration.test.ts, which fail to COMPILE (import a path/helper
+    that does not exist) -- i.e. the CSRF subsystem's own tests have never run.
+
     $ npx jest tests/critical-paths/auth-flow.spec.ts
     Tests: 11 passed, 11 total
 

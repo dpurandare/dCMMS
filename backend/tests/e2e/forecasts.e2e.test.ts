@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Forecast API E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let siteId: string;
     let assetId: string;
     let defaultTenant: any;
@@ -35,21 +36,13 @@ describe('Forecast API E2E', () => {
         await db.insert('users', user);
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 name: 'Test Solar Farm',
                 location: 'Nevada, USA',
@@ -66,7 +59,7 @@ describe('Forecast API E2E', () => {
         const assetRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 tenantId: defaultTenant.id,
                 siteId: siteId,
@@ -84,7 +77,7 @@ describe('Forecast API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/forecasts/generation/generate',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     siteId,
                     assetId,
@@ -105,7 +98,7 @@ describe('Forecast API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/forecasts/generation/generate',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     siteId: 'invalid-uuid',
                     forecastHorizonHours: 24
@@ -121,7 +114,7 @@ describe('Forecast API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: `/api/v1/forecasts/generation/${siteId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -136,7 +129,7 @@ describe('Forecast API E2E', () => {
             const genRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/forecasts/generation/generate',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     siteId,
                     assetId,
@@ -152,7 +145,7 @@ describe('Forecast API E2E', () => {
             await server.inject({
                 method: 'PUT',
                 url: `/api/v1/forecasts/generation/${forecastId}/actual`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     actualGenerationMw: 50
                 }
@@ -162,7 +155,7 @@ describe('Forecast API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/forecasts/accuracy/calculate',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     siteId,
                     modelName: 'sarima', // Match the model used in generate

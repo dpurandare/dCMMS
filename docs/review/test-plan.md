@@ -46,8 +46,11 @@ Tests: 11 passed, 11 total
 
 ## 2. Work order: create → assign → complete → close
 
-**Status: ⚠️ partial, pre-existing.** `backend/tests/e2e/work-orders.e2e.test.ts`
-covers create, one status transition, and task/part management (4 tests).
+**Status: ⚠️ partial.** `backend/tests/e2e/work-orders.e2e.test.ts`
+covers create, one status transition, and task/part management (4 tests,
+**passing as of 2026-11-12** — they had been failing since before the review
+because the specs never sent the `x-csrf-token` header; see
+`backend/tests/helpers/auth.ts`).
 **Not covered:** the full lifecycle through `close`, and — the more
 important gap — **state-machine rejection of invalid transitions** (e.g.
 `draft → closed` directly, skipping `in_progress`/`completed`) is named
@@ -56,9 +59,7 @@ implements the state machine; nothing exercises its rejection paths.
 
 ```
 $ npx jest tests/e2e/work-orders.e2e.test.ts
-(pre-existing failures unrelated to this review — see REV-037's evidence:
- these e2e specs return 403 where 201 is expected, a test-environment/seed
- issue, not something this session traced to a root cause)
+Tests: 4 passed, 4 total
 ```
 
 ## 3. Asset CRUD with hierarchy
@@ -117,8 +118,8 @@ test to write — just not written yet.
 | # | Path | Status | Tests |
 | - | ---- | :----: | ----- |
 | 1 | Login / refresh / logout | ✅ | 11 (new) |
-| 2 | Work order lifecycle + invalid-transition rejection | ⚠️ | 4 (pre-existing, partial) |
-| 3 | Asset CRUD + hierarchy | ⚠️ | 6 (pre-existing, partial) |
+| 2 | Work order lifecycle + invalid-transition rejection | ⚠️ | 4 (repaired; rejection paths still untested) |
+| 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
 | 4 | Tenant isolation | ⚠️ | 10 (expanded 3× this session) |
 | 5 | Permission enforcement, 6 roles | 🔴 | 0 |
 | 6 | Migration up | 🔴 | 0 (CI job exists, doesn't run) |

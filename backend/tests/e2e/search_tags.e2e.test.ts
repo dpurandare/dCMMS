@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Asset Search & Tags E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
     let siteId: string;
     let assetId: string;
@@ -35,21 +36,13 @@ describe('Asset Search & Tags E2E', () => {
         await db.insert('users', user);
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: { name: 'Search Site', siteId: 'SRCH-01' }
         });
         siteId = JSON.parse(siteRes.body).id;
@@ -58,7 +51,7 @@ describe('Asset Search & Tags E2E', () => {
         const assetRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 siteId,
                 name: 'Solar Panel Array X',
@@ -74,7 +67,7 @@ describe('Asset Search & Tags E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: `/api/v1/assets/${assetId}/tags`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { tag: 'maintenance-due' }
             });
 
@@ -88,7 +81,7 @@ describe('Asset Search & Tags E2E', () => {
             const res = await server.inject({
                 method: 'DELETE',
                 url: `/api/v1/assets/${assetId}/tags/critical`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -104,7 +97,7 @@ describe('Asset Search & Tags E2E', () => {
             await server.inject({
                 method: 'POST',
                 url: '/api/v1/assets',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { siteId, name: 'Wind Turbine Y', type: 'turbine', tags: ['wind', 'north'] }
             });
         });
@@ -113,7 +106,7 @@ describe('Asset Search & Tags E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/assets?search=Solar',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -126,7 +119,7 @@ describe('Asset Search & Tags E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/assets?search=critical', // Searches tags too
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);

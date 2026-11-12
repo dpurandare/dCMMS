@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Asset Hierarchy E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
     let siteId: string;
     let parentId: string;
@@ -36,21 +37,13 @@ describe('Asset Hierarchy E2E', () => {
         await db.insert('users', user);
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: { name: 'Hierarchy Site', siteId: 'HIER-01' }
         });
         siteId = JSON.parse(siteRes.body).id;
@@ -59,7 +52,7 @@ describe('Asset Hierarchy E2E', () => {
         const parentRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: { siteId, name: 'Parent Asset', type: 'inverter' } // Changed type to inverter to match enum
         });
         parentId = JSON.parse(parentRes.body).id;
@@ -69,7 +62,7 @@ describe('Asset Hierarchy E2E', () => {
         const childRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 siteId,
                 name: 'Child Asset',
@@ -85,7 +78,7 @@ describe('Asset Hierarchy E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: `/api/v1/assets/${parentId}/hierarchy`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             if (res.statusCode !== 200) console.log('GET Hierarchy Error:', res.body);
@@ -103,7 +96,7 @@ describe('Asset Hierarchy E2E', () => {
             const res = await server.inject({
                 method: 'PATCH',
                 url: `/api/v1/assets/${parentId}`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { parentAssetId: parentId }
             });
 
@@ -119,7 +112,7 @@ describe('Asset Hierarchy E2E', () => {
             const res = await server.inject({
                 method: 'PATCH',
                 url: `/api/v1/assets/${parentId}`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { parentAssetId: childId }
             });
 

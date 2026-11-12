@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Work Orders API E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
     let siteId: string;
     let assetId: string;
@@ -37,22 +38,14 @@ describe('Work Orders API E2E', () => {
         await db.insert('users', user);
         userId = user.id;
 
-        // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        // Login (returns Authorization + x-csrf-token, as the real frontend sends)
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site
         const siteRes = await server.inject({
             method: 'POST',
             url: '/api/v1/sites',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 name: 'WO Test Site',
                 siteId: 'WO-SITE'
@@ -64,7 +57,7 @@ describe('Work Orders API E2E', () => {
         const assetRes = await server.inject({
             method: 'POST',
             url: '/api/v1/assets',
-            headers: { Authorization: `Bearer ${token}` },
+            headers: authHeaders,
             payload: {
                 siteId,
                 name: 'WO Test Asset',
@@ -80,7 +73,7 @@ describe('Work Orders API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     title: "Test WO",
                     type: "preventive",
@@ -103,7 +96,7 @@ describe('Work Orders API E2E', () => {
             const createRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     title: "Transition WO",
                     type: "corrective",
@@ -117,7 +110,7 @@ describe('Work Orders API E2E', () => {
             const transRes = await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/transition`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { status: "open" }
             });
 
@@ -130,7 +123,7 @@ describe('Work Orders API E2E', () => {
             const createRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { title: "Task WO", type: "inspection", priority: "low", siteId }
             });
             const woId = JSON.parse(createRes.body).id;
@@ -139,7 +132,7 @@ describe('Work Orders API E2E', () => {
             const taskRes = await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/tasks`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { title: "Check voltage", taskOrder: 1 }
             });
 
@@ -150,7 +143,7 @@ describe('Work Orders API E2E', () => {
             const updateRes = await server.inject({
                 method: 'PATCH',
                 url: `/api/v1/work-orders/${woId}/tasks/${taskId}`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { isCompleted: true, notes: "Voltage OK" }
             });
             expect(updateRes.statusCode).toBe(200);
@@ -160,7 +153,7 @@ describe('Work Orders API E2E', () => {
             const delRes = await server.inject({
                 method: 'DELETE',
                 url: `/api/v1/work-orders/${woId}/tasks/${taskId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(delRes.statusCode).toBe(200);
         });
@@ -171,8 +164,7 @@ describe('Work Orders API E2E', () => {
                 tenantId: defaultTenant.id,
                 partNumber: "P-100",
                 name: "Fuse",
-                quantity: 50,
-                unitCost: "10.00"
+                unitPrice: "10.00"
             };
             const savedPart = await db.insert('parts', part);
 
@@ -180,7 +172,7 @@ describe('Work Orders API E2E', () => {
             const createRes = await server.inject({
                 method: 'POST',
                 url: '/api/v1/work-orders',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { title: "Part WO", type: "corrective", priority: "high", siteId }
             });
             const woId = JSON.parse(createRes.body).id;
@@ -189,8 +181,8 @@ describe('Work Orders API E2E', () => {
             const partRes = await server.inject({
                 method: 'POST',
                 url: `/api/v1/work-orders/${woId}/parts`,
-                headers: { Authorization: `Bearer ${token}` },
-                payload: { partId: savedPart.id, quantityRequired: 2 }
+                headers: authHeaders,
+                payload: { partId: savedPart.id, quantity: 2 }
             });
             expect(partRes.statusCode).toBe(200);
             const partUsageId = JSON.parse(partRes.body).id;
@@ -199,7 +191,7 @@ describe('Work Orders API E2E', () => {
             const delRes = await server.inject({
                 method: 'DELETE',
                 url: `/api/v1/work-orders/${woId}/parts/${partUsageId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(delRes.statusCode).toBe(200);
         });

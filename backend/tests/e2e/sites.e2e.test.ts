@@ -1,10 +1,11 @@
 import { TestServer } from '../../tests/helpers/test-server';
 import { db } from '../../tests/helpers/database';
 import { UserFactory } from '../../tests/factories/user.factory';
+import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Sites API E2E', () => {
     let server: TestServer;
-    let token: string;
+    let authHeaders: { Authorization: string; 'x-csrf-token': string };
     let defaultTenant: any;
 
     beforeAll(async () => {
@@ -33,15 +34,7 @@ describe('Sites API E2E', () => {
         await db.insert('users', user);
 
         // Login
-        const loginRes = await server.inject({
-            method: 'POST',
-            url: '/api/v1/auth/login',
-            payload: {
-                email: 'admin@dcmms.local',
-                password: 'password123'
-            }
-        });
-        token = JSON.parse(loginRes.body).accessToken;
+        authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
     });
 
     describe('POST /api/v1/sites', () => {
@@ -49,7 +42,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     name: 'Test Setup Solar Farm',
                     siteId: 'TEST-SOL-01',
@@ -72,7 +65,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     name: 'Auto Gen Site'
                 }
@@ -90,13 +83,13 @@ describe('Sites API E2E', () => {
             await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { name: 'Site A', siteId: 'SITE-A' }
             });
             await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { name: 'Site B', siteId: 'SITE-B' }
             });
         });
@@ -105,7 +98,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -118,7 +111,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: '/api/v1/sites?search=Site A',
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -135,7 +128,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { name: 'Target Site' }
             });
             siteId = JSON.parse(res.body).id;
@@ -145,7 +138,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: `/api/v1/sites/${siteId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -159,7 +152,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'GET',
                 url: `/api/v1/sites/${randomId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(404);
@@ -173,7 +166,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { name: 'Old Name' }
             });
             siteId = JSON.parse(res.body).id;
@@ -183,7 +176,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'PATCH',
                 url: `/api/v1/sites/${siteId}`,
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: {
                     name: 'New Name',
                     city: 'New City'
@@ -204,7 +197,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'POST',
                 url: '/api/v1/sites',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: authHeaders,
                 payload: { name: 'To Delete' }
             });
             siteId = JSON.parse(res.body).id;
@@ -214,7 +207,7 @@ describe('Sites API E2E', () => {
             const res = await server.inject({
                 method: 'DELETE',
                 url: `/api/v1/sites/${siteId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
 
             expect(res.statusCode).toBe(200);
@@ -223,9 +216,19 @@ describe('Sites API E2E', () => {
             const getRes = await server.inject({
                 method: 'GET',
                 url: `/api/v1/sites/${siteId}`,
-                headers: { Authorization: `Bearer ${token}` }
+                headers: authHeaders
             });
             expect(getRes.statusCode).toBe(404);
+
+            // ...and it must not show up in the listing either
+            const listRes = await server.inject({
+                method: 'GET',
+                url: '/api/v1/sites',
+                headers: authHeaders
+            });
+            expect(listRes.statusCode).toBe(200);
+            const ids = JSON.parse(listRes.body).data.map((x: any) => x.id);
+            expect(ids).not.toContain(siteId);
         });
     });
 });
