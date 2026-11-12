@@ -50,6 +50,11 @@ jest.mock('fastify', () => {
     return Object.assign(wrapped, real, { default: wrapped, __esModule: true });
 });
 
+const DATE_LIKE = /(date|time|start|end|until|from|expir|_at$)/i; // case-insensitive: installationDate
+/** An END-like field is a day after a START-like one (permits: validUntil must be after validFrom). */
+const isoFor = (key: string) =>
+    new Date(Date.now() + (/(until|end|expir)/i.test(key) ? 86_400_000 : 0)).toISOString();
+
 /** Body fields that hold another resource's id, and which table's A-row to put there. */
 const FK_FIELDS: Record<string, string> = {
     siteId: 'sites', assetId: 'assets', workOrderId: 'work_orders', userId: 'users', assignedTo: 'users',
@@ -66,24 +71,25 @@ function canHoldUuid(z: any): boolean {
     return max === undefined || max >= 36;
 }
 
-function fromZod(z: any, key: string, A: World): unknown {
+function fromZod(z: any, key: string, A: World, idx = 0): unknown {
+    if (A.keys?.[key]) return A.keys[key];
     const fk = FK_FIELDS[key];
-    if (fk && A.ids[fk]?.[0] && canHoldUuid(z)) return A.ids[fk][0];
+    if (fk && A.ids[fk]?.[idx] && canHoldUuid(z)) return A.ids[fk][idx];
     const t = z?._def?.typeName;
     const checks: any[] = z?._def?.checks ?? [];
     const check = (kind: string) => checks.find((c) => c.kind === kind);
     switch (t) {
         case 'ZodObject': {
             const shape = typeof z.shape === 'function' ? z.shape() : z.shape;
-            return Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, fromZod(v, k, A)]));
+            return Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, fromZod(v, k, A, idx)]));
         }
         case 'ZodOptional': case 'ZodNullable': case 'ZodDefault': case 'ZodReadonly': case 'ZodBranded':
-            return fromZod(z._def.innerType ?? z._def.type, key, A);
-        case 'ZodEffects': return fromZod(z._def.schema, key, A);
+            return fromZod(z._def.innerType ?? z._def.type, key, A, idx);
+        case 'ZodEffects': return fromZod(z._def.schema, key, A, idx);
         case 'ZodString': {
             if (check('uuid')) return randomUUID();
             if (check('email')) return 'attacker@b.test';
-            if (check('datetime')) return new Date().toISOString();
+            if (check('datetime')) return isoFor(key);
             if (check('url')) return 'https://example.com';
             // A regex we can't invert: try plausible values against the route's own pattern.
             const rx = check('regex')?.regex as RegExp | undefined;
@@ -92,14 +98,20 @@ function fromZod(z: any, key: string, A: World): unknown {
                     .find((c) => { rx.lastIndex = 0; return rx.test(c); });
                 if (hit) return hit;
             }
+            // A plain z.string() that the handler feeds to `new Date(...)`: a name-based hint, or the
+            // whole route 500s on a RangeError and never reaches the logic under test.
+            if (DATE_LIKE.test(key)) return isoFor(key);
             let v = 'x'.repeat(Math.max(check('min')?.value ?? 1, 1));
             const max = check('max')?.value;
             if (max) v = v.slice(0, max);
             return v;
         }
         case 'ZodNumber': {
+            // A typical value, NOT the boundary: min(0) -> 0 made an unrelated divide-by-~0 crash
+            // the handler, and the crash hid an unscoped lookup in front of it.
             const min = check('min'); const max = check('max');
-            let v = min ? (min.inclusive ? min.value : min.value + 1) : 1;
+            let v = 1;
+            if (min && v < (min.inclusive ? min.value : min.value + 1)) v = min.inclusive ? min.value : min.value + 1;
             if (max && v > max.value) v = max.value;
             return v;
         }
@@ -107,31 +119,33 @@ function fromZod(z: any, key: string, A: World): unknown {
         case 'ZodEnum': return z._def.values[0];
         case 'ZodNativeEnum': return Object.values(z._def.values)[0];
         case 'ZodLiteral': return z._def.value;
-        case 'ZodArray': return [fromZod(z._def.type, key, A)];
+        case 'ZodArray': return [fromZod(z._def.type, key, A, idx)];
         case 'ZodUnion': case 'ZodDiscriminatedUnion': {
             const opts = z._def.options;
-            return fromZod(Array.isArray(opts) ? opts[0] : [...opts.values()][0], key, A);
+            return fromZod(Array.isArray(opts) ? opts[0] : [...opts.values()][0], key, A, idx);
         }
         case 'ZodRecord': case 'ZodAny': case 'ZodUnknown': return {};
-        case 'ZodDate': return new Date().toISOString();
-        case 'ZodLazy': return fromZod(z._def.getter(), key, A);
+        case 'ZodDate': return isoFor(key);
+        case 'ZodLazy': return fromZod(z._def.getter(), key, A, idx);
         default: return undefined;
     }
 }
 
-function fromJson(s: any, key: string, A: World): unknown {
+function fromJson(s: any, key: string, A: World, idx = 0): unknown {
+    if (A.keys?.[key]) return A.keys[key];
     const fk = FK_FIELDS[key];
-    if (fk && A.ids[fk]?.[0]) return A.ids[fk][0];
+    if (fk && A.ids[fk]?.[idx]) return A.ids[fk][idx];
     if (!s) return undefined;
     if (s.enum) return s.enum[0];
     switch (s.type) {
-        case 'object': return Object.fromEntries(Object.entries(s.properties ?? {}).map(([k, v]) => [k, fromJson(v, k, A)]));
-        case 'array': return [fromJson(s.items, key, A)];
+        case 'object': return Object.fromEntries(Object.entries(s.properties ?? {}).map(([k, v]) => [k, fromJson(v, k, A, idx)]));
+        case 'array': return [fromJson(s.items, key, A, idx)];
         case 'string':
             if (s.format === 'uuid') return randomUUID();
             if (s.format === 'email') return 'attacker@b.test';
-            if (s.format === 'date-time') return new Date().toISOString();
+            if (s.format === 'date-time') return isoFor(key);
             if (s.format === 'uri' || s.format === 'url') return 'https://example.com/hook';
+            if (DATE_LIKE.test(key)) return isoFor(key);
             return 'x'.repeat(Math.max(s.minLength ?? 1, 1));
         case 'integer': case 'number': return Math.max(s.minimum ?? 1, 1);
         case 'boolean': return false;
@@ -143,20 +157,35 @@ function fromJson(s: any, key: string, A: World): unknown {
  * A body that satisfies the route's own schema. Routes with NO body schema take
  * the raw body as-is, so they get a hostile generic one (mass-assignment bait).
  */
-function bodyFor(schema: any, A: World): Record<string, unknown> {
+function bodyFor(schema: any, A: World, idx = 0): Record<string, unknown> {
     const body = schema?.body;
     if (body) {
-        const v = typeof body.safeParse === 'function' ? fromZod(body, '', A) : fromJson(body, '', A);
+        const v = typeof body.safeParse === 'function' ? fromZod(body, '', A, idx) : fromJson(body, '', A, idx);
         return (v ?? {}) as Record<string, unknown>;
     }
-    const first = (t: string) => A.ids[t]?.[0];
+    const first = (t: string) => A.ids[t]?.[idx];
     return {
         tenantId: A.tenantId, tenant_id: A.tenantId, role: 'super_admin', passwordHash: 'x', isActive: false,
         name: 'HACKED-BY-B', title: 'HACKED-BY-B', description: 'HACKED-BY-B', status: 'cancelled',
         siteId: first('sites'), assetId: first('assets'), workOrderId: first('work_orders'),
         userId: first('users'), assignedTo: first('users'), partId: first('parts'), crewId: first('crews'),
         newPassword: 'HackedPassword123!', currentPassword: 'HackedPassword123!',
+        token: 'x'.repeat(24), // routes that read a body field with no schema at all (device-token DELETE)
     };
+}
+
+/**
+ * One body per foreign reference. Everything else in the body is B's OWN valid data, and exactly
+ * one field (siteId, or parentAssetId, or userId ...) points at tenant A. Filling every reference
+ * with A's ids at once lets the first bad one abort the request, so the others are never tried:
+ * a PATCH that validates parentAssetId but happily stores a foreign siteId looked clean.
+ */
+function perReferenceBodies(schema: any, A: World, B: World): Array<Record<string, unknown>> {
+    const allA = bodyFor(schema, A);
+    const ownB = bodyFor(schema, B, 1); // B's 2nd row: never the same as the path id (B's 1st)
+    return [...Object.keys(FK_FIELDS), ...Object.keys(A.keys ?? {})]
+        .filter((k) => k in allA && allA[k] !== ownB[k] && allA[k] !== undefined)
+        .map((k) => ({ ...ownB, [k]: allA[k] }));
 }
 
 const stringsIn = (v: unknown, out: string[] = []): string[] => {
@@ -168,7 +197,11 @@ const stringsIn = (v: unknown, out: string[] = []): string[] => {
 
 const PASSWORD = 'TenantSweep123!';
 const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'];
-const SKIP_URL = (u: string) => u.includes('/auth/') || u.includes('/slack/');
+// /auth/* and Slack: not tenant-data routes (and logout/login would invalidate the attacker's session).
+// /csrf/*: GET /csrf/token REPLACES the stored CSRF token, so probing it makes the attacker's cached
+// token stale and every CSRF-protected write after it silently 403s without reaching its handler --
+// which is exactly how this sweep went blind to the asset holes.
+const SKIP_URL = (u: string) => u.includes('/auth/') || u.includes('/slack/') || u.includes('/csrf/');
 
 const urlFor = (database: string) => {
     const u = new URL(process.env.DATABASE_URL!);
@@ -198,7 +231,7 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
     let known: Record<string, Set<string>> = {};
     const violations = new Set<string>();
     const unprobed: string[] = []; // write routes where EVERY request died in validation: the generator failed
-    const stats = { routes: 0, requests: 0, controlHits: 0, resets: 0 };
+    const stats = { routes: 0, requests: 0, controlHits: 0, resets: 0, csrfRejections: 0 };
 
     const q = (sql: string, params: unknown[] = []) => pool.query(sql, params);
 
@@ -210,7 +243,7 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
 
     async function buildWorld() {
         A = await seedWorld(pool, 'A');
-        B = await seedWorld(pool, 'B');
+        B = await seedWorld(pool, 'B', 2);
         // The attacker: a real tenant_admin of B who can actually log in.
         const orm = drizzle(pool);
         const email = `attacker-${randomUUID().slice(0, 8)}@b.test`;
@@ -226,6 +259,10 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         const { accessToken, csrfToken } = JSON.parse(res.body);
         headers = { Authorization: `Bearer ${accessToken}`, 'x-csrf-token': csrfToken };
 
+        for (const w of [A, B]) {
+            const tpl = await q(`select template_id from compliance_report_templates where id = any($1::uuid[])`, [w.ids['compliance_report_templates'] ?? []]);
+            w.keys = tpl.rows[0] ? { templateId: tpl.rows[0].template_id } : {};
+        }
         aIds = Object.values(A.ids).flat();
         aPool = [...aIds, ...(await naturalKeys(A))];
         known = {};
@@ -382,44 +419,56 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         for (const route of routes) {
             const isWrite = MUTATING.includes(route.method);
             const names = paramNames(route.url);
-            const requests: Array<{ url: string; requested: string[] }> = [];
+            const requests: Array<{ url: string; requested: string[]; body?: Record<string, unknown> }> = [];
+
+            const bodyAllA = isWrite ? bodyFor(route.schema, A) : undefined;
+            const refBodies = isWrite ? perReferenceBodies(route.schema, A, B) : [];
 
             if (names.length === 0) {
-                requests.push({ url: route.url + (isWrite ? '' : qs), requested: [] });
+                if (isWrite) {
+                    for (const b of [bodyAllA!, ...refBodies]) requests.push({ url: route.url, requested: [], body: b });
+                } else {
+                    requests.push({ url: route.url + qs, requested: [] });
+                }
             } else {
                 for (const v of aPool) {
-                    requests.push({ url: fill(route.url, names.map(() => v)) + (isWrite ? '' : qs), requested: [v] });
+                    requests.push({ url: fill(route.url, names.map(() => v)) + (isWrite ? '' : qs), requested: [v], body: bodyAllA });
                     if (names.length > 1) {
                         for (let i = 0; i < names.length; i++) {
                             const vals = names.map((_, j) => (j === i ? v : randomUUID()));
-                            requests.push({ url: fill(route.url, vals) + (isWrite ? '' : qs), requested: [v] });
+                            requests.push({ url: fill(route.url, vals) + (isWrite ? '' : qs), requested: [v], body: bodyAllA });
                         }
                     }
                 }
             }
 
-            // B's own resource in the path + A's ids in the body: "attach A's user to MY crew".
-            // Without this, a route that checks the path id but not the body ids looks clean.
-            // (Not for DELETE: B deleting its own rows tests nothing and destroys the fixtures later routes need.)
+            // B's own resource in the path + ONE foreign reference in the body: "attach A's user to MY
+            // crew", "move MY asset onto A's site". (Not for DELETE: B deleting its own rows tests
+            // nothing and destroys the fixtures later routes need.)
             if (isWrite && route.method !== 'DELETE' && names.length > 0) {
                 for (const v of Object.values(B.ids).flat()) {
-                    requests.push({ url: fill(route.url, names.map(() => v)), requested: [v] });
+                    for (const b of [bodyAllA!, ...refBodies]) {
+                        requests.push({ url: fill(route.url, names.map(() => v)), requested: [v], body: b });
+                    }
                 }
             }
 
             const reads: string[] = [];
-            const body = isWrite ? bodyFor(route.schema, A) : undefined;
-            const bodyStrings = body ? stringsIn(body) : [];
+            const bodyStrings = isWrite ? [bodyAllA!, ...refBodies].flatMap((b) => stringsIn(b)) : [];
             let reachedHandler = !isWrite;
             let firstValidationError = '';
             await inFlight(requests, 16, async (req) => {
                 const res: any = await timed(server.inject({
                     method: route.method as any, url: req.url, headers,
-                    ...(isWrite ? { payload: body } : {}),
+                    ...(isWrite ? { payload: req.body } : {}),
                 }));
                 stats.requests++;
-                if (res.statusCode !== 400 && res.statusCode !== 'timeout') reachedHandler = true;
-                else if (isWrite && !firstValidationError && res.statusCode === 400) firstValidationError = String(res.body).replace(/\s+/g, ' ').slice(0, 220);
+                if (res.statusCode === 403 && typeof res.body === 'string' && /csrf/i.test(res.body)) stats.csrfRejections++;
+                // 5xx does NOT count: a handler that crashes on the generated body (e.g. new Date('x'))
+                // answers every request with a 500, and a sweep of that route proves nothing.
+                const code = res.statusCode;
+                if (typeof code === 'number' && code !== 400 && code < 500) reachedHandler = true;
+                else if (isWrite && !firstValidationError && (code === 400 || (typeof code === 'number' && code >= 500))) firstValidationError = `[${res.statusCode}] ` + String(res.body).replace(/\s+/g, ' ').slice(0, 220);
                 const leak = typeof res.body === 'string' ? readLeak(res.body, [...req.requested, ...bodyStrings]) : null;
                 if (leak) reads.push(`READ-LEAK (${leak})`);
             });
@@ -451,7 +500,13 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         // A route listed here answered 400 to EVERY request, i.e. the body generator could not
         // satisfy its schema, so the sweep proved nothing about it. Keep this list short and
         // explained; a growing list means the sweep is going blind.
-        expect(unprobed).toEqual([]);
+        const EXPECTED_UNPROBED: Record<string, string> = {
+            'POST /api/v1/genai/chat': 'calls the Gemini API; GEMINI_API_KEY is not set in tests (REV-065)',
+            'POST /api/v1/telemetry': 'publishes to Kafka, which the test server is not connected to (REV-065)',
+            'POST /api/v1/notifications/test': 'sends through real email/SMS/push providers (REV-065)',
+        };
+        const unexpected = unprobed.filter((u) => !EXPECTED_UNPROBED[u.split(' :: ')[0]]);
+        expect(unexpected).toEqual([]);
     });
 
     it('positive control: B reading its OWN rows through the same routes does return data', async () => {
@@ -471,6 +526,12 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         // If this is ~0 the sweep above proved nothing: every probe may simply have errored.
         expect(hits).toBeGreaterThanOrEqual(10);
     }, 300000);
+
+    it('no request was rejected for a CSRF problem (that would mean the probe is not testing the handler)', () => {
+        // A 403 "Invalid CSRF token" is not an isolation result, it is the probe being turned away at
+        // the door. Previously these were counted as "a real answer" and hid real holes.
+        expect(stats.csrfRejections).toBe(0);
+    });
 
     it('swept a meaningful amount', () => {
         expect(stats.routes).toBeGreaterThan(100);

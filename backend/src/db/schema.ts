@@ -232,6 +232,7 @@ export const assets = pgTable("assets", {
   parentAssetId: uuid("parent_asset_id"),
   assetId: varchar("asset_id", { length: 100 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
   type: assetTypeEnum("type").notNull().default("other"),
   manufacturer: varchar("manufacturer", { length: 255 }),
   model: varchar("model", { length: 255 }),

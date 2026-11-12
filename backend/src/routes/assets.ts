@@ -7,6 +7,7 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { authorize } from "../middleware/authorize";
+import { assertInTenant } from "../utils/ownership";
 
 const assetRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.setValidatorCompiler(validatorCompiler);
@@ -67,9 +68,13 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
     model: z.string().optional(),
     serialNumber: z.string().optional(),
     location: z.string().optional(),
-    parentAssetId: z.string().uuid().optional(),
+    // "" (what the web forms send for "no parent") and null both mean "no parent".
+    parentAssetId: z.union([z.string().uuid(), z.literal(""), z.null()]).optional(),
+    // Must match the assets.status database enum. This used to be
+    // operational | down | maintenance | retired: "retired" is not in the enum (a database error),
+    // while "degraded" and "decommissioned" -- which the web UI offers -- were refused.
     status: z
-      .enum(["operational", "down", "maintenance", "retired"])
+      .enum(["operational", "degraded", "down", "maintenance", "decommissioned"])
       .default("operational"),
     criticality: z.enum(["critical", "high", "medium", "low"]).optional(),
     installationDate: z.string().optional(),
@@ -83,6 +88,23 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   const UpdateAssetSchema = CreateAssetSchema.partial();
+
+  // `tags` is stored as JSON text. Responses used to hand that string back from GET/PATCH while the
+  // tag endpoints returned arrays, and the UI then split the JSON string on commas.
+  const parseTags = (t: unknown): string[] => {
+    if (Array.isArray(t)) return t.map(String);
+    if (typeof t === "string" && t) {
+      try {
+        const v = JSON.parse(t);
+        if (Array.isArray(v)) return v.map(String);
+      } catch {
+        /* not JSON: fall through to comma-separated */
+      }
+      return t.split(",").map((x) => x.trim()).filter(Boolean);
+    }
+    return [];
+  };
+  const present = (a: any) => (a && typeof a === "object" ? { ...a, tags: parseTags(a.tags) } : a);
 
   // GET /api/v1/assets
   server.get(
@@ -133,7 +155,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         filters,
         pagination,
       );
-      return result;
+      return { ...result, data: result.data.map(present) };
     },
   );
 
@@ -173,7 +195,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      return asset;
+      return present(asset);
     },
   );
 
@@ -236,6 +258,10 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
       const user = request.user as any;
       const body = request.body;
 
+      // A foreign site must not even reach tag generation: the tag embeds the site's code.
+      await assertInTenant("site", body.siteId, user.tenantId);
+      await assertInTenant("asset", body.parentAssetId || undefined, user.tenantId);
+
       // Generate asset tag if not provided
       const assetTag =
         body.assetTag ||
@@ -256,7 +282,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         model: body.model,
         serialNumber: body.serialNumber,
         location: body.location,
-        parentAssetId: body.parentAssetId,
+        parentAssetId: body.parentAssetId || undefined,
         status: body.status,
         criticality: body.criticality,
         installationDate: body.installationDate
@@ -273,7 +299,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         metadata: body.metadata,
       });
 
-      return reply.status(201).send(asset);
+      return reply.status(201).send(present(asset));
     },
   );
 
@@ -306,6 +332,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
       const body = request.body;
 
       const updates: any = { ...body };
+      if (updates.parentAssetId === "") updates.parentAssetId = null; // detach
       if (body.installationDate)
         updates.installationDate = new Date(body.installationDate);
       if (body.warrantyExpiryDate)
@@ -321,7 +348,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      return asset;
+      return present(asset);
     },
   );
 

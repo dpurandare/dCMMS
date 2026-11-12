@@ -8,6 +8,7 @@ import { createComplianceReportGenerationService } from "../services/compliance-
 import { createAuditLogService } from "../services/audit-log.service";
 import { createReadStream, existsSync } from "fs";
 import { authorize } from "../middleware/authorize";
+import { isInTenant } from "../utils/ownership";
 
 // Validation schemas
 const generateReportSchema = z.object({
@@ -65,6 +66,11 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           return reply.status(401).send({
             error: "Unauthorized",
           });
+        }
+
+        // The report is generated from, and stored against, this site: it must be the caller's.
+        if (!(await isInTenant("site", request.body.siteId, tenantId))) {
+          return reply.status(404).send({ error: "Site not found" });
         }
 
         const reportRequest = {

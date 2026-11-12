@@ -1,6 +1,19 @@
+import { assertInTenant } from "../utils/ownership";
 import { db } from "../db";
 import { assets } from "../db/schema";
 import { eq, and, desc, asc, sql, like, or, isNull } from "drizzle-orm";
+
+/** A client-caused failure; `statusCode` makes the global handler answer 4xx instead of 500. */
+export class AssetError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "AssetError";
+  }
+}
+
 
 export interface AssetFilters {
   siteId?: string;
@@ -29,7 +42,7 @@ export interface CreateAssetData {
   serialNumber?: string;
   location?: Record<string, any> | string;
   parentAssetId?: string;
-  status?: "operational" | "down" | "maintenance" | "retired";
+  status?: "operational" | "degraded" | "down" | "maintenance" | "decommissioned";
   criticality?: "critical" | "high" | "medium" | "low";
   installationDate?: Date;
   warrantyExpiryDate?: Date;
@@ -49,7 +62,7 @@ export interface UpdateAssetData {
   model?: string;
   serialNumber?: string;
   location?: Record<string, any> | string;
-  status?: "operational" | "down" | "maintenance" | "retired";
+  status?: "operational" | "degraded" | "down" | "maintenance" | "decommissioned";
   criticality?: "critical" | "high" | "medium" | "low";
   installationDate?: Date;
   warrantyExpiryDate?: Date;
@@ -196,6 +209,9 @@ export class AssetService {
    */
   static async create(data: CreateAssetData) {
     const { assetTag, ...assetData } = data;
+    // The site and the parent must be the creator's own tenant's.
+    await assertInTenant("site", (data as any).siteId, (data as any).tenantId);
+    await assertInTenant("asset", (data as any).parentAssetId, (data as any).tenantId);
     const [asset] = (await db
       .insert(assets)
       .values({
@@ -233,10 +249,13 @@ export class AssetService {
    * Update asset
    */
   static async update(id: string, tenantId: string, data: UpdateAssetData) {
+    await assertInTenant("site", (data as any).siteId, tenantId);
+    await assertInTenant("asset", (data as any).parentAssetId, tenantId);
+
     // Check for circular reference if parentAssetId is being updated
     if (data.parentAssetId !== undefined) {
       if (data.parentAssetId === id) {
-        throw new Error("Circular reference: Asset cannot be its own parent");
+        throw new AssetError(400, "Circular reference: Asset cannot be its own parent");
       }
       if (data.parentAssetId) {
         await this.checkCircularReference(id, data.parentAssetId, tenantId);
@@ -280,7 +299,7 @@ export class AssetService {
       .where(and(eq(assets.parentAssetId, id), eq(assets.tenantId, tenantId)));
 
     if (Number(childCount?.count || 0) > 0) {
-      throw new Error("Cannot delete asset with child assets");
+      throw new AssetError(409, "Cannot delete asset with child assets");
     }
 
     const [deleted] = (await db
@@ -336,7 +355,7 @@ export class AssetService {
 
     while (currentId && depth < MAX_DEPTH) {
       if (currentId === assetId) {
-        throw new Error("Circular reference detected");
+        throw new AssetError(400, "Circular reference detected");
       }
 
       const [parent] = await db
@@ -355,7 +374,7 @@ export class AssetService {
    */
   static async addTag(id: string, tenantId: string, tag: string) {
     const asset = (await this.getById(id, tenantId)) as any;
-    if (!asset) throw new Error("Asset not found");
+    if (!asset) throw new AssetError(404, "Asset not found");
 
     const tags = JSON.parse(asset.tags || "[]");
     if (!tags.includes(tag)) {
@@ -370,7 +389,7 @@ export class AssetService {
    */
   static async removeTag(id: string, tenantId: string, tag: string) {
     const asset = (await this.getById(id, tenantId)) as any;
-    if (!asset) throw new Error("Asset not found");
+    if (!asset) throw new AssetError(404, "Asset not found");
 
     const tags = JSON.parse(asset.tags || "[]");
     const newTags = tags.filter((t: string) => t !== tag);

@@ -7,6 +7,7 @@ import {
 import { createComplianceTemplateService } from "../services/compliance-template.service";
 import { authorize } from "../middleware/authorize";
 import { getTenantId } from "../utils/tenant";
+import { isInTenant } from "../utils/ownership";
 
 // Validation schemas
 const autoPopulateSchema = z.object({
@@ -146,6 +147,9 @@ export default async function complianceTemplateRoutes(
 
         const { templateId } = request.params;
         const { siteId, startDate, endDate } = request.body;
+        if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+          return reply.status(404).send({ error: "Site not found" });
+        }
 
         // Verify template exists
         const template = await complianceService.getTemplate(templateId, getTenantId(request));
@@ -288,6 +292,9 @@ export default async function complianceTemplateRoutes(
 
         const { templateId } = request.params;
         const { siteId, startDate, endDate, manualData } = request.body;
+        if (!(await isInTenant("site", siteId, getTenantId(request)))) {
+          return reply.status(404).send({ error: "Site not found" });
+        }
 
         // Get template
         const template = await complianceService.getTemplate(templateId, getTenantId(request));

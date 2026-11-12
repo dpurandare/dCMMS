@@ -67,11 +67,23 @@ Tests: 4 passed, 4 total
 
 ## 3. Asset CRUD with hierarchy
 
-**Status: ⚠️ partial, pre-existing.** `backend/tests/e2e/assets.e2e.test.ts`
-(create, list, list-by-type, soft-delete) and `backend/tests/e2e/hierarchy.e2e.test.ts`
-(recursive hierarchy fetch, circular-reference prevention — both direct
-self-parenting and a 3-level cycle). This is decent coverage of the
-hierarchy-specific logic; full CRUD (update) isn't separately tested.
+**Status: ✅ covered (2026-11-12).** `backend/tests/e2e/assets.e2e.test.ts` (27 tests)
+plus `hierarchy.e2e.test.ts` (recursive hierarchy, cycle prevention). The update block
+checks field persistence, `updatedAt`, every database status value, coordinates of
+exactly 0, tags, 404, hierarchy (set, self-parent, cycle, detach) and cross-tenant
+references — and includes a **contract test using the exact payload the web edit form
+sends**, which is what exposed that editing any top-level, degraded or decommissioned
+asset returned 400.
+
+It found, among others: a missing `description` column (every description silently
+discarded), the status enum wrong in three places, three cross-tenant reference holes,
+and tags returned as a JSON string by some endpoints and an array by others. 17 of the
+tests fail on the original code. See REV-038.
+
+```
+$ npx jest tests/e2e/assets.e2e.test.ts tests/e2e/hierarchy.e2e.test.ts
+Tests: 30 passed
+```
 
 ## 4. Tenant isolation on every resource
 
@@ -157,19 +169,19 @@ Tests: 11 passed, 11 total
 | - | ---- | :----: | ----- |
 | 1 | Login / refresh / logout | ✅ | 11 (new) |
 | 2 | Work order lifecycle + invalid-transition rejection | ✅ | 74 (new) + 4 (repaired) |
-| 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
+| 3 | Asset CRUD + hierarchy | ✅ | 27 + 3 hierarchy |
 | 4 | Tenant isolation | ✅ | sweep (149 routes, 7,042 requests) + 19 targeted |
 | 5 | Permission enforcement, 6 roles | ✅ | 60 (new) |
 | 6 | Migration up | ✅ | 11 (new) |
 
-**Where this stands (2026-11-12):** five of six paths are covered (1, 2, 4, 5, 6) and
-one is partial (3). Writing the tests is what found the bugs, in each case
+**Where this stands (2026-11-12):** all six paths are covered. REV-038 is complete
+apart from its "runs in CI" half, which is descoped by the standing no-CI decision. Writing the tests is what found the bugs, in each case
 bugs that were live and that no earlier review had surfaced: logout never
 revoked a session (path 1); a safety-gate bypass and every invalid transition
 returning HTTP 500 (path 2); a read-only role able to delete work orders and
 assets (path 5). Path 6 found no drift, but a first version of it missed a
 deleted index, found only by deliberately breaking the migrations. What remains
-of REV-038: asset *update* behaviour (path 3). Path 4's sweep found the most
-serious defects of the whole review so far (cross-tenant account modification with
-mass assignment of `role`). The product decisions the RBAC work surfaced (REV-064)
+of REV-038: nothing. Path 4's sweep found the most serious defects of the whole
+review so far (cross-tenant account modification with mass assignment of `role`),
+and path 3 found that the web edit form could not save most assets. The product decisions the RBAC work surfaced (REV-064)
 were made and implemented.

@@ -226,7 +226,9 @@ describe('migrations: empty database -> declared schema', () => {
         fs.writeFileSync(path.join(tmp, '0000_bad.sql'), 'CREATE TABLE definitely_not_valid (;');
         fs.writeFileSync(path.join(tmp, 'meta/_journal.json'), JSON.stringify({
             version: '5', dialect: 'pg',
-            entries: [{ idx: 0, version: '5', when: Date.now() + 10_000, tag: '0000_bad', breakpoints: true }],
+            // Far in the future on purpose: drizzle skips any migration older than the last one applied,
+            // so a timestamp near "now" can silently fall behind a real migration and never run.
+            entries: [{ idx: 0, version: '5', when: 8_000_000_000_000, tag: '0000_bad', breakpoints: true }],
         }));
         try {
             await expect(migrate(drizzle(pool), { migrationsFolder: tmp })).rejects.toThrow();

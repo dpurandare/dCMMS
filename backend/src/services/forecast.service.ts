@@ -1,3 +1,4 @@
+import { assertInTenant, NotFoundError } from "../utils/ownership";
 import { db } from "../db";
 import {
   generationForecasts,
@@ -269,6 +270,7 @@ export class ForecastService {
   async updateActualGeneration(
     forecastId: string,
     actualGenerationMw: number,
+    tenantId: string,
   ): Promise<void> {
     // Get forecast
     const [forecast] = await db
@@ -276,16 +278,27 @@ export class ForecastService {
       .from(generationForecasts)
       .where(eq(generationForecasts.id, forecastId));
 
-    if (!forecast) {
-      throw new Error("Forecast not found");
-    }
+    // generation_forecasts has no tenant column: it belongs to a tenant through its site. This
+    // used to look the forecast up by id alone, so any user could overwrite another tenant's
+    // actuals. A foreign forecast is reported exactly like a missing one.
+    if (!forecast) throw new NotFoundError("forecast");
+    await assertInTenant("site", forecast.siteId, tenantId);
 
     // Calculate errors
     const predicted = parseFloat(forecast.predictedGenerationMw.toString());
     const actual = actualGenerationMw;
     const error = actual - predicted;
     const absoluteError = Math.abs(error);
-    const percentageError = (absoluteError / (actual + 1e-10)) * 100;
+    // percentage_error is numeric(5,2): anything above 999.99 overflows the column and the whole
+    // update fails with a 500. That is not an edge case -- 4 MW actual against 50 MW predicted is
+    // already 1150% -- and an actual of exactly 0 (a solar farm at night) divided by ~0. Clamp it.
+    const MAX_PERCENTAGE = 999.99;
+    const percentageError =
+      actual > 0
+        ? Math.min((absoluteError / actual) * 100, MAX_PERCENTAGE)
+        : absoluteError > 0
+          ? MAX_PERCENTAGE
+          : 0;
 
     // Update forecast
     await db

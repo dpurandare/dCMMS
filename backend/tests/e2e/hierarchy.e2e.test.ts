@@ -100,9 +100,8 @@ describe('Asset Hierarchy E2E', () => {
                 payload: { parentAssetId: parentId }
             });
 
-            if (res.statusCode !== 500) console.log('PATCH Circular Error:', res.body);
 
-            expect(res.statusCode).toBe(500); // Or 400 if we handled it better, currently Service throws Error
+            expect(res.statusCode).toBe(400); // a client error, not a server fault (this used to assert 500)
             const body = JSON.parse(res.body);
             expect(body.message).toMatch(/Circular reference/);
         });
@@ -116,9 +115,8 @@ describe('Asset Hierarchy E2E', () => {
                 payload: { parentAssetId: childId }
             });
 
-            if (res.statusCode !== 500) console.log('PATCH Loop Error:', res.body);
 
-            expect(res.statusCode).toBe(500);
+            expect(res.statusCode).toBe(400);
             const body = JSON.parse(res.body);
             expect(body.message).toMatch(/Circular reference/);
         });

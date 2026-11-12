@@ -194,6 +194,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
       await forecastService.updateActualGeneration(
         forecastId,
         actualGenerationMw,
+        getTenantId(request),
       );
 
       return reply.code(200).send({

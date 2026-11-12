@@ -1,4 +1,4 @@
-import { assertInTenant } from "../utils/ownership";
+import { assertInTenant, NotFoundError } from "../utils/ownership";
 import { db } from "../db";
 import { crews, crewMembers } from "../db/schema";
 import { eq, and, desc, asc, like, sql } from "drizzle-orm";
@@ -102,7 +102,7 @@ export class CrewService {
     });
 
     if (!crew) {
-      throw new Error("Crew not found");
+      throw new NotFoundError("crew");
     }
 
     return crew;
@@ -151,7 +151,7 @@ export class CrewService {
     });
 
     if (existingMember) {
-      throw new Error("User is already a member of this crew");
+      throw Object.assign(new Error("User is already a member of this crew"), { statusCode: 409 });
     }
 
     const [member] = await db

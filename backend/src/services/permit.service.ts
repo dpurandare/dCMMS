@@ -1,3 +1,4 @@
+import { NotFoundError } from "../utils/ownership";
 import { db } from "../db";
 import { permits, workOrders } from "../db/schema";
 import { eq, and, desc, asc, like, or, sql } from "drizzle-orm";
@@ -40,7 +41,7 @@ export interface PaginationParams {
 export class PermitService {
   static async create(data: CreatePermitData) {
     if (data.validFrom >= data.validUntil) {
-      throw new Error("validUntil must be after validFrom");
+      throw Object.assign(new Error("validUntil must be after validFrom"), { statusCode: 400 });
     }
 
     // Verify WO exists and belongs to tenant
@@ -52,7 +53,7 @@ export class PermitService {
     });
 
     if (!wo) {
-      throw new Error("Work Order not found");
+      throw new NotFoundError("Work order");
     }
 
     const [inserted] = await db
@@ -72,7 +73,7 @@ export class PermitService {
       data.validUntil &&
       data.validFrom >= data.validUntil
     ) {
-      throw new Error("validUntil must be after validFrom");
+      throw Object.assign(new Error("validUntil must be after validFrom"), { statusCode: 400 });
     }
 
     const permit = await db.query.permits.findFirst({
@@ -80,7 +81,7 @@ export class PermitService {
     });
 
     if (!permit) {
-      throw new Error("Permit not found");
+      throw new NotFoundError("Permit");
     }
 
     const updateData: any = { ...data, updatedAt: new Date() };
@@ -108,7 +109,7 @@ export class PermitService {
       },
     });
 
-    if (!permit) throw new Error("Permit not found");
+    if (!permit) throw new NotFoundError("Permit");
     return permit;
   }
 
@@ -180,7 +181,7 @@ export class PermitService {
     });
 
     if (!permit) {
-      throw new Error("Permit not found");
+      throw new NotFoundError("Permit");
     }
 
     // Could add logic to prevent deletion if WO is in progress

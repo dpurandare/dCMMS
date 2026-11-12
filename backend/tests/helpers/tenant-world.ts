@@ -23,6 +23,8 @@ export interface World {
     tenantId: string;
     /** table name -> ids of the rows seeded for this tenant */
     ids: Record<string, string[]>;
+    /** natural-key values a request body must quote, by body field name (e.g. a template's code) */
+    keys?: Record<string, string>;
     /** tables that could not be seeded, with the reason */
     skipped: Record<string, string>;
     canary: string;
@@ -115,7 +117,7 @@ function valueFor(
 }
 
 /** Seed one tenant. `pool` must point at a freshly migrated database. */
-export async function seedWorld(pool: Pool, label: string): Promise<World> {
+export async function seedWorld(pool: Pool, label: string, rowsPerTable = 1): Promise<World> {
     const orm = drizzle(pool);
     const ids: Record<string, string[]> = {};
     const skipped: Record<string, string> = {};
@@ -129,35 +131,38 @@ export async function seedWorld(pool: Pool, label: string): Promise<World> {
     } as any).returning();
     ids['tenants'] = [tenant.id];
 
-    for (const t of SEED_ORDER) {
+    for (let round = 0; round < rowsPerTable; round++) {
+      for (const t of SEED_ORDER) {
         const tName = getTableConfig(t).name;
         if (tName === 'tenants') continue;
+        if (round > 0 && !ids[tName]) continue; // the first row failed to seed; don't retry
 
         const cfg = getTableConfig(t);
         const fkTarget: Record<string, string> = {};
         for (const fk of cfg.foreignKeys) {
-            const r = fk.reference();
-            const target = getTableConfig(r.foreignTable).name;
-            if (target === tName) continue; // self-reference: leave null
-            r.columns.forEach((c: any) => { fkTarget[c.name] = target; });
+          const r = fk.reference();
+          const target = getTableConfig(r.foreignTable).name;
+          if (target === tName) continue; // self-reference: leave null
+          r.columns.forEach((c: any) => { fkTarget[c.name] = target; });
         }
 
         try {
-            const values: Record<string, unknown> = {};
-            for (const [key, col] of Object.entries(getTableColumns(t)) as [string, any][]) {
-                const mustSet = col.notNull && !col.hasDefault && col.name !== 'id';
-                const isTenantCol = col.name === 'tenant_id';
-                // Also fill nullable FK columns so child rows are genuinely linked to the parent.
-                const nullableFk = !col.notNull && fkTarget[col.name] && ids[fkTarget[col.name]]?.length;
-                if (mustSet || isTenantCol || nullableFk) {
-                    values[key] = valueFor(col, tName, label, tenant.id, fkTarget, ids);
-                }
+          const values: Record<string, unknown> = {};
+          for (const [key, col] of Object.entries(getTableColumns(t)) as [string, any][]) {
+            const mustSet = col.notNull && !col.hasDefault && col.name !== 'id';
+            const isTenantCol = col.name === 'tenant_id';
+            // Also fill nullable FK columns so child rows are genuinely linked to the parent.
+            const nullableFk = !col.notNull && fkTarget[col.name] && ids[fkTarget[col.name]]?.length;
+            if (mustSet || isTenantCol || nullableFk) {
+              values[key] = valueFor(col, tName, label, tenant.id, fkTarget, ids);
             }
-            const [row] = await (orm.insert(t as any).values(values as any) as any).returning();
-            ids[tName] = [row.id];
+          }
+          const [row] = await (orm.insert(t as any).values(values as any) as any).returning();
+          (ids[tName] ??= []).push(row.id);
         } catch (e: any) {
-            skipped[tName] = String(e?.message ?? e).split('\n')[0].slice(0, 160);
+          if (round === 0) skipped[tName] = String(e?.message ?? e).split('\n')[0].slice(0, 160);
         }
+      }
     }
 
     return { label, tenantId: tenant.id, ids, skipped, canary };
