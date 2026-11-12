@@ -115,15 +115,20 @@ Tests: 41 passed, 41 total
 
 ## 6. Migration up from the oldest supported version
 
-**Status: 🔴 not covered by a test**, though verified manually multiple
-times this session (every `npm run build` + backend restart implicitly
-re-runs migrations on a stack that needs them). REV-014 already added a CI
-job asserting table/enum/index counts and a non-empty `__drizzle_migrations`
-— but per the standing no-CI-gate decision, nothing runs that job. There is
-no Jest test that spins up a schema-less database, runs `db:migrate`, and
-asserts the expected shape. Given drizzle now owns the schema outright
-(ADR-004) and there are only 3 migrations total, this is a small, contained
-test to write — just not written yet.
+**Status: ✅ covered (2026-11-12).** `backend/tests/critical-paths/migrations.spec.ts`
+(11 tests) migrates a brand-new throwaway database with the real `./drizzle`
+migrations and compares the result to `schema.ts` — tables, columns,
+nullability, enums, declared indexes — plus journal-vs-applied, idempotency,
+and that a broken migration throws. It found no drift: schema and migrations
+agree. Indexes and triggers live only in the hand-written `0002` migration, so
+`schema.ts` cannot vouch for them; their counts (53 / 30) are pinned instead.
+A first version missed a deleted index entirely — found by mutation testing,
+not by inspection.
+
+```
+$ npx jest tests/critical-paths/migrations.spec.ts
+Tests: 11 passed, 11 total
+```
 
 ---
 
@@ -136,11 +141,15 @@ test to write — just not written yet.
 | 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
 | 4 | Tenant isolation | ⚠️ | 10 (expanded 3× this session) |
 | 5 | Permission enforcement, 6 roles | ✅ | 41 (new); 19 gaps -> REV-064 |
-| 6 | Migration up | 🔴 | 0 (CI job exists, doesn't run) |
+| 6 | Migration up | ✅ | 11 (new) |
 
-**What actually shipped this session:** path 1 went from zero coverage to
-real coverage, and in the process caught a genuine, previously-unknown
-security bug (logout never revoked sessions) that had been live since this
-mechanism was written. Paths 2–4 have real but partial pre-existing
-coverage. Paths 5–6 remain open — realistically 2–3 more days of work,
-consistent with REV-038's original 1-week estimate for the full scope.
+**Where this stands (2026-11-12):** four of six paths are covered (1, 2, 5, 6) and
+two are partial (3, 4). Writing the tests is what found the bugs, in each case
+bugs that were live and that no earlier review had surfaced: logout never
+revoked a session (path 1); a safety-gate bypass and every invalid transition
+returning HTTP 500 (path 2); a read-only role able to delete work orders and
+assets (path 5). Path 6 found no drift, but a first version of it missed a
+deleted index, found only by deliberately breaking the migrations. What remains
+of REV-038: asset *update* behaviour (path 3) and a systematic every-route
+tenant sweep (path 4). The product decisions the RBAC work surfaced are tracked
+as REV-064.
