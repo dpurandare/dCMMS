@@ -93,14 +93,25 @@ Tests: 10 passed, 10 total
 
 ## 5. Permission enforcement per role, all 6 roles
 
-**Status: 🔴 not covered.** No test iterates the role vocabulary
-(`backend/src/constants/permissions.ts`) against endpoints systematically.
-Individual routes are spot-checked for *a* permission requirement during
-REV-029's per-route pass, but nothing asserts, for each of the 6 roles, which
-of the ~39 route modules it can and cannot reach. This is real, unstarted
-work — likely a parametrized test generated from the permission matrix in
-`specs/09_ROLE_FEATURE_ACCESS_MATRIX.md`, not something to write ad hoc per
-route.
+**Status: ✅ covered (2026-11-12), with 19 known gaps tracked as REV-064.**
+`backend/tests/critical-paths/rbac-matrix.spec.ts` (41 tests) probes all 83
+mutating routes as each of the 6 roles and asserts (a) core routes require the
+permission they should (allowed roles derived from `ROLE_PERMISSIONS`, not
+from the route's own options), (b) `viewer` is read-only, (c) a two-sided
+ratchet on the known gaps, (d) `super_admin` reaches everything.
+
+It found assets, work-order sub-resources, reports and compliance reports
+writable by a read-only role (fixed), and 19 further routes that need a
+product decision (REV-064). See REV-038 in the tracker for details and the
+behaviour changes. Method note: the spec strips route schemas so authorization
+is observable independent of body validation, and must never probe
+`/auth/logout` (it deletes the caller's CSRF token and poisons later results).
+
+```
+$ npx jest tests/critical-paths/rbac-matrix.spec.ts
+Tests: 41 passed, 41 total
+(against the original routes: 19 failed, 22 passed)
+```
 
 ## 6. Migration up from the oldest supported version
 
@@ -124,7 +135,7 @@ test to write — just not written yet.
 | 2 | Work order lifecycle + invalid-transition rejection | ✅ | 74 (new) + 4 (repaired) |
 | 3 | Asset CRUD + hierarchy | ⚠️ | 6 (repaired 2026-11-12, passing) |
 | 4 | Tenant isolation | ⚠️ | 10 (expanded 3× this session) |
-| 5 | Permission enforcement, 6 roles | 🔴 | 0 |
+| 5 | Permission enforcement, 6 roles | ✅ | 41 (new); 19 gaps -> REV-064 |
 | 6 | Migration up | 🔴 | 0 (CI job exists, doesn't run) |
 
 **What actually shipped this session:** path 1 went from zero coverage to

@@ -277,7 +277,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: UpdateTaskSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -295,7 +295,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         params: z.object({ id: z.string().uuid(), taskId: z.string().uuid() }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -315,7 +315,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: AddPartSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -335,7 +335,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         params: z.object({ id: z.string().uuid(), partId: z.string().uuid() }),
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -355,7 +355,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
         body: AddLaborSchema,
         security: [{ bearerAuth: [] }],
       },
-      preHandler: authenticate,
+      preHandler: [authenticate, authorize({ permissions: ["update:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;
@@ -381,7 +381,7 @@ export const workOrderRoutes = async (app: FastifyInstance) => {
           200: z.object({ success: z.boolean() }),
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["delete:work-orders"] })],
     },
     async (request) => {
       const user = request.user as any;

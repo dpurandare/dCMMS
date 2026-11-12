@@ -71,7 +71,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           isPublic: z.boolean().optional(),
         }),
       },
-      preHandler: [csrfProtection],
+      preHandler: [csrfProtection, authorize({ permissions: ["create:reports"] })],
     },
     async (request) => {
       const { tenantId, id: userId } = request.user as UserPayload;
@@ -95,7 +95,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           isPublic: z.boolean().optional(),
         }),
       },
-      preHandler: [csrfProtection],
+      preHandler: [csrfProtection, authorize({ permissions: ["create:reports"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -121,7 +121,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
           id: z.string().uuid(),
         }),
       },
-      preHandler: [csrfProtection],
+      preHandler: [csrfProtection, authorize({ permissions: ["create:reports"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };

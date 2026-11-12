@@ -3,6 +3,7 @@ import { FileStorageService } from "../services/file-storage.service";
 import { db } from "../db";
 import { workOrderAttachments, workOrders } from "../db/schema";
 import { eq, and } from "drizzle-orm";
+import { authorize } from "../middleware/authorize";
 
 const attachmentsRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
@@ -39,7 +40,11 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [
+        server.authenticate,
+        csrfProtection,
+        authorize({ permissions: ["update:work-orders"] }),
+      ],
     },
     async (request, reply) => {
       const { workOrderId } = request.params as { workOrderId: string };
@@ -328,7 +333,10 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [
+        server.authenticate,
+        authorize({ permissions: ["update:work-orders"] }),
+      ],
     },
     async (request, reply) => {
       const { workOrderId, attachmentId } = request.params as {

@@ -230,7 +230,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           201: AssetSchema,
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["create:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -298,7 +298,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -352,7 +352,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["delete:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -410,7 +410,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -456,7 +456,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection],
+      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;

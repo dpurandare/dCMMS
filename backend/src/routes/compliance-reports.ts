@@ -54,6 +54,7 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         tags: ["Compliance"],
         description: "Generate a new compliance report (PDF, CSV, or JSON)",
       },
+      preHandler: [authorize({ permissions: ["create:compliance"] })],
     },
     async (request, reply) => {
       try {
@@ -355,6 +356,9 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
         description:
           "Update compliance report status (draft, final, submitted)",
       },
+      preHandler: [
+        authorize({ anyPermissions: ["submit:compliance", "approve:compliance"] }),
+      ],
     },
     async (request, reply) => {
       try {
