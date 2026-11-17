@@ -1,6 +1,6 @@
 # ADR-005: Auth transport, and what CSRF protection is for
 
-- **Status:** Accepted
+- **Status:** Accepted; the CSRF-token part was **amended 2026-11-17 (REV-018a)**: the token system was removed (see the Amendment at the end)
 - **Date:** 2026-09-19
 - **Tasks:** REV-017, REV-018
 - **Deciders:** Deepak Purandare
@@ -105,3 +105,25 @@ neither is done.
 - `Secure` is set only when `NODE_ENV=production`, so local HTTP development
   still works. A staging environment served over HTTP will not set the cookie —
   that is intended, not a bug to work around.
+
+## Amendment — 2026-11-17 (REV-018a): the CSRF token system is removed
+
+Decision (Deepak): **delete the token system; protect the two cookie endpoints with a stateless
+Origin check.** Section 3 above ("kept, and must be either wired or removed") is resolved as *removed*.
+
+Why: Bearer-header endpoints are already CSRF-immune (a cross-site request cannot set `Authorization`).
+The only ambient credential is the refresh cookie (`SameSite=Strict`, `Path=/api/v1/auth`), and a token keyed
+by user id cannot protect `/auth/refresh`, which runs when no user is authenticated. The token system covered
+about two-thirds of mutating routes inconsistently, rotated silently through `GET /csrf/token`, cost a Redis
+lookup per request, and (found while removing it) the frontend never stored the token it was given, so it
+could not have sent one.
+
+What replaced it: `middleware/origin-check.ts`, applied to `POST /auth/refresh` and `POST /auth/logout`.
+A request carrying an `Origin` header that is not in the allowed list (the CORS list, plus optional
+`CORS_ORIGINS`) is refused with 403. A request with **no** `Origin` (the mobile app, curl, server-to-server)
+is not blocked. Tests: `tests/e2e/auth-origin.e2e.test.ts` (the two refusal tests fail without the check).
+
+Transitional: `GET /api/v1/csrf/token` remains for one release as a deprecated no-op (dummy token, logged
+warning) for any client outside this repository. Delete it next release after checking the logs.
+
+Reopen only if the access token ever moves into a cookie.

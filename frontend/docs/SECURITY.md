@@ -104,25 +104,11 @@ connect-src 'self' http://localhost:3001;
 
 ## 4. Cross-Site Request Forgery (CSRF) Protection
 
-### Current Protection
+**There are no CSRF tokens** (removed 2026-11-17, REV-018a; see ADR-005).
 
-**Primary Defense**: Bearer token authentication
-- Tokens in `Authorization` header (not cookies)
-- Custom header prevents simple cross-origin requests
-- SameSite cookie policy (if using cookies)
-
-### Optional Enhancement
-
-CSRF tokens for critical operations (can be added later):
-
-```typescript
-// API client automatically adds CSRF token
-headers: {
-  'X-CSRF-Token': getCsrfToken(),
-}
-```
-
-**Status**: Not required with bearer tokens, but can be added for defense-in-depth.
+- Every API call authenticates with an `Authorization: Bearer` header, which a cross-site request cannot set, so these calls are CSRF-immune.
+- The only ambient credential is the HttpOnly refresh cookie (`SameSite=Strict`, scoped to `/api/v1/auth`). The backend refuses `POST /auth/refresh` and `POST /auth/logout` when the request carries an `Origin` header that is not an allowed origin.
+- If the access token ever moves into a cookie, this must be revisited.
 
 ---
 

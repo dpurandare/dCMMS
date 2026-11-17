@@ -247,7 +247,7 @@ This checklist serves as the comprehensive gate for production deployment of dCM
   - [ ] Input validation on all endpoints (Zod schemas)
   - [ ] SQL injection protection (parameterized queries)
   - [ ] XSS protection (input sanitization)
-  - [ ] CSRF protection enabled
+  - [ ] Cookie endpoints (`/auth/refresh`, `/auth/logout`) enforce the Origin check; set `CORS_ORIGINS` to your real frontend origin(s)
 
 - [ ] **Infrastructure Security**
   - [ ] Firewall rules configured (least privilege)

@@ -696,7 +696,7 @@ let any authenticated user read another tenant's alerts; an enforcing
 Content-Security-Policy with per-request nonces; the refresh token moved out of
 `localStorage` into an HttpOnly cookie; and per-account login throttling.
 
-Open and tracked: the CSRF subsystem is not wired to any route, tenant
+Open and tracked: tenant
 isolation has no row-level-security backstop, and `analytics-admin` runs
 caller-supplied queries unscoped. See
 [`TasksTracking/15_Review_Remediation.md`](./TasksTracking/15_Review_Remediation.md).

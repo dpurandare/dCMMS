@@ -1,3 +1,5 @@
+> **SUPERSEDED / ARCHIVED 2026-11-17 (REV-018a).** The CSRF token system described below was removed; see ADR-005 (amendment). Kept for history only.
+
 # CSRF Protection Implementation Guide
 
 ## Overview

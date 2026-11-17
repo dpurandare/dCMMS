@@ -52,8 +52,8 @@ safety gate, and the tenant boundary — and found three defects, see REV-038 in
 the tracker. The older `backend/tests/e2e/work-orders.e2e.test.ts`
 covers create, one status transition, and task/part management (4 tests,
 **passing as of 2026-11-12** — they had been failing since before the review
-because the specs never sent the `x-csrf-token` header; see
-`backend/tests/helpers/auth.ts`).
+because the specs never sent the `x-csrf-token` header; the CSRF token
+system was removed on 2026-11-17, REV-018a).
 **Not covered:** the full lifecycle through `close`, and — the more
 important gap — **state-machine rejection of invalid transitions** (e.g.
 `draft → closed` directly, skipping `in_progress`/`completed`) is named
@@ -136,7 +136,7 @@ dashboards, forecasts, telemetry ingest, weather refresh, ML cache clear) that
 needed a product decision (REV-064, decided and fixed). See REV-038 in the tracker for details and the
 behaviour changes. Method note: the spec strips route schemas so authorization
 is observable independent of body validation, and must never probe
-`/auth/logout` (it deletes the caller's CSRF token and poisons later results).
+`/auth/logout` (it ends the caller's session and poisons later results).
 
 ```
 $ npx jest tests/critical-paths/rbac-matrix.spec.ts
