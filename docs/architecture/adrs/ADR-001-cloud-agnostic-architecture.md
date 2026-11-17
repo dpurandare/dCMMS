@@ -1,6 +1,6 @@
 # ADR-001: Cloud-Agnostic Architecture Strategy
 
-**Status:** Accepted
+**Status:** Accepted — **the "Database" stack (QuestDB) is partly superseded by [ADR-006](./ADR-006-timescaledb-time-series-store.md) (Proposed, 2026-11-17)**
 **Date:** 2025-11-18
 **Decision Makers:** Technical Architecture Team, Product Management
 **Related:** STAKEHOLDER_DECISIONS.md (Nov 15, 2025), TECHNOLOGY_STACK_EVALUATION.md

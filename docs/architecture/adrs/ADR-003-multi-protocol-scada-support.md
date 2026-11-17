@@ -1,6 +1,6 @@
 # ADR-003: Multi-Protocol SCADA Integration
 
-**Status:** Accepted
+**Status:** Accepted — **QuestDB as the cloud raw-telemetry store is partly superseded by [ADR-006](./ADR-006-timescaledb-time-series-store.md) (Proposed, 2026-11-17; the edge-buffer role is left open there)**
 **Date:** 2025-11-18
 **Decision Makers:** Integration Architecture Team, Backend Team, Product Management
 **Related:** Spec 10 (Data Ingestion), Spec 12 (Integration Specifications), Spec 21 (Edge Computing)
