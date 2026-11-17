@@ -486,7 +486,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       const pushService = createPushNotificationService(fastify);
 
       // Unregister device token
-      await pushService.unregisterDeviceToken(token);
+      await pushService.unregisterDeviceToken(token, (request.user as { id: string }).id);
 
       fastify.log.info(
         { token: token.substring(0, 20) },

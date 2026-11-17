@@ -367,6 +367,26 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         }));
     }
 
+    /**
+     * Stub the three external dependencies that stop routes being exercised at all, so the ROUTES'
+     * own logic (tenant scoping, validation) still runs but nothing leaves the process: Kafka
+     * (telemetry ingest), real email/SMS/push providers (test notification), the Gemini API (genai
+     * chat). Must run INSIDE the test: jest.config sets resetMocks + restoreMocks, which undo any
+     * spy created in beforeAll before the first test starts.
+     */
+    async function stubExternals() {
+        const kafka = await import('../../src/services/kafka.service');
+        jest.spyOn(kafka.kafkaService, 'publishTelemetry').mockResolvedValue(undefined as any);
+        const notif = await import('../../src/services/notification.service');
+        jest.spyOn(notif, 'createNotificationService').mockReturnValue({ sendNotification: async () => ({}) } as any);
+        const genai = await import('../../src/services/genai.service');
+        return {
+            // The route passes the CALLER's tenant to the knowledge-base query; recorded so the sweep can
+            // assert it is only ever B's.
+            genaiQuery: jest.spyOn(genai.GenAIService, 'query').mockResolvedValue({ answer: 'stub', context: [] } as any),
+        };
+    }
+
     beforeAll(async () => {
         admin = new Pool({ connectionString: urlFor('postgres') });
         await admin.query(`CREATE DATABASE "${dbName}"`);
@@ -404,6 +424,7 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
     });
 
     it('sweeps every route with tenant A\'s real ids and finds no cross-tenant read or write', async () => {
+        const { genaiQuery } = await stubExternals();
         const routes: Array<{ method: string; url: string; schema?: any }> = [];
         for (const r of mockRoutes) {
             const url = String(r.url);
@@ -490,6 +511,13 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
             }
         }
 
+        // Every knowledge-base query the sweep provoked must have been scoped to the attacker's own tenant.
+        if (stats.resets === 0) {
+            const tenants = genaiQuery.mock.calls.map((c) => c[1]);
+            expect(tenants.length).toBeGreaterThan(0);
+            expect(tenants.filter((t) => t !== B.tenantId)).toEqual([]);
+        }
+
         const unexpected = [...violations].filter((v) => !KNOWN_LEAKS[v.split(' :: ')[0]]);
         expect(unexpected).toEqual([]);
         const stale = Object.keys(KNOWN_LEAKS).filter((k) => ![...violations].some((v) => v.startsWith(k + ' :: ')));
@@ -500,11 +528,9 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         // A route listed here answered 400 to EVERY request, i.e. the body generator could not
         // satisfy its schema, so the sweep proved nothing about it. Keep this list short and
         // explained; a growing list means the sweep is going blind.
-        const EXPECTED_UNPROBED: Record<string, string> = {
-            'POST /api/v1/genai/chat': 'calls the Gemini API; GEMINI_API_KEY is not set in tests (REV-065)',
-            'POST /api/v1/telemetry': 'publishes to Kafka, which the test server is not connected to (REV-065)',
-            'POST /api/v1/notifications/test': 'sends through real email/SMS/push providers (REV-065)',
-        };
+        // Routes that cannot be exercised at all. Empty: the three that used to be here (genai chat,
+        // telemetry -> Kafka, test notification) are now stubbed in beforeAll. A new entry needs a reason.
+        const EXPECTED_UNPROBED: Record<string, string> = {};
         const unexpected = unprobed.filter((u) => !EXPECTED_UNPROBED[u.split(' :: ')[0]]);
         expect(unexpected).toEqual([]);
     });

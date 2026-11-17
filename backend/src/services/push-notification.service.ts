@@ -242,7 +242,9 @@ export class PushNotificationService {
   /**
    * Unregister device token
    */
-  async unregisterDeviceToken(token: string): Promise<void> {
+  async unregisterDeviceToken(token: string, userId: string): Promise<void> {
+    // Scoped to the owner: this used to deactivate whichever row held the token, so anyone who
+    // knew (or guessed) a token could silence another user's push notifications.
     this.fastify.log.info(
       { token: token.substring(0, 20) },
       "Unregistering device token",
@@ -255,7 +257,7 @@ export class PushNotificationService {
           isActive: false,
           updatedAt: new Date(),
         })
-        .where(eq(deviceTokens.token, token));
+        .where(and(eq(deviceTokens.token, token), eq(deviceTokens.userId, userId)));
 
       this.fastify.log.info("Device token unregistered successfully");
     } catch (error) {

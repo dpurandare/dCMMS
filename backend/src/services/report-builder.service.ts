@@ -2,11 +2,9 @@ import { FastifyInstance } from "fastify";
 import { ClickHouseClient } from "@clickhouse/client";
 import { createClickhouseClient } from "../config/clickhouse";
 
-export type ReportDataSource =
-  | "work_orders"
-  | "assets"
-  | "telemetry"
-  | "alarms";
+/** The datasources reports can be built on. Single source of truth: the type, the route validation and the builder's tables all derive from it. */
+export const REPORT_DATASOURCES = ["work_orders", "assets", "telemetry", "alarms"] as const;
+export type ReportDataSource = (typeof REPORT_DATASOURCES)[number];
 export type AggregationType = "count" | "sum" | "avg" | "min" | "max";
 export type GroupByType =
   | "day"

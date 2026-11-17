@@ -5,7 +5,10 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { createReportService } from "../services/report.service";
-import { createReportBuilderService } from "../services/report-builder.service";
+import {
+  createReportBuilderService,
+  REPORT_DATASOURCES,
+} from "../services/report-builder.service";
 import { authorize } from "../middleware/authorize";
 
 export default async function reportRoutes(fastify: FastifyInstance) {
@@ -66,7 +69,8 @@ export default async function reportRoutes(fastify: FastifyInstance) {
         body: z.object({
           name: z.string().min(1),
           description: z.string().optional(),
-          datasource: z.string().min(1),
+          // Was z.string(): any value was stored and only failed later, at execution time, with a 500.
+          datasource: z.enum(REPORT_DATASOURCES),
           config: z.any(),
           isPublic: z.boolean().optional(),
         }),
@@ -172,7 +176,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     {
       schema: {
         params: z.object({
-          datasource: z.enum(["work_orders", "assets", "telemetry", "alarms"]),
+          datasource: z.enum(REPORT_DATASOURCES),
         }),
       },
     },

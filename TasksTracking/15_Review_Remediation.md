@@ -1510,6 +1510,7 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     after migrations spec: Tests: 2 failed, 198 passed, 200 total (4 pre-existing failing suites, unchanged).
     after tenant sweep + fixes: Tests: 2 failed, 231 passed, 233 total, stable over two consecutive full runs.
     tenant-sweep vs ORIGINAL src (fixes stashed): 31 findings; with fixes: 0. 9 new targeted isolation tests: 9 fail on original, 9 pass.
+    after REV-065 fixes + stubbed sweep routes (2026-11-17): Tests: 2 failed, 263 passed, 265 total, stable over two consecutive full runs.
     after asset-update tests + sweep hardening: Tests: 2 failed, 255 passed, 257 total, stable over two consecutive full runs. Asset tests: 17 fail on the original code. Sweep (hardened) vs the 4 newly found holes reverted one group at a time: each detected.
     RBAC spec vs ORIGINAL routes (fixes stashed): 19 failed, 22 passed — proves it detects the bugs.
     Remaining 4 failing suites are pre-existing, confirmed identical with
@@ -1606,15 +1607,15 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     ```
   - **Status:** ✅ COMPLETE
 
-- [ ] **REV-065** - Residual tenant/ownership gaps the sweep does not reach or deliberately leaves 🟡 **P2**
-  - [ ] **Intra-tenant exposure, not cross-tenant (so out of the sweep's scope, but real):** any user with `read:notifications` can read a *colleague's* notification history and preferences (`/users/:userId/notification-…`); any admin with `update:users` can edit any user in their tenant; `DELETE /users/device-token` takes only a token, not the owner. Decide whether these should be self-or-admin.
+- [ ] **REV-065** - Residual tenant/ownership gaps the sweep does not reach or deliberately leaves 🟡 **P2** ⚠️ **PARTIAL**
+  - [ ] **Intra-tenant exposure, not cross-tenant (so out of the sweep's scope, but real):** any user with `read:notifications` can read a *colleague's* notification history and preferences (`/users/:userId/notification-…`); any admin with `update:users` can edit any user in their tenant. Decide whether these should be self-or-admin. _(The third item originally listed here — `DELETE /users/device-token` not being owner-scoped — is fixed, below.)_
   - [ ] **Dashboards still have no ownership check** (carried from REV-064): `createdBy` is recorded but update/delete never compare it.
   - [ ] **Role change is an unbuilt feature.** The edit-user form has a role selector but does not send it, and nothing uses the `manage:roles` permission. If wanted: a dedicated endpoint guarded by `manage:roles`, validated against the role enum, with an escalation limit (a `tenant_admin` must not be able to mint a `super_admin`). Do **not** re-open this by loosening the `PUT /users/:id` allow-list.
-  - [ ] **"Not found" reported as a 500 in places** (non-security, found by the sweep's coverage check): compliance report generation for an unknown template, `DELETE /users/device-token` for an unknown token. Same bare-`Error` pattern fixed in work orders, assets, crews and permits; worth one more pass over the remaining services.
-  - [ ] **Routes the sweep cannot exercise in a test environment** (declared in `EXPECTED_UNPROBED`): `POST /genai/chat` (needs `GEMINI_API_KEY`), `POST /telemetry` (publishes to Kafka), `POST /notifications/test` (real providers). They need a stubbed dependency before they can be swept.
+  - [x] **"Not found" as a 500 — measured, and smaller than first written (2026-11-17).** Probed 25 not-found / conflict cases with real requests: nearly all already answer 404. The real defects were three, all fixed with regression tests (`tests/e2e/edge-cases.e2e.test.ts`, 3 of 8 fail on the original code): **`POST /reports` accepted any datasource** (200, stored, then failed at execution with a 500) — now a 400 via a single `REPORT_DATASOURCES` list shared by the type, the route validation and the builder; **`POST /compliance/reports` for an unknown template was a 500** — now 404; **`DELETE /users/device-token` deactivated whichever row held the token** for any caller — now scoped to the owner. _Left as is, by judgement:_ `DELETE /dashboards/:id` and `DELETE /reports/:id` return 204 for an unknown id (idempotent DELETE) while assets/sites/work orders return 404; inconsistent but defensible, and a client treating a repeat delete as an error would break.
+  - [x] **Routes the sweep could not exercise — now exercised (2026-11-17).** `POST /genai/chat`, `POST /telemetry` (Kafka) and `POST /notifications/test` (real providers) are probed with their one external dependency stubbed by `jest.spyOn` inside the sweep test; `EXPECTED_UNPROBED` is empty. The genai stub also records the tenant the route passes to the knowledge-base query, and the sweep asserts it is only ever the attacker's own. Note for anyone adding stubs: `jest.config.js` sets `resetMocks` and `restoreMocks`, which silently undo any spy created in `beforeAll` — create them inside the test.
   - [ ] **Sweep blind spots to close:** multipart upload routes; a `super_admin` attacker (is cross-tenant access ever intended? it is currently undefined); more than one seeded row per table; foreign-key body fields not in `FK_FIELDS`; MQTT/Kafka ingestion.
   - **Priority:** 🟡 P2
-  - **Status:** 🔴 Not Started
+  - **Status:** ⚠️ PARTIAL — open: intra-tenant privacy, dashboard ownership, the unbuilt role-change endpoint, and the sweep blind spots below.
 
 ---
 

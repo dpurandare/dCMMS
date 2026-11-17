@@ -121,9 +121,12 @@ export default async function complianceReportRoutes(fastify: FastifyInstance) {
           },
         });
       } catch (error: any) {
+        // Client errors thrown with a statusCode (e.g. an unknown template -> 404) keep their code;
+        // everything else is a genuine server fault.
+        const status = typeof error?.statusCode === "number" ? error.statusCode : 500;
         fastify.log.error({ error }, "Failed to generate compliance report");
-        return reply.status(500).send({
-          error: "Failed to generate compliance report",
+        return reply.status(status).send({
+          error: status === 500 ? "Failed to generate compliance report" : "Not Found",
           message: error.message,
         });
       }

@@ -1,3 +1,4 @@
+import { NotFoundError } from "../utils/ownership";
 import { FastifyInstance } from "fastify";
 import { db } from "../db";
 import { complianceGeneratedReports } from "../db/schema";
@@ -77,7 +78,8 @@ export class ComplianceReportGenerationService {
       );
 
       if (!template) {
-        throw new Error(`Template not found: ${request.templateId}`);
+        // A client error (unknown template code), not a server fault: the route maps it to 404.
+        throw new NotFoundError(`Template ${request.templateId}`);
       }
 
       // Auto-populate data
