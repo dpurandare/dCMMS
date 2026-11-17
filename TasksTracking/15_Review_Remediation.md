@@ -47,13 +47,13 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 | Phase | Workstreams | Tasks | Done | Status |
 | :---- | :---------- | :---- | :--- | :----- |
 | **Phase 0** — Stop the bleeding (2 days) | WS-2, WS-3 (P0 only) | 9 | 4 | ⚠️ In Progress |
-| **Phase 1** — Ground truth (1 week) | WS-1, WS-3, WS-4 | 16 | 13 | ⚠️ In Progress |
+| **Phase 1** — Ground truth (1 week) | WS-1, WS-3, WS-4 | 16 | 14 | ⚠️ In Progress |
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 20 | 16 | ⚠️ In Progress |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
 | **Deferred** — real-feature product decisions (not a phase) | — | 4 | 4 | ✅ All four resolved: REV-061 and REV-062 descoped (docs and permissions aligned 2026-11-17), REV-063 folded into REV-056 (its work is carried there), REV-064 done |
 | **Follow-ups** — decided or postponed 2026-11-17 (not a phase) | — | 2 | 0 | 🔴 Not Started (REV-066, REV-067) |
-| **TOTAL** | | **79** | **37** | **47%** |
+| **TOTAL** | | **79** | **38** | **48%** |
 
 **By severity:** 🔴 P0: 6 · 🟠 P1: 35 · 🟡 P2: 22 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19; REV-025b and REV-027b split from REV-025/REV-027 on 2026-09-19; REV-061/062/063 added on 2026-09-19 as deferred product decisions, not remediation — see "DEFERRED — Real Feature Decisions" below Phase 4)_
 
@@ -772,24 +772,27 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     CSRF-immune.
   - **Status:** ✅ COMPLETE
 
-- [ ] **REV-018a** - Wire or delete the CSRF subsystem 🟠 **P1**
+- [x] **REV-018a** - Wire or delete the CSRF subsystem 🟠 **P1** ✅ **DONE 2026-11-17** (deleted)
   - **Decision (Deepak, 2026-11-17): DELETE the token system; add an Origin/Referer check on the cookie endpoints.** Rationale (ADR-005): Bearer-header endpoints are already CSRF-immune; the only ambient credential is the refresh cookie (SameSite=Strict, scoped to `/auth/*`), and a user-keyed token cannot protect `/auth/refresh`. The token system covered ~two-thirds of mutating routes inconsistently, rotates silently via `GET /csrf/token`, and added Redis lookups and client burden.
   - **Refinements from the 2026-11-17 Q&A:** (1) **External clients:** the only in-repo client of the CSRF flow is the web frontend. The Flutter app in `mobile/` was checked on request (all file types): it has **no CSRF code** — it never sends `x-csrf-token` and never calls `/csrf/token`. Deepak is unsure about clients *outside* the repo, so the default taken is to keep `GET /api/v1/csrf/token` as a **deprecated no-op** (dummy token + a logged deprecation warning) for one release. (2) The Origin/Referer check must reject **only when an `Origin` header is present and not allowed**: non-browser clients such as the mobile app send none and must not be blocked. (3) Side effect worth knowing: the mobile app's `POST` / `DELETE /work-orders` currently get **403 (no CSRF token)**, because it never sends one; the removal fixes that part of mobile sync.
   - [ ] **TODO — delete the deprecated `GET /csrf/token` no-op in the release after this one** (check the deprecation warning in the logs first: if something still calls it, find out what).
-  - [ ] **TODO — docs:** remove or archive `docs/security/CSRF_IMPLEMENTATION.md`.
-  - [ ] **TODO — remove:** `middleware/csrf.ts`, `routes/csrf.ts` (+ its registration), `csrfProtection` from ~16 route files, the `csrfToken` field in the login response, `frontend/src/lib/csrf.ts` and the header in `api-client.ts`, the two uncompilable tests (`src/__tests__/middleware/csrf.test.ts`, `src/__tests__/csrf-integration.test.ts`), `backend/scripts/add-csrf-protection.sh`.
-  - [ ] **TODO — add:** a stateless Origin/Referer check on `POST /auth/refresh` and `POST /auth/logout`, with tests (a foreign Origin -> 403).
-  - [ ] **TODO — knock-on:** `tests/helpers/auth.ts` `loginHeaders` throws without `csrfToken`; every e2e spec and the sweep send `x-csrf-token`; the sweep's `/csrf/` skip and its "no CSRF rejection" assertion go away; update the RBAC spec comments; update ADR-005 (status -> removed). Reopen only if the access token ever moves into a cookie.
+  - [x] **DONE — docs:** `CSRF_IMPLEMENTATION.md` and `CSRF_BATCH_SUMMARY.md` moved to `docs/archive/` with a superseded banner; ADR-005 amended; `frontend/docs/SECURITY.md`, README, production-readiness checklist and test-plan updated.
+  - [x] **DONE — removed:** `middleware/csrf.ts`, `routes/csrf.ts` (+ its registration), `csrfProtection` from ~16 route files, the `csrfToken` field in the login response, `frontend/src/lib/csrf.ts` and the header in `api-client.ts`, the two uncompilable tests (`src/__tests__/middleware/csrf.test.ts`, `src/__tests__/csrf-integration.test.ts`), `backend/scripts/add-csrf-protection.sh`.
+  - [x] **DONE — added:** a stateless Origin/Referer check on `POST /auth/refresh` and `POST /auth/logout`, with tests (a foreign Origin -> 403).
+  - [x] **DONE — knock-on:** `tests/helpers/auth.ts` `loginHeaders` throws without `csrfToken`; every e2e spec and the sweep send `x-csrf-token`; the sweep's `/csrf/` skip and its "no CSRF rejection" assertion go away; update the RBAC spec comments; update ADR-005 (status -> removed). Reopen only if the access token ever moves into a cookie.
   - **Verify:** `grep -rn csrf backend/src frontend/src` returns only the Origin check; full suite green; `POST /auth/refresh` with a foreign `Origin` is refused.
-  - [ ] Decide: attach `csrfProtection` as defence in depth on authenticated state-changing routes, or delete the subsystem
-  - [ ] Note the mismatch that blocks the obvious answer: a double-submit token keyed by user id does not fit `/auth/refresh`, which by definition runs when there is no authenticated user to key against — so it cannot simply be bolted onto the one endpoint that carries an ambient credential
-  - [ ] Whichever way it goes, `backend/scripts/add-csrf-protection.sh` and the two design documents must match reality afterwards
+  - **Result (2026-11-17, commits 9b842e1 / 36a483d / efa6a73 / 3eb483d):** `grep -rn "csrfProtection\|middleware/csrf" backend/src frontend/src` returns nothing. `middleware/origin-check.ts` guards `POST /auth/refresh` and `/auth/logout` (foreign `Origin` -> 403; no `Origin` is allowed, so the mobile app is not blocked). `GET /csrf/token` is kept as a **deprecated no-op** (the only remaining TODO above). New optional env `CORS_ORIGINS` feeds both CORS and the Origin check (previously CORS allowed only four localhost origins, so a deployed frontend on another origin needs it; added to the production checklist). Tests: new `tests/e2e/auth-origin.e2e.test.ts` (9 tests; **the two refusal tests fail with the check neutered**, verified). Backend suite 281 passed, 2 pre-existing failures (`analytics-trends`; `example.spec` does not run); the two uncompilable CSRF suites are gone. The mobile app's `POST` / `DELETE /work-orders` no longer get 403 for a missing CSRF token (not tested against the real app).
+  - **Found while removing it:** nothing in the frontend ever called `setCsrfToken`, so the web app never held a token and its state-changing requests would have been refused wherever the middleware was wired. The CSRF system was inert on the client as well as the server.
+  - **Frontend suite: 3 suites / 4 tests fail, identical before and after this change (pre-existing, not CSRF):** `src/__tests__/auth/auth-flow.test.tsx` (still written for the pre-ADR-005 `localStorage` login and an old `login()` signature), `src/__tests__/api/integration.test.ts`, `tests/unit/components/Button.test.tsx`; plus type errors in `auth-flow.test.tsx` and `tests/e2e/asset-hierarchy.spec.ts`. **TODO:** add to REV-067 (frontend follow-ups).
+  - [x] Decide: attach `csrfProtection` as defence in depth on authenticated state-changing routes, or delete the subsystem
+  - [x] Note the mismatch that blocks the obvious answer: a double-submit token keyed by user id does not fit `/auth/refresh`, which by definition runs when there is no authenticated user to key against — so it cannot simply be bolted onto the one endpoint that carries an ambient credential
+  - [x] Whichever way it goes, `backend/scripts/add-csrf-protection.sh` and the two design documents must match reality afterwards
   - [x] **New evidence from REV-029 (2026-09-19):** confirms this is still live and worse than "inert" in one place — `routes/auth.ts` generates and deletes a CSRF token on login/logout but never validates one, including on `/logout` itself; `dashboards.ts` (before today) imported the middleware but never wired it in; `routes/crews.ts:42-50` wraps the import in a try/catch that silently swaps in a no-op if it ever fails to load, a fail-open pattern on a security control. Application is inconsistent across ≥8 files, not just "never wired anywhere." This doesn't resolve the decision, just sharpens the evidence for it.
   - **Priority:** 🟠 P1 — 277 lines of inert security machinery is its own hazard: it reads like protection in review and in audits, and it is not
   - **Estimated:** 1 day
   - **Split from:** REV-018
   - **Verify:** either a request with a missing/incorrect CSRF token is rejected by a real route, or `grep -rn csrfProtection backend/src` returns nothing.
-  - **Status:** 🔴 Not Started
+  - **Status:** ✅ DONE 2026-11-17 (only the deprecated `GET /csrf/token` no-op remains, to be deleted next release)
 - [x] **REV-019** - Tighten Content-Security-Policy 🟠 **P1**
   - [x] Remove `'unsafe-eval'` and `'unsafe-inline'` from `script-src`
   - [x] Make `connect-src` environment-driven
