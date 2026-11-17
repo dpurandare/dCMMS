@@ -11,7 +11,7 @@ import { loginHeaders } from '../../tests/helpers/auth';
 
 const mockPublish = jest.fn();
 jest.mock('../../src/services/kafka.service', () => ({
-    kafkaService: { publishTelemetry: (...a: any[]) => mockPublish(...a) },
+    kafkaService: { publishTelemetry: (...a: any[]) => mockPublish(...a), disconnect: async () => undefined },
 }));
 
 describe('Telemetry tenancy E2E', () => {
