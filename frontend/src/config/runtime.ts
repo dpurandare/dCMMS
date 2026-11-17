@@ -20,7 +20,6 @@ export interface RuntimeConfig {
     };
 
     security: {
-        enableCSRF: boolean;
         sessionTimeout: number; // minutes
         tokenRefreshInterval: number; // minutes
         maxLoginAttempts: number;
@@ -48,7 +47,6 @@ export const runtimeConfig: RuntimeConfig = {
     },
 
     security: {
-        enableCSRF: process.env.NEXT_PUBLIC_ENABLE_CSRF === 'true',
         sessionTimeout: parseInt(process.env.NEXT_PUBLIC_SESSION_TIMEOUT || '60', 10),
         tokenRefreshInterval: parseInt(process.env.NEXT_PUBLIC_TOKEN_REFRESH_INTERVAL || '14', 10),
         maxLoginAttempts: parseInt(process.env.NEXT_PUBLIC_MAX_LOGIN_ATTEMPTS || '5', 10),

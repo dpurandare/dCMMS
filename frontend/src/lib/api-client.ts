@@ -37,7 +37,9 @@ export const apiClient: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor to add auth token and CSRF token
+// Request interceptor to add the access token. No CSRF token: the API authenticates with this
+// Authorization header (which a cross-site request cannot set) and protects its cookie endpoints with
+// an Origin check instead (REV-018a, ADR-005).
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
@@ -47,15 +49,6 @@ apiClient.interceptors.request.use(
       const token = useAuthStore.getState().accessToken;
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
-      }
-
-      // Add CSRF token for state-changing requests
-      const { getCsrfToken, requiresCsrfProtection } = await import('@/lib/csrf');
-      if (config.method && requiresCsrfProtection(config.method)) {
-        const csrfToken = getCsrfToken();
-        if (csrfToken && config.headers) {
-          config.headers['X-CSRF-Token'] = csrfToken;
-        }
       }
     }
     return config;
