@@ -51,10 +51,11 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 20 | 16 | ⚠️ In Progress |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
-| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 1 | 🛑 3 BLOCKED on Deepak (REV-064 done) |
-| **TOTAL** | | **77** | **34** | **44%** |
+| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 1 | REV-061/062/063 decided 2026-11-17 (descope / descope / folded into REV-056); implementation TODOs recorded in each entry |
+| **Follow-ups** — decided or postponed 2026-11-17 (not a phase) | — | 2 | 0 | 🔴 Not Started (REV-066, REV-067) |
+| **TOTAL** | | **79** | **34** | **43%** |
 
-**By severity:** 🔴 P0: 6 · 🟠 P1: 33 · 🟡 P2: 22 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19; REV-025b and REV-027b split from REV-025/REV-027 on 2026-09-19; REV-061/062/063 added on 2026-09-19 as deferred product decisions, not remediation — see "DEFERRED — Real Feature Decisions" below Phase 4)_
+**By severity:** 🔴 P0: 6 · 🟠 P1: 34 · 🟡 P2: 23 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19; REV-025b and REV-027b split from REV-025/REV-027 on 2026-09-19; REV-061/062/063 added on 2026-09-19 as deferred product decisions, not remediation — see "DEFERRED — Real Feature Decisions" below Phase 4)_
 
 > Update this table at the end of each working day. It is the only status anyone outside the team should need to read.
 
@@ -136,6 +137,10 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Status:** ⚠️ PARTIAL — code complete and verified; non-dev environment rotation is REV-001a
 
 - [ ] **REV-001a** - Rotate secrets in non-dev environments 🔴 **P0** 🛑 **BLOCKED**
+  - **Decision (Deepak, 2026-11-17): rotate everything with the next staging/demo redeploy.** Staging/demo hold only seed data, so **no data audit** (recorded as a decision, not an oversight). Context: the repo is **public**; `changeme-secret-key` (first auth commit's fallback) is public, and so are the compose defaults (`dcmms_password_dev`, `redis_password_dev`, `minioadmin`, Grafana `admin/admin`). Current builds cannot boot with the old key (`JWT_SECRET` must be >= 64 chars; the old key is 20), so only pre-2026-09-19 builds were exposed.
+  - [ ] **TODO (Claude):** write `docs/runbooks/rotate-secrets.md` with exact commands.
+  - [ ] **TODO (Deepak — Claude cannot touch these environments):** generate `JWT_SECRET` (`openssl rand -base64 64`); replace the default DB / Redis / MinIO / Grafana passwords; redeploy current `main`; run `npm run db:migrate` (migration `0003_asset_description` — without it assets error); expect every user to be logged out once.
+  - [ ] **TODO (verify):** a token signed with the old key is rejected; the default passwords no longer work.
   - [ ] Generate a fresh `JWT_SECRET` (≥64 chars) for staging and any demo instance
   - [ ] Rotate `CLICKHOUSE_PASSWORD`, `REDIS_PASSWORD`, `QUESTDB_PASSWORD` and the database password anywhere they were set to the `*_dev` values from `docker-compose.yml`
   - [ ] Invalidate all outstanding refresh tokens after rotation
@@ -759,6 +764,11 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Status:** ✅ COMPLETE
 
 - [ ] **REV-018a** - Wire or delete the CSRF subsystem 🟠 **P1**
+  - **Decision (Deepak, 2026-11-17): DELETE the token system; add an Origin/Referer check on the cookie endpoints.** Rationale (ADR-005): Bearer-header endpoints are already CSRF-immune; the only ambient credential is the refresh cookie (SameSite=Strict, scoped to `/auth/*`), and a user-keyed token cannot protect `/auth/refresh`. The token system covered ~two-thirds of mutating routes inconsistently, rotates silently via `GET /csrf/token`, and added Redis lookups and client burden.
+  - [ ] **TODO — remove:** `middleware/csrf.ts`, `routes/csrf.ts` (+ its registration), `csrfProtection` from ~16 route files, the `csrfToken` field in the login response, `frontend/src/lib/csrf.ts` and the header in `api-client.ts`, the two uncompilable tests (`src/__tests__/middleware/csrf.test.ts`, `src/__tests__/csrf-integration.test.ts`), `backend/scripts/add-csrf-protection.sh`.
+  - [ ] **TODO — add:** a stateless Origin/Referer check on `POST /auth/refresh` and `POST /auth/logout`, with tests (a foreign Origin -> 403).
+  - [ ] **TODO — knock-on:** `tests/helpers/auth.ts` `loginHeaders` throws without `csrfToken`; every e2e spec and the sweep send `x-csrf-token`; the sweep's `/csrf/` skip and its "no CSRF rejection" assertion go away; update the RBAC spec comments; update ADR-005 (status -> removed). Reopen only if the access token ever moves into a cookie.
+  - **Verify:** `grep -rn csrf backend/src frontend/src` returns only the Origin check; full suite green; `POST /auth/refresh` with a foreign `Origin` is refused.
   - [ ] Decide: attach `csrfProtection` as defence in depth on authenticated state-changing routes, or delete the subsystem
   - [ ] Note the mismatch that blocks the obvious answer: a double-submit token keyed by user id does not fit `/auth/refresh`, which by definition runs when there is no authenticated user to key against — so it cannot simply be bolted onto the one endpoint that carries an ambient credential
   - [ ] Whichever way it goes, `backend/scripts/add-csrf-protection.sh` and the two design documents must match reality afterwards
@@ -1208,6 +1218,9 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - [ ] **Still open — product decisions, not engineering ones:**
     - Real SendGrid/SES/Twilio/SNS/FCM integration, or accept SMTP + console-log as the permanent email path and formally drop SMS/push? Needs provider accounts/credentials this session doesn't have either way.
     - Real work-order approval and predictive-maintenance persistence, tracked as **REV-062** below, or close that door for good?
+  - **Decision (Deepak, 2026-11-17): work-order APPROVAL — descope now; make docs match code.** Facts: spec 02 defines 11 states (`submitted/approved/assigned/verified`); the code has 8 and `draft -> open` is the only release step; `approve:work-orders` is granted to super_admin / tenant_admin / site_manager but enforced nowhere; no frontend approval UI. **Predictive maintenance** is decided together with REV-056.
+  - [ ] **TODO:** update `specs/02_STATE_MACHINES.md` to the 8 states that exist; remove `approve:work-orders` from `ROLE_PERMISSIONS` + the `Permission` type in the backend and the frontend mirror (the REV-064 parity test keeps them in sync); record the descope in `99_Descoped_Tasks.md` (reopenable as backlog); close REV-028's open line.
+  - **Verify:** `grep -rn "approve:work-orders" backend/src frontend/src` returns nothing; parity test green; spec 02 matches `work-order-state.ts`.
   - **Priority:** 🟠 P1
   - **Estimated:** 1–3 weeks depending on scope decisions
   - **Verify:** `grep -rn "TODO" backend/src/services` → every remaining TODO has a task ID beside it.
@@ -1613,6 +1626,8 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - [ ] **Role change is an unbuilt feature.** The edit-user form has a role selector but does not send it, and nothing uses the `manage:roles` permission. If wanted: a dedicated endpoint guarded by `manage:roles`, validated against the role enum, with an escalation limit (a `tenant_admin` must not be able to mint a `super_admin`). Do **not** re-open this by loosening the `PUT /users/:id` allow-list.
   - [x] **"Not found" as a 500 — measured, and smaller than first written (2026-11-17).** Probed 25 not-found / conflict cases with real requests: nearly all already answer 404. The real defects were three, all fixed with regression tests (`tests/e2e/edge-cases.e2e.test.ts`, 3 of 8 fail on the original code): **`POST /reports` accepted any datasource** (200, stored, then failed at execution with a 500) — now a 400 via a single `REPORT_DATASOURCES` list shared by the type, the route validation and the builder; **`POST /compliance/reports` for an unknown template was a 500** — now 404; **`DELETE /users/device-token` deactivated whichever row held the token** for any caller — now scoped to the owner. _Left as is, by judgement:_ `DELETE /dashboards/:id` and `DELETE /reports/:id` return 204 for an unknown id (idempotent DELETE) while assets/sites/work orders return 404; inconsistent but defensible, and a client treating a repeat delete as an error would break.
   - [x] **Routes the sweep could not exercise — now exercised (2026-11-17).** `POST /genai/chat`, `POST /telemetry` (Kafka) and `POST /notifications/test` (real providers) are probed with their one external dependency stubbed by `jest.spyOn` inside the sweep test; `EXPECTED_UNPROBED` is empty. The genai stub also records the tenant the route passes to the knowledge-base query, and the sweep asserts it is only ever the attacker's own. Note for anyone adding stubs: `jest.config.js` sets `resetMocks` and `restoreMocks`, which silently undo any spy created in `beforeAll` — create them inside the test.
+  - [ ] **TODO — role matrix vs spec 09 was never reconciled:** the spec matrix has ~16 personas, the code has 6 roles. Oddities left as-is: `operator` can create alerts but `technician` cannot; `operator` reaches `ml-features`. Decide the intended matrix, then encode it in the RBAC spec's `INTENT` table.
+  - [ ] **TODO — consistency:** `DELETE /dashboards/:id` and `DELETE /reports/:id` return 204 for an unknown id (idempotent) while assets / sites / work orders return 404. Decide one convention; a client treating a repeat delete as an error would break if switched to 404.
   - [ ] **Sweep blind spots to close:** multipart upload routes; a `super_admin` attacker (is cross-tenant access ever intended? it is currently undefined); more than one seeded row per table; foreign-key body fields not in `FK_FIELDS`; MQTT/Kafka ingestion.
   - **Priority:** 🟡 P2
   - **Status:** ⚠️ PARTIAL — open: intra-tenant privacy, dashboard ownership, the unbuilt role-change endpoint, and the sweep blind spots below.
@@ -1636,6 +1651,8 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Status:** 🔴 Not Started
 
 - [ ] **REV-043** - Decide between QuestDB and ClickHouse 🟡 **P2**
+  - **Decision (Deepak, 2026-11-17): TimescaleDB is the time-series store, as spec 10 says. QuestDB is out. ClickHouse is out** ("does not make any sense; drop it; revisit TimescaleDB only if a performance bottleneck appears"). Evidence (same 20M-row workload, single node, laptop): ClickHouse 1.9M rows/s but no duplicate protection; TimescaleDB 119k rows/s *with* unique-key dedupe, 16x compression, native continuous aggregates and retention policies, direct joins to Postgres, all queries < 250 ms, ~153 vs 162 MB on disk. ClickHouse and QuestDB appear in **no spec**.
+  - **Deliverables and follow-ups are tracked under REV-066.** This task closes when ADR-006 exists and `docker-compose.yml` matches it.
   - [ ] The system runs three time-series stores; the code uses at most two (ClickHouse: 13 files, QuestDB: 5)
   - [ ] Pick one, or write an ADR justifying both
   - **Priority:** 🟡 P2
@@ -1750,6 +1767,8 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Status:** 🔴 Not Started
 
 - [ ] **REV-056** - Scope decision on the three peripheral areas 🟠 **P1**
+  - **Now also owns (2026-11-17):** sensor-driven **Alarms** (folded in from REV-063), **predictive maintenance** (the second half of REV-062), and the **telemetry consumer**. Key finding: telemetry is a dead end — `POST /telemetry` publishes to Kafka and **no consumer reads it**, so nothing is stored or thresholded (verified: no `eachMessage`/`consumer.run` in `backend/src`). The topic name is also hardcoded (`"raw_telemetry"`, `routes/telemetry.ts`) while `.env.example` declares `KAFKA_TOPIC_TELEMETRY_RAW=telemetry.raw`, read nowhere.
+  - [ ] **TODO:** decide ML / telemetry / mobile scope; if telemetry stays in scope, build the Kafka consumer -> TimescaleDB with a duplicate-handling design (unique key + `ON CONFLICT DO NOTHING` was verified to work on compressed chunks), then Alarms on top of it.
   - [ ] These represent ~18k LOC with almost no integration into the running product
   - [ ] Decide in / out of scope for internal beta **before** spending further review effort
   - **Priority:** 🟠 P1
@@ -1815,6 +1834,8 @@ exist so the question stays visible in the planner instead of disappearing into
 code. Nothing here is scheduled into a phase until a decision lands.
 
 - [ ] **REV-061** - Decide: real Cost Management, or close it for good 🛑 **BLOCKED**
+  - **Decision (Deepak, 2026-11-17): DESCOPE now; keep capturing cost data** (part `unit_price`, `cost_per_unit`, labor `hourly_rate` stay in the schema). First slice if ever reopened: cost-per-work-order rollup per asset/site/period on existing columns, no new tables (~1-2 days + a UI screen); the full spec (budgets, billing integration, optimisation) is several weeks.
+  - [ ] **TODO:** add the descope to `TasksTracking/99_Descoped_Tasks.md`; mark `specs/23_COST_MANAGEMENT.md` as not implemented / reopenable backlog.
   - [ ] `budget-management`, `cost-calculation`, `cost-analytics` were deleted under REV-025 — in-memory-only storage and `Math.random()` fabricated figures, unsalvageable
   - [ ] If wanted: from-scratch build against `specs/23_COST_MANAGEMENT.md` — real persistence, real cost aggregation, no reuse of deleted code
   - [ ] If not wanted: mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md` (it's already there as removed; this would make "not building it" the final word rather than an open question) and update `TasksTracking/10_Cost_Management.md`'s framing accordingly
@@ -1831,6 +1852,8 @@ code. Nothing here is scheduled into a phase until a decision lands.
   - **Status:** 🛑 BLOCKED — awaiting decision
 
 - [ ] **REV-063** - Decide: real sensor-driven Alarms, or close it for good 🛑 **BLOCKED**
+  - **Decision (Deepak, 2026-11-17): FOLD INTO REV-056** and decide there, together with the telemetry storage now chosen (TimescaleDB). Not a standalone blocked item any more. The rule-based `alerts` system is live and unaffected.
+  - [ ] **TODO:** when REV-056 is decided, either build Alarms on the telemetry consumer (REV-056 / REV-066) or descope; `specs/ALARMS_DASHBOARD_SPEC.md` (638 lines) is the reference.
   - [ ] `routes/alarms.ts` was deleted under REV-025 — queried a table that never existed, and even the code that existed didn't implement what `specs/ALARMS_DASHBOARD_SPEC.md` actually describes (real-time sensor-threshold-driven alarms, distinct from the rule-based `alerts` system, which is live and unaffected)
   - [ ] If wanted: from-scratch build — new `alarms` table, threshold-breach-to-alarm generation wired into telemetry ingestion, the full dashboard spec (live updates, bulk actions, CSV export) on the frontend, where nothing exists today
   - [ ] If not wanted: mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md`
@@ -1869,6 +1892,37 @@ there is nothing left to decide). ML Inference / Model Governance (not deleted �
 registered as honestly-labeled mocks under REV-027a; building *real* model serving
 is a materially larger initiative than this list and belongs with REV-056's ML/
 telemetry/mobile scope decision, not here).
+
+---
+
+# FOLLOW-UPS — decided or postponed (recorded 2026-11-17)
+
+Items that were **decided but not yet implemented**, or **deliberately postponed**, during the 2026-11-17 decision round. Several are recorded as `TODO` sub-items inside their existing tasks (REV-001a, REV-018a, REV-043, REV-056, REV-061/062/063, REV-065); these two have no other home.
+
+- [ ] **REV-066** - Make TimescaleDB the time-series store; port and retire ClickHouse; remove QuestDB 🟠 **P1**
+  - **Decision (Deepak, 2026-11-17):** TimescaleDB, per spec 10. QuestDB and ClickHouse are out. Revisit **only if a performance bottleneck appears** — untested so far: batched `COPY`, concurrent reads during ingest, bigger hardware; headroom measured was ~1.7x over the spec's 72k events/s Year-3 target on a laptop.
+  - [x] **Interim mitigation DONE (2026-11-17) for a proven SQL injection:** `report-builder.service.ts` pasted stored report-filter fields/values straight into ClickHouse SQL (26 interpolated values, 0 parameterized, across 5 services). Proven end to end: an injected subquery ran and the error echoed the generated SQL, including the `tenant_id` clause. Latent for tenant data (ClickHouse is empty; `CLICKHOUSE_ETL_ENABLED` defaults off) but ClickHouse's system tables were readable. Fixed by **disabling `POST /reports/:id/execute` (503)** and making the ETL scheduler **refuse to boot** when `CLICKHOUSE_ETL_ENABLED=true`. Tests: `tests/e2e/edge-cases.e2e.test.ts`, `tests/unit/etl-guard.spec.ts` (both fail on the original code). Other user-reachable inputs checked: `site_id` / compliance `siteId` are UUID-validated, `tenantId` comes from the token, dates are ISO strings; the asset-health scorer has no callers.
+  - [ ] **TODO — ADR-006:** TimescaleDB is the time-series store; supersedes the off-spec ClickHouse / QuestDB code; records the benchmark evidence and the revisit trigger above.
+  - [ ] **TODO — decide placement (not yet asked):** a separate Timescale instance (as compose runs today) vs switching the main Postgres to the Timescale image (direct joins to assets/sites, one backup, `CREATE EXTENSION` from a drizzle migration). Recommendation at pilot scale: the main Postgres.
+  - [ ] **TODO — licence check:** `timescaledb.license = timescale` (Community / TSL) is what provides compression and continuous aggregates. Confirm it fits the product's deployment and commercial model (self-hosting is fine; offering it as a managed service is not).
+  - [ ] **TODO — port the five ClickHouse-backed features** to Postgres/Timescale with **parameterized SQL and allow-listed columns**: KPI analytics (`kpi-calculation.service.ts`), report builder (`report-builder.service.ts`; its `alarms` datasource has no table), compliance auto-populate (`compliance-template.service.ts` — it interpolates template-definition values that come from the database, so not user-reachable, but must still be parameterized), asset health scoring (`asset-health-scoring.service.ts` — has **no callers**: decide keep or delete), ETL (`clickhouse-etl.service.ts`, `etl-scheduler.service.ts` — likely unnecessary once the data is in Postgres/Timescale). These are real features, so they are **ported, not deleted**.
+  - [ ] **TODO — restore report execution:** replace the 503 in `routes/reports.ts` with the ported `execute`, and remove the `POST /reports/:id/execute` entry from `EXPECTED_UNPROBED` in `tests/security/tenant-sweep.spec.ts`.
+  - [ ] **TODO — telemetry route:** remove the QuestDB pool (it has zero tables — the schema was never created, hence `GET /telemetry` 500s); read from Timescale; remove `Math.random()`; create the hypertables / continuous aggregates / retention policies by migration (spec 10 section 6: 1-day chunks, 1- and 5-minute aggregates, compress after 7 days, 90 days raw, 5 years aggregated). The Kafka consumer is REV-056.
+  - [ ] **TODO — remove the infra last:** QuestDB and ClickHouse from `docker-compose.yml`, `scripts/dev.sh`, `.env*`, `config/env.ts` secret rules and the docs/specs that name them; then the `CLICKHOUSE_ETL_ENABLED` guard. (Both containers currently report *unhealthy* from broken healthchecks — ClickHouse's `wget` is refused 381 times in a row; QuestDB's uses `curl`, which is not in the image — the databases themselves work. Moot once removed.)
+  - **Related failing test:** `tests/unit/analytics-trends.test.ts` (KPI endpoints -> 500) resolves with the port.
+  - **Evidence (2026-11-17):** `edge-cases.e2e` + `etl-guard.spec`: 2 of the new tests fail on the original code (report execution ran the injected SQL; the ETL booted with the flag on) and pass with the mitigation. Full backend suite: Tests: 2 failed, 267 passed, 269 total, stable over two consecutive runs (the 2 failures are the pre-existing `analytics-trends` ones). Benchmark (same workload both stores, scratch schemas dropped afterwards): ClickHouse 20M rows in 10.7 s, queries 70-96 ms, 153 MB; TimescaleDB 20M rows in 168 s with the unique key enforced, queries 57-240 ms, 162 MB (16.5x compression), duplicate re-insert into compressed chunks ignored.
+  - **Priority:** 🟠 P1
+  - **Verify:** `grep -rli "clickhouse\|questdb" backend/src docker-compose.yml scripts` returns nothing; KPI, report, compliance and telemetry endpoints return real data from Timescale in e2e tests; the tenant sweep passes with report execution restored.
+  - **Status:** 🔴 Not Started (interim mitigation done)
+
+- [ ] **REV-067** - Frontend / UI follow-ups from the 2026-11-12 backend changes 🟡 **P2**
+  - [ ] **TODO — UI walkthrough, never done:** REV-064 changed who can do what. Check no screen assumes otherwise: `operator` can no longer generate forecasts or ingest telemetry over HTTP; `operator` / `technician` / `viewer` can no longer create or edit dashboards; `site_manager` can no longer create or delete assets; `operator` / `viewer` lost report writes; non-admins lost model-governance writes.
+  - [ ] **TODO:** `frontend/src/components/assets/asset-status-badge.tsx` still types status as `operational | maintenance | down | retired` — align to the database enum (`degraded`, `decommissioned`; there is no `retired`).
+  - [ ] **TODO:** `frontend/src/types/api.ts` has `tags?: string` in one place and `string[]` in another; the backend now returns arrays everywhere.
+  - [ ] **TODO (trivial):** two stray `console.log` calls remain in `backend/tests/e2e/hierarchy.e2e.test.ts`.
+  - **Priority:** 🟡 P2
+  - **Verify:** the walkthrough above recorded in this entry; `npm run build` and the frontend tests pass.
+  - **Status:** 🔴 Not Started
 
 ---
 
