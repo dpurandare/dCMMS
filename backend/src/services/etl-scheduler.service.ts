@@ -23,6 +23,18 @@ export class ETLSchedulerService {
   async start(): Promise<void> {
     const enabled = process.env.CLICKHOUSE_ETL_ENABLED === "true";
 
+    // REFUSE to start (REV-066). Turning this on copies every tenant's operational data into
+    // ClickHouse, whose query builders are SQL-injectable (report filters). That makes the
+    // injection a cross-tenant read. ClickHouse is being retired; until the analytics code is
+    // ported to PostgreSQL/TimescaleDB with parameterized SQL this must stay off, and failing the
+    // boot is the point: a log line saying "disabled" is exactly how this would be missed.
+    if (enabled) {
+      throw new Error(
+        "CLICKHOUSE_ETL_ENABLED=true is blocked: the ClickHouse query builders are SQL-injectable " +
+          "and ClickHouse is being retired in favour of TimescaleDB (REV-066). Unset it.",
+      );
+    }
+
     if (!enabled) {
       this.fastify.log.info("ClickHouse ETL scheduler is disabled");
       return;

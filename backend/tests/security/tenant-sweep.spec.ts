@@ -528,9 +528,11 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         // A route listed here answered 400 to EVERY request, i.e. the body generator could not
         // satisfy its schema, so the sweep proved nothing about it. Keep this list short and
         // explained; a growing list means the sweep is going blind.
-        // Routes that cannot be exercised at all. Empty: the three that used to be here (genai chat,
-        // telemetry -> Kafka, test notification) are now stubbed in beforeAll. A new entry needs a reason.
-        const EXPECTED_UNPROBED: Record<string, string> = {};
+        // Routes that cannot be exercised at all. genai chat, telemetry -> Kafka and test notification
+        // are stubbed in the sweep. A new entry needs a reason.
+        const EXPECTED_UNPROBED: Record<string, string> = {
+            'POST /api/v1/reports/:id/execute': 'deliberately disabled (503) until the report builder is ported off ClickHouse (REV-066); remove this entry when it is restored',
+        };
         const unexpected = unprobed.filter((u) => !EXPECTED_UNPROBED[u.split(' :: ')[0]]);
         expect(unexpected).toEqual([]);
     });

@@ -154,19 +154,21 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       preHandler: [csrfProtection],
     },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
-      const { tenantId } = request.user as UserPayload;
-      const options = request.body as any;
-
-      try {
-        const result = await reportService.execute(id, tenantId, options);
-        return result;
-      } catch (error) {
-        if ((error as Error).message === "Report not found") {
-          return reply.status(404).send({ message: "Report not found" });
-        }
-        throw error;
-      }
+      // DISABLED (REV-066). Report execution built SQL for ClickHouse by pasting stored filter
+      // fields/values straight into the query -- a confirmed, exploitable SQL injection (proven
+      // end to end on 2026-11-17: an injected subquery ran, and the error echoed the generated
+      // SQL including the tenant filter). ClickHouse is being retired in favour of
+      // PostgreSQL/TimescaleDB, and nothing real depends on this today (ClickHouse is empty, so
+      // every run returned []). Rather than patch code that is being replaced, execution is off
+      // until the report builder is ported with parameterized SQL.
+      // TODO(REV-066): port ReportBuilderService to Postgres/Timescale (parameterized queries,
+      // allow-listed columns), then restore reportService.execute(id, tenantId, options) here.
+      return reply.status(503).send({
+        statusCode: 503,
+        error: "Service Unavailable",
+        message:
+          "Report execution is temporarily disabled while analytics moves to PostgreSQL/TimescaleDB (REV-066).",
+      });
     },
   );
 

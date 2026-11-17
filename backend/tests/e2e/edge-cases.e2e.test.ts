@@ -53,6 +53,32 @@ describe('Edge cases E2E', () => {
         });
     });
 
+    describe('report execution (disabled, REV-066)', () => {
+        // Execution built ClickHouse SQL by pasting stored filter values into the query: a proven
+        // SQL injection. It is off until the report builder is ported to Postgres/Timescale with
+        // parameterized SQL. This pins the OFF state so it cannot quietly come back.
+        it('answers 503 for a report the caller owns, and never runs it', async () => {
+            const created = await server.inject({
+                method: 'POST', url: '/api/v1/reports', headers: admin,
+                payload: {
+                    name: 'inj', datasource: 'work_orders',
+                    config: {
+                        datasource: 'work_orders', columns: ['wo_id'],
+                        filters: [{ field: 'status', operator: 'eq', value: "x' AND (SELECT throwIf(1, 'INJECTED')) = 0 --" }],
+                    },
+                },
+            });
+            expect(created.statusCode).toBe(200);
+            const id = JSON.parse(created.body).id;
+
+            const res = await server.inject({ method: 'POST', url: `/api/v1/reports/${id}/execute`, headers: admin, payload: {} });
+            expect(res.statusCode).toBe(503);
+            // the injected function must not have been evaluated (it would surface in an error body)
+            expect(res.body).not.toContain('INJECTED');
+            expect(res.body).toContain('REV-066');
+        });
+    });
+
     describe('compliance', () => {
         // Used to be a 500 "Failed to generate compliance report".
         it('answers 404, not 500, for a report on an unknown template', async () => {
