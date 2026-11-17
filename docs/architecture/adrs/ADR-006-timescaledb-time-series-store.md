@@ -1,6 +1,6 @@
 # ADR-006: TimescaleDB is the time-series store; ClickHouse is retired and QuestDB is removed from the backend
 
-- **Status:** **Proposed** — records the decision Deepak Purandare took on 2026-11-17. It becomes **Accepted** on his sign-off. One part (QuestDB, below) needs his **reconfirmation**: it was decided on incomplete information.
+- **Status:** **Proposed** — records the decision Deepak Purandare took on 2026-11-17. It becomes **Accepted** on his sign-off, **after the QuestDB part is settled**: that part was first decided on incomplete information and is now explicitly **deferred until the existing telemetry pipeline has been triaged (REV-054)**.
 - **Date:** 2026-11-17
 - **Task:** REV-043 (the decision), REV-066 (the work)
 - **Deciders:** Deepak Purandare
@@ -38,7 +38,7 @@ The ClickHouse query builders paste values into SQL: 26 interpolated values and 
 1. **TimescaleDB is the single time-series store** — raw telemetry and aggregates — as `specs/10` says.
 2. **As a separate Timescale instance, not the main operational Postgres.** At pilot scale the spec expects ~26 GB/day, about 2.3 TB of raw data over the 90-day window, against an operational database measured in megabytes (11 MB today). A separate instance gives independent tuning, scaling and backups, keeps telemetry write load away from the operational data, matches `specs/10` and the deployment runbooks (which list the two databases separately) and what `docker-compose.yml` already runs, and leaves the operational database free to use a managed Postgres service later. The Timescale image *does* include `pgvector`, so a merge was technically possible; it was rejected on operational grounds, not capability.
 3. **ClickHouse is retired — by porting, not by deleting.** It backs five real features. They are ported to PostgreSQL / TimescaleDB with **parameterized SQL and allow-listed columns**, and only then is ClickHouse removed. (The ETL is probably unnecessary once the data lives in Postgres/Timescale.)
-4. **QuestDB is removed from the backend and the cloud stack.** TimescaleDB takes over raw telemetry. See *Open points* — this reverses a part of ADR-003.
+4. **QuestDB: undecided, pending REV-054** (Deepak, 2026-11-17: "triage the pipeline first, then decide"). The default direction is Timescale-only, which would reverse a part of ADR-003; but QuestDB is the storage layer of an existing Python/Flink pipeline under `telemetry/`, so it stays in place, untouched, until that pipeline has been run end to end and a recommendation made. See *Open points*.
 5. **Revisit trigger (Deepak): if a performance bottleneck appears with TimescaleDB, reopen this decision.** The untested conditions that are most likely to matter are listed under *Evidence*.
 
 ## Evidence
@@ -80,7 +80,7 @@ Compare **bytes on disk**, not the compression ratios: the uncompressed formats 
 
 ## Open points
 
-1. **QuestDB — needs Deepak's reconfirmation.** The decision to remove it was taken while it was described as appearing in no specification. In fact **ADR-001 and ADR-003 (both Accepted) name it**: as the cloud raw-telemetry store and as a 24-hour edge buffer. Removing it from the backend reverses the first role (Timescale's ingest headroom over the Year-3 target is the thing to watch). The **edge-buffer role is a separate question** this ADR does not decide: no edge component exists in this repository, `specs/21` itself says the edge uses SQLite / "TimescaleDB Edge (optional)", and the documents contradict each other. It should be settled when the edge work is scoped (REV-056).
+1. **QuestDB — deferred until REV-054 (Deepak, 2026-11-17).** The decision to remove it was first taken while it was described as appearing in no specification, and while the existing telemetry pipeline had not been found. In fact **ADR-001 and ADR-003 (both Accepted) name it**: as the cloud raw-telemetry store and as a 24-hour edge buffer. Removing it from the backend reverses the first role (Timescale's ingest headroom over the Year-3 target is the thing to watch). The **edge-buffer role is a separate question** this ADR does not decide: no edge component exists in this repository, `specs/21` itself says the edge uses SQLite / "TimescaleDB Edge (optional)", and the documents contradict each other. It should be settled when the edge work is scoped (REV-056).
 2. **Licence confirmation** (above).
 3. **Placement is decided** (separate instance), but the sizing of that instance is not.
 
