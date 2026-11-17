@@ -5,7 +5,7 @@ import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Forecast API E2E', () => {
     let server: TestServer;
-    let authHeaders: { Authorization: string; 'x-csrf-token': string };
+    let authHeaders: { Authorization: string };
     let siteId: string;
     let assetId: string;
     let defaultTenant: any;

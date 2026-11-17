@@ -260,8 +260,8 @@ describe("cross-tenant isolation", () => {
     async function mutatingHeaders(email: string) {
       const res = await app.inject({ method: "POST", url: "/api/v1/auth/login", payload: { email, password: PASSWORD } });
       expect(res.statusCode).toBe(200);
-      const { accessToken, csrfToken } = res.json();
-      return { authorization: `Bearer ${accessToken}`, "x-csrf-token": csrfToken };
+      const { accessToken } = res.json();
+      return { authorization: `Bearer ${accessToken}` };
     }
 
     async function freshUser(tenantId: string, tag: string) {

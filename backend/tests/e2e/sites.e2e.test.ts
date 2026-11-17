@@ -5,7 +5,7 @@ import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Sites API E2E', () => {
     let server: TestServer;
-    let authHeaders: { Authorization: string; 'x-csrf-token': string };
+    let authHeaders: { Authorization: string };
     let defaultTenant: any;
 
     beforeAll(async () => {

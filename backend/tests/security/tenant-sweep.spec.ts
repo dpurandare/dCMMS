@@ -198,10 +198,7 @@ const stringsIn = (v: unknown, out: string[] = []): string[] => {
 const PASSWORD = 'TenantSweep123!';
 const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'];
 // /auth/* and Slack: not tenant-data routes (and logout/login would invalidate the attacker's session).
-// /csrf/*: GET /csrf/token REPLACES the stored CSRF token, so probing it makes the attacker's cached
-// token stale and every CSRF-protected write after it silently 403s without reaching its handler --
-// which is exactly how this sweep went blind to the asset holes.
-const SKIP_URL = (u: string) => u.includes('/auth/') || u.includes('/slack/') || u.includes('/csrf/');
+const SKIP_URL = (u: string) => u.includes('/auth/') || u.includes('/slack/');
 
 const urlFor = (database: string) => {
     const u = new URL(process.env.DATABASE_URL!);
@@ -231,7 +228,7 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
     let known: Record<string, Set<string>> = {};
     const violations = new Set<string>();
     const unprobed: string[] = []; // write routes where EVERY request died in validation: the generator failed
-    const stats = { routes: 0, requests: 0, controlHits: 0, resets: 0, csrfRejections: 0 };
+    const stats = { routes: 0, requests: 0, controlHits: 0, resets: 0 };
 
     const q = (sql: string, params: unknown[] = []) => pool.query(sql, params);
 
@@ -256,8 +253,8 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
 
         const res = await server.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password: PASSWORD } });
         if (res.statusCode !== 200) throw new Error(`attacker login failed: ${res.statusCode} ${res.body}`);
-        const { accessToken, csrfToken } = JSON.parse(res.body);
-        headers = { Authorization: `Bearer ${accessToken}`, 'x-csrf-token': csrfToken };
+        const { accessToken } = JSON.parse(res.body);
+        headers = { Authorization: `Bearer ${accessToken}` };
 
         for (const w of [A, B]) {
             const tpl = await q(`select template_id from compliance_report_templates where id = any($1::uuid[])`, [w.ids['compliance_report_templates'] ?? []]);
@@ -484,7 +481,6 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
                     ...(isWrite ? { payload: req.body } : {}),
                 }));
                 stats.requests++;
-                if (res.statusCode === 403 && typeof res.body === 'string' && /csrf/i.test(res.body)) stats.csrfRejections++;
                 // 5xx does NOT count: a handler that crashes on the generated body (e.g. new Date('x'))
                 // answers every request with a 500, and a sweep of that route proves nothing.
                 const code = res.statusCode;
@@ -554,12 +550,6 @@ describe('cross-tenant sweep: tenant B attacks tenant A through every route', ()
         // If this is ~0 the sweep above proved nothing: every probe may simply have errored.
         expect(hits).toBeGreaterThanOrEqual(10);
     }, 300000);
-
-    it('no request was rejected for a CSRF problem (that would mean the probe is not testing the handler)', () => {
-        // A 403 "Invalid CSRF token" is not an isolation result, it is the probe being turned away at
-        // the door. Previously these were counted as "a real answer" and hid real holes.
-        expect(stats.csrfRejections).toBe(0);
-    });
 
     it('swept a meaningful amount', () => {
         expect(stats.routes).toBeGreaterThan(100);

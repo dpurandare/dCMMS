@@ -5,7 +5,7 @@ import { loginHeaders } from '../../tests/helpers/auth';
 
 describe('Work Orders API E2E', () => {
     let server: TestServer;
-    let authHeaders: { Authorization: string; 'x-csrf-token': string };
+    let authHeaders: { Authorization: string };
     let defaultTenant: any;
     let siteId: string;
     let assetId: string;
@@ -38,7 +38,7 @@ describe('Work Orders API E2E', () => {
         await db.insert('users', user);
         userId = user.id;
 
-        // Login (returns Authorization + x-csrf-token, as the real frontend sends)
+        // Login (returns the Authorization header, as the real frontend sends)
         authHeaders = await loginHeaders(server, 'admin@dcmms.local', 'password123');
 
         // Create Site

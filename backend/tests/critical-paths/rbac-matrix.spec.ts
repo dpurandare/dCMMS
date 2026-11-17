@@ -24,8 +24,8 @@
  *      so the list can only shrink.
  *   4. super_admin can reach everything any other role can.
  *
- * Do NOT put /auth/logout in the probe: logout deletes the caller's CSRF token,
- * so every later request 403s for the wrong reason (an earlier version of this
+ * Do NOT put /auth/logout in the probe: logout ends the caller's session,
+ * so every later request is refused for the wrong reason (an earlier version of this
  * probe did exactly that and produced a plausible-looking, wrong matrix).
  */
 import { TestServer } from '../helpers/test-server';
@@ -174,7 +174,7 @@ describe('permission enforcement per role', () => {
 
         const probe = mockRoutes.filter((r) => {
             const url = String(r.url);
-            // /auth/* (logout deletes the CSRF token) and Slack (HMAC, not role-based) are out of scope
+            // /auth/* (logout ends the session) and Slack (HMAC, not role-based) are out of scope
             return url.startsWith('/api/') && !url.includes('/auth/') && !url.includes('/slack/');
         });
 
