@@ -20,8 +20,6 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
   // and authenticate might not be visible in the ZodTypeProvider version if not typed globally
   const authenticate = (fastify as any).authenticate;
 
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // Schema definitions
   const SiteSchema = z.object({
@@ -234,7 +232,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           201: SiteSchema,
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["create:sites"] })],
+      preHandler: [authenticate, authorize({ permissions: ["create:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -288,7 +286,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:sites"] })],
+      preHandler: [authenticate, authorize({ permissions: ["update:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -336,7 +334,7 @@ const siteRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["delete:sites"] })],
+      preHandler: [authenticate, authorize({ permissions: ["delete:sites"] })],
     },
     async (request, reply) => {
       const user = request.user as any;

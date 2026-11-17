@@ -1,67 +1,42 @@
-import { FastifyPluginAsync } from 'fastify';
-import { generateCsrfToken, storeCsrfToken } from '../middleware/csrf';
+import { FastifyPluginAsync } from "fastify";
 
 /**
- * CSRF Token Routes
- * Provides endpoints for CSRF token management
+ * DEPRECATED no-op (REV-018a, ADR-005). The CSRF token system was removed: endpoints authenticate
+ * with an Authorization header, and the cookie endpoints use an Origin check instead
+ * (middleware/origin-check.ts). This route stays for one release so a client outside this
+ * repository that still fetches a token does not break. It returns a dummy token that nothing
+ * validates and logs a warning so we can see whether anything still calls it.
+ *
+ * TODO (REV-018a): delete this file and its registration in server.ts in the next release, after
+ * checking the logs for the deprecation warning.
  */
 const csrfRoutes: FastifyPluginAsync = async (server) => {
-  /**
-   * GET /api/v1/csrf/token
-   * Generate and return a CSRF token for the authenticated user
-   */
   server.get(
-    '/token',
+    "/token",
     {
       schema: {
-        description: 'Get CSRF token for authenticated user',
-        tags: ['csrf'],
-        security: [{ bearerAuth: [] }],
+        description: "DEPRECATED: CSRF tokens are no longer used. Returns a dummy token.",
+        tags: ["csrf"],
+        deprecated: true,
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              csrfToken: { type: 'string' },
-              expiresIn: { type: 'number' },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
+              csrfToken: { type: "string" },
+              expiresIn: { type: "number" },
+              deprecated: { type: "boolean" },
             },
           },
         },
       },
-      preHandler: [server.authenticate],
     },
     async (request, reply) => {
-      const user = request.user as { id: string };
-
-      if (!user || !user.id) {
-        return reply.status(401).send({
-          statusCode: 401,
-          error: 'Unauthorized',
-          message: 'Authentication required',
-        });
-      }
-
-      // Generate new CSRF token
-      const csrfToken = generateCsrfToken();
-
-      // Store in Redis
-      const redis = (server as any).redis;
-      await storeCsrfToken(redis, user.id, csrfToken);
-
-      request.log.debug({ userId: user.id }, 'CSRF token generated');
-
-      return reply.send({
-        csrfToken,
-        expiresIn: 3600, // 1 hour in seconds
-      });
-    }
+      request.log.warn(
+        { userAgent: request.headers["user-agent"] },
+        "DEPRECATED: GET /csrf/token called; CSRF tokens were removed and nothing validates this value",
+      );
+      return reply.send({ csrfToken: "deprecated-not-validated", expiresIn: 0, deprecated: true });
+    },
   );
 };
 

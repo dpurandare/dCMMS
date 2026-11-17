@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from "fastify";
 import { AuthService, UserPayload } from "../services/auth.service";
 import { TokenService } from "../services/token.service";
+import { requireAllowedOrigin } from "../middleware/origin-check";
 import {
   clearRefreshCookie,
   readRefreshCookie,
@@ -34,7 +35,6 @@ const authRoutes: FastifyPluginAsync = async (server) => {
             properties: {
               accessToken: { type: "string" },
               expiresIn: { type: "number" },
-              csrfToken: { type: "string" },
               user: {
                 type: "object",
                 properties: {
@@ -104,11 +104,6 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           userAgent: request.headers["user-agent"],
         });
 
-        // Generate and store CSRF token
-        const { generateCsrfToken, storeCsrfToken } = await import('../middleware/csrf');
-        const csrfToken = generateCsrfToken();
-        await storeCsrfToken((server as any).redis, user.id, csrfToken);
-
         // If admin and requirePasswordChange, add reminder to response
         let passwordChangeReminder = undefined;
         if (user.role === "tenant_admin" && user.requirePasswordChange) {
@@ -122,7 +117,6 @@ const authRoutes: FastifyPluginAsync = async (server) => {
 
         return {
           ...safeTokens,
-          csrfToken, // Include CSRF token in response
           user: {
             id: user.id,
             tenantId: user.tenantId,
@@ -171,6 +165,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
+      preHandler: requireAllowedOrigin,
     },
     async (request, reply) => {
       // The refresh token is only ever accepted from the HttpOnly cookie. It is
@@ -240,7 +235,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: server.authenticate,
+      preHandler: [requireAllowedOrigin, server.authenticate],
     },
     async (request, reply) => {
       const user = request.user as { id: string };
@@ -253,10 +248,6 @@ const authRoutes: FastifyPluginAsync = async (server) => {
         await RefreshTokenService.revokeAllUserTokens(user.id);
 
         clearRefreshCookie(reply);
-
-        // Delete CSRF token
-        const { deleteCsrfToken } = await import('../middleware/csrf');
-        await deleteCsrfToken((request.server as any).redis, user.id);
 
         request.log.info(
           { userId: user.id, allDevices },

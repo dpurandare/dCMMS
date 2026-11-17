@@ -55,8 +55,6 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   // Require authentication for all routes
   fastify.addHook("onRequest", fastify.authenticate);
 
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // Get user notification preferences
   fastify.get<{
@@ -109,7 +107,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
       schema: {
         body: updatePreferencesSchema,
       },
-      preHandler: [csrfProtection, authorize({ permissions: ["update:notifications"] })],
+      preHandler: [authorize({ permissions: ["update:notifications"] })],
     },
     async (request, reply) => {
       try {
@@ -514,7 +512,7 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
   }>(
     "/notifications/test",
     {
-      preHandler: [csrfProtection, authorize({ adminOnly: true })],
+      preHandler: [authorize({ adminOnly: true })],
     },
     async (request, reply) => {
       try {

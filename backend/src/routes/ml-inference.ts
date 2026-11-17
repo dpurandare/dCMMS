@@ -3,8 +3,6 @@ import { authorize } from "../middleware/authorize";
 import { MLInferenceService } from "../services/ml-inference.mock";
 
 const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // This plugin serves mock data only (REV-027) — label every response.
   server.addHook("onSend", async (_request, reply) => {
@@ -35,7 +33,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       try {
@@ -75,7 +73,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       try {
@@ -114,7 +112,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       try {
@@ -141,7 +139,7 @@ const mlInferenceRoutes: FastifyPluginAsync = async (server) => {
         tags: ["ML Inference"],
         security: [{ bearerAuth: [] }],
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["manage:system"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["manage:system"] })],
     },
     async (request, reply) => {
       try {

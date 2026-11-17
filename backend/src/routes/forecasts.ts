@@ -11,8 +11,6 @@ import { getTenantId } from "../utils/tenant";
 import { assertInTenant } from "../utils/ownership";
 
 const forecastRoutes: FastifyPluginAsync = async (server) => {
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   server.setValidatorCompiler(validatorCompiler);
   server.setSerializerCompiler(serializerCompiler);
@@ -62,7 +60,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const { siteId, assetId, forecastHorizonHours, modelType, energyType } =
@@ -136,7 +134,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           ),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const { siteId } = request.params as any;
@@ -185,7 +183,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const { forecastId } = request.params as any;
@@ -233,7 +231,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["generate:forecasts"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["generate:forecasts"] })],
     },
     async (request, reply) => {
       const {
@@ -287,7 +285,7 @@ const forecastRoutes: FastifyPluginAsync = async (server) => {
           ),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       // Implementation placeholder

@@ -14,8 +14,9 @@ import { envOrDefault } from "../config/env";
  *
  * This also changes the threat model: the browser now attaches the refresh
  * credential automatically, which is precisely the condition that makes CSRF
- * applicable. `SameSite=Strict` is the primary defence, and the existing CSRF
- * subsystem becomes meaningful rather than redundant (REV-018, ADR-005).
+ * applicable. `SameSite=Strict` is the primary defence; the second layer is the stateless Origin
+ * check on POST /auth/refresh and /auth/logout (middleware/origin-check.ts). The old CSRF token
+ * system was removed (REV-018a, ADR-005).
  */
 
 export const REFRESH_COOKIE_NAME = "dcmms_refresh_token";

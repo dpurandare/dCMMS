@@ -39,16 +39,6 @@ export const crewRoutes = async (app: FastifyInstance) => {
   const server = app.withTypeProvider<ZodTypeProvider>();
   const authenticate = (app as any).authenticate;
 
-  // Since we might need csrf Protection later, we will import it if available
-  let csrfProtection: any;
-  try {
-    const csrf = await import("../middleware/csrf");
-    csrfProtection = csrf.csrfProtection;
-  } catch (e) {
-    // mock if missing
-    csrfProtection = async () => {};
-  }
-
   server.post(
     "/",
     {

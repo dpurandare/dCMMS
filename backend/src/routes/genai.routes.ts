@@ -19,8 +19,6 @@ export const genaiRoutes = async (app: FastifyInstance) => {
 
   const server = app.withTypeProvider<ZodTypeProvider>();
 
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // Note: multipart is already registered globally in server.ts
 
@@ -42,7 +40,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           500: z.object({ message: z.string() }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -156,7 +154,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -219,7 +217,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;
@@ -251,7 +249,7 @@ export const genaiRoutes = async (app: FastifyInstance) => {
           }),
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const user = request.user as UserPayload;

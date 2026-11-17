@@ -12,8 +12,6 @@ import { authorize } from "../middleware/authorize";
 export async function dashboardRoutes(fastify: FastifyInstance) {
   fastify.setValidatorCompiler(validatorCompiler);
   
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
   fastify.setSerializerCompiler(serializerCompiler);
 
   const kpiService = createKPICalculationService(fastify);

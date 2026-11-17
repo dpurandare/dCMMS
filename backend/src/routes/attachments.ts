@@ -6,8 +6,6 @@ import { eq, and } from "drizzle-orm";
 import { authorize } from "../middleware/authorize";
 
 const attachmentsRoutes: FastifyPluginAsync = async (server) => {
-  // Import CSRF protection
-  const { csrfProtection } = await import("../middleware/csrf");
 
   // POST /api/v1/work-orders/:workOrderId/attachments
   server.post(
@@ -42,7 +40,6 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
       },
       preHandler: [
         server.authenticate,
-        csrfProtection,
         authorize({ permissions: ["update:work-orders"] }),
       ],
     },
@@ -160,7 +157,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const { workOrderId } = request.params as { workOrderId: string };
@@ -231,7 +228,7 @@ const attachmentsRoutes: FastifyPluginAsync = async (server) => {
           required: ["workOrderId", "attachmentId"],
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const { workOrderId, attachmentId } = request.params as {

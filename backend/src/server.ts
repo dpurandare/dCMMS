@@ -21,6 +21,7 @@ import { auditHook } from "./middleware/audit";
 import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
 import csrfRoutes from "./routes/csrf";
+import { ALLOWED_ORIGINS } from "./middleware/origin-check";
 import workOrderRoutes from "./routes/work-orders";
 import attachmentsRoutes from "./routes/attachments";
 import { dashboardRoutes } from "./routes/dashboards";
@@ -163,12 +164,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // CORS
   await server.register(cors, {
-    origin: [
-      "http://localhost:3011",
-      "http://localhost:3001",
-      "http://localhost:4200",
-      "http://localhost:3000",
-    ],
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   });
 
@@ -319,7 +315,7 @@ A modern CMMS API for managing assets, work orders, sites, and maintenance opera
           },
           {
             name: "csrf",
-            description: "CSRF token management - Get CSRF tokens for protected operations",
+            description: "DEPRECATED: CSRF tokens were removed (REV-018a); kept as a no-op for one release",
           },
           {
             name: "work-orders",

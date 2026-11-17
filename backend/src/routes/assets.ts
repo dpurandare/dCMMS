@@ -16,8 +16,6 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>();
   const authenticate = (fastify as any).authenticate;
 
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // Schema Definitions
   const AssetSchema = z.object({
@@ -252,7 +250,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           201: AssetSchema,
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["create:assets"] })],
+      preHandler: [authenticate, authorize({ permissions: ["create:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -324,7 +322,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
+      preHandler: [authenticate, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -379,7 +377,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["delete:assets"] })],
+      preHandler: [authenticate, authorize({ permissions: ["delete:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -437,7 +435,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
+      preHandler: [authenticate, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;
@@ -483,7 +481,7 @@ const assetRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         },
       },
-      preHandler: [authenticate, csrfProtection, authorize({ permissions: ["update:assets"] })],
+      preHandler: [authenticate, authorize({ permissions: ["update:assets"] })],
     },
     async (request, reply) => {
       const user = request.user as any;

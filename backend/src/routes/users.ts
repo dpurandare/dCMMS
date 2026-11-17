@@ -5,8 +5,6 @@ import { AuthService, UserPayload } from "../services/auth.service";
 import { authorize } from "../middleware/authorize";
 
 const usersRoutes: FastifyPluginAsync = async (server) => {
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // GET /api/v1/users
   server.get(
@@ -83,7 +81,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["create:users"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["create:users"] })],
     },
     async (request, reply) => {
       const user = request.user;
@@ -163,7 +161,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["delete:users"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["delete:users"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -246,7 +244,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["update:users"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["update:users"] })],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
@@ -287,7 +285,7 @@ const usersRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };

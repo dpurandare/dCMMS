@@ -4,8 +4,6 @@ import FormData from "form-data";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 let authToken = "";
-let csrfToken = "";
-let csrfCookie = "";
 
 async function login() {
     console.log("🔐 Logging in...");
@@ -26,27 +24,6 @@ async function login() {
     authToken = data.accessToken;
     console.log("✅ Logged in successfully");
     return authToken;
-}
-
-async function getCsrfToken() {
-    console.log("🔑 Getting CSRF token...");
-
-    const response = await fetch(`${API_URL}/api/v1/auth/csrf`, {
-        headers: {
-            Authorization: `Bearer ${authToken}`,
-        },
-    });
-
-    // Extract CSRF cookie
-    const cookies = response.headers.raw()["set-cookie"];
-    if (cookies && cookies.length > 0) {
-        csrfCookie = cookies[0].split(";")[0];
-    }
-
-    const data: any = await response.json();
-    csrfToken = data.csrfToken;
-    console.log("✅ Got CSRF token");
-    return csrfToken;
 }
 
 async function testUploadDocument() {
@@ -74,8 +51,6 @@ Routine Maintenance:
         method: "POST",
         headers: {
             Authorization: `Bearer ${authToken}`,
-            "X-CSRF-Token": csrfToken,
-            Cookie: csrfCookie,
             ...form.getHeaders(),
         },
         body: form,
@@ -131,8 +106,6 @@ async function testChatQuery(query: string) {
         headers: {
             Authorization: `Bearer ${authToken}`,
             "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken,
-            Cookie: csrfCookie,
         },
         body: JSON.stringify({ query }),
     });
@@ -172,7 +145,6 @@ async function main() {
 
     try {
         await login();
-        await getCsrfToken();
 
         const jobId = await testUploadDocument();
         await testJobStatus(jobId);

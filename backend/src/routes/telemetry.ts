@@ -19,8 +19,6 @@ async function ownedSiteIds(tenantId: string): Promise<string[]> {
 }
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
-  // Import CSRF protection
-  const { csrfProtection } = await import('../middleware/csrf');
 
   // Require authentication and RBAC for all routes
   server.addHook("onRequest", server.authenticate);
@@ -129,7 +127,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection, authorize({ permissions: ["ingest:telemetry"] })],
+      preHandler: [server.authenticate, authorize({ permissions: ["ingest:telemetry"] })],
     },
     async (request, reply) => {
       const events = request.body as any[];
@@ -254,7 +252,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const query = request.query as TelemetryQuery;
@@ -432,7 +430,7 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           },
         },
       },
-      preHandler: [server.authenticate, csrfProtection],
+      preHandler: [server.authenticate],
     },
     async (request, reply) => {
       const query = request.query as TelemetryStatsQuery;
