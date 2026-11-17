@@ -275,7 +275,7 @@ DEPLOYMENT". Alongside it stood these claims, none of which was supported:
 | "156/156 integration tests passed" | The backend test suite could not run at all until 2026-09-19; it now executes 60 tests, 29 of which fail |
 | "243/243 regression tests passed" | No such suite exists in the repository |
 | "93/100 security score, 0 critical/high vulnerabilities" | 88 vulnerabilities, 5 critical and 42 high. The audit that produced the score never ran a dependency scan — it is [withdrawn](./docs/security/security-audit-report.md) |
-| "Telemetry 72K events/sec" | Telemetry is published to Kafka and **no consumer exists**; `GET /api/v1/telemetry` returns 500 |
+| "Telemetry 72K events/sec" | Telemetry is published to Kafka and **no consumer runs in the backend or the main stack** — a separate Python/Flink pipeline under `telemetry/` (a Flink job reading `raw_telemetry` and writing to QuestDB, an alarm detector, aggregation scripts) exists but is not part of the main stack and is unverified end to end (REV-054); `GET /api/v1/telemetry` returns 500 |
 | "92–96% / 96.8% ML accuracy" | Six of seven ML route files are never imported into `server.ts` |
 | "API p95 <200ms" | No benchmark in the repository produces this figure |
 

@@ -1,7 +1,7 @@
 # Alarms Dashboard Specification (DCMMS-076)
 
-> **Implementation status (2026-11-17): NOT IMPLEMENTED; decision folded into REV-056.** Sensor-threshold alarms cannot exist
-> yet: `POST /telemetry` publishes to Kafka and **no consumer reads it**, so telemetry is never stored or evaluated. The
+> **Implementation status (2026-11-17): NOT IMPLEMENTED; decision folded into REV-056.** Sensor-threshold alarms do not run
+> yet: `POST /telemetry` publishes to Kafka and **no consumer runs in the backend or the main stack**, so telemetry is not stored or evaluated there. A separate Python/Flink pipeline with an alarm detector exists under `telemetry/` (`services/alarm-detector.py`) but is unverified (REV-054) and its `alarm_rules` table is missing from the main database. The
 > time-series store is now decided (TimescaleDB, a separate instance; REV-043 / REV-066), but the consumer is part of the
 > REV-056 scope decision. The rule-based `alerts` system is a different, live feature and is unaffected. See
 > `TasksTracking/15_Review_Remediation.md`, REV-056 / REV-063.

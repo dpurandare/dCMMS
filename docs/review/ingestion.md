@@ -11,6 +11,8 @@
 > | The weather route is not registered | `grep -n weather backend/src/server.ts` | no matches — confirmed |
 > | Telemetry reaches Kafka | `routes/telemetry.ts:164` publishes to `"raw_telemetry"` | confirmed |
 >
+> **Correction (2026-11-17):** the first row is true as scoped (`backend/src`, JavaScript consumer calls) but was read too broadly. A Python/Flink consumer exists under `telemetry/` (`flink-jobs/telemetry-processor.py`, `services/alarm-detector.py`); it is not part of the main stack and has not been verified end to end (REV-054).
+>
 > One thing this document does not mention, found while checking it: the topic
 > name is the **hardcoded string** `"raw_telemetry"` at `routes/telemetry.ts:164`,
 > while `.env.example` declares `KAFKA_TOPIC_TELEMETRY_RAW=telemetry.raw`. That

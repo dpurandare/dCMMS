@@ -83,8 +83,10 @@ The declared response schema does not match what the handler returns. Listing
 users is as core as this product gets, and it is broken right now.
 
 The telemetry 500s are downstream of a known gap: `POST /api/v1/telemetry`
-publishes to Kafka and **no consumer exists**, so the QuestDB tables the read
+publishes to Kafka and **no consumer runs in the backend or the main stack**, so the QuestDB tables the read
 path queries are never populated. See `docs/review/ingestion.md`.
+
+> **Correction (2026-11-17):** a separate Python/Flink pipeline under `telemetry/` (a Flink job reading `raw_telemetry` and writing to QuestDB, an alarm detector, aggregation scripts) exists but is not part of the main stack and is unverified end to end (REV-054). Its QuestDB schema script lives in that separate stack, which is why the main QuestDB has no tables.
 
 ---
 
