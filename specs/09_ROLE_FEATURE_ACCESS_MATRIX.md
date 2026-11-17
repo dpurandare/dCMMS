@@ -273,7 +273,7 @@ Examples:
 - `read:work-orders:all` - Read all work orders across all sites
 - `create:work-orders:own-site` - Create work orders for assigned site
 - `execute:work-orders:assigned` - Execute only assigned work orders
-- `approve:work-orders:budget-10k` - Approve work orders up to $10,000
+- `approve:work-orders:budget-10k` - Approve work orders up to $10,000 _(design only: work-order approval is descoped, REV-062 — not implemented)_
 
 ### 5.2 Role-to-Permission Assignment
 

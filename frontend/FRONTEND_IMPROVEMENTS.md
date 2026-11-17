@@ -292,10 +292,10 @@ function WorkOrderPage() {
 
 // Protected Button with tooltip
 <ProtectedButton
-  permissions={["approve:work-orders"]}
-  disabledTooltip="Only managers can approve work orders"
+  permissions={["close:work-orders"]}
+  disabledTooltip="Only managers can close work orders"
 >
-  Approve
+  Close
 </ProtectedButton>
 
 // Admin-only section
@@ -576,10 +576,10 @@ import { ProtectedSection, ProtectedButton } from '@/components/auth/protected';
 
 // Disable button with tooltip
 <ProtectedButton
-  permissions={["approve:work-orders"]}
-  disabledTooltip="Only managers can approve"
+  permissions={["close:work-orders"]}
+  disabledTooltip="Only managers can close"
 >
-  Approve
+  Close
 </ProtectedButton>
 ```
 

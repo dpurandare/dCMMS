@@ -17,7 +17,6 @@ export type Permission =
   | "read:work-orders"
   | "update:work-orders"
   | "delete:work-orders"
-  | "approve:work-orders"
   | "assign:work-orders"
   | "close:work-orders"
   // Assets
@@ -113,7 +112,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:work-orders",
     "update:work-orders",
     "delete:work-orders",
-    "approve:work-orders",
     "assign:work-orders",
     "close:work-orders",
     "create:assets",
@@ -179,7 +177,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "read:work-orders",
     "update:work-orders",
     "delete:work-orders",
-    "approve:work-orders",
     "assign:work-orders",
     "close:work-orders",
     "create:assets",
@@ -241,7 +238,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "create:work-orders",
     "read:work-orders",
     "update:work-orders",
-    "approve:work-orders",
     "assign:work-orders",
     "close:work-orders",
     "read:assets",

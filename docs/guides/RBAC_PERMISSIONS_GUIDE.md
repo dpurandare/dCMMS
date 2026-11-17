@@ -48,7 +48,6 @@ frontend/src/types/api.ts              ← must match backend (TypeScript type)
 | `read:work-orders` | View work orders |
 | `update:work-orders` | Edit work orders |
 | `delete:work-orders` | Delete work orders |
-| `approve:work-orders` | Approve work orders |
 | `assign:work-orders` | Assign work orders to users |
 | `close:work-orders` | Close completed work orders |
 

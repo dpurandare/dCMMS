@@ -2,8 +2,15 @@
 
 **Version:** 1.0
 **Priority:** P2 (Release 2)
-**Status:** Complete
+**Status:** Specification written. **NOT IMPLEMENTED: descoped 2026-11-17 (REV-061); reopenable as backlog.**
 **Last Updated:** 2025-11-11
+
+> **Implementation status (2026-11-17).** No cost-management feature exists in the code or the frontend; the earlier
+> implementation was in-memory with `Math.random()` numbers and was deleted (REV-025). Raw cost *inputs* are still
+> captured and stored: part `unit_price`, `cost_per_unit` on parts used, and labor `hourly_rate`. If this is ever
+> reopened, the cheapest first slice is a cost-per-work-order rollup per asset / site / period on those existing
+> columns (about 1-2 days of backend work plus a UI screen, no new tables); budgets, billing integration and
+> optimisation (sections 4, 7, 8) are several weeks. See `TasksTracking/15_Review_Remediation.md`, REV-061.
 
 ---
 

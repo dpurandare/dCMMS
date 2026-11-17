@@ -40,6 +40,18 @@ than completed. Evidence: `TasksTracking/15_Review_Remediation.md` REV-025.
 | *(unlisted)*   | `routes/alarms.ts`        | Queried a table that was never created; structurally superseded by the already-live `alerts` table. The sensor-driven auto-alarm behavior `specs/ALARMS_DASHBOARD_SPEC.md` describes doesn't exist anywhere today — legitimate future backlog, not this file |
 | *(unlisted)*   | `routes/slack.ts`, `services/slack.service.ts` | Zero auth guard, queried nonexistent tables, self-labeled "Mock Provider" — a real, working Slack integration already exists via `routes/integrations.ts` + `slack-provider.service.ts` |
 
+## Descoped / folded under the 2026-11-17 decision round (Deepak)
+
+Unlike the REV-025 rows above, nothing was deleted here: these are product decisions to **not build now**, each
+reopenable as a normal backlog item. Evidence and the full reasoning: `TasksTracking/15_Review_Remediation.md`.
+
+| Item | Decision | What changed / how to reopen |
+| :--- | :------- | :--------------------------- |
+| **Work-order approval** (REV-062; earlier DCMMS-117) | Descoped | Spec 02 section 1 now describes the 8 implemented states; the original 11-state design is kept as appendix 1.6. The unenforced `approve:work-orders` permission was removed from the backend and frontend role tables. Reopen: an optional per-tenant gate (`draft -> submitted -> approved \| rejected`) is ~3-5 days; the full 11-state lifecycle is 1-2 weeks plus a frontend overhaul. |
+| **Cost Management** (REV-061; earlier DCMMS-120 to 122) | Descoped | `specs/23_COST_MANAGEMENT.md` is marked not implemented. Cost *inputs* are still captured (part price, cost per unit, labor rate). Reopen: a cost-per-work-order rollup is ~1-2 days + a UI screen; budgets / billing / optimisation are weeks. |
+| **Sensor-driven Alarms** (REV-063; DCMMS-076) | **Not descoped: folded into REV-056** | Needs a telemetry consumer that does not exist (nothing reads the Kafka topic). Decided together with the ML / telemetry / mobile scope. The rule-based `alerts` system is unaffected. |
+| **Predictive maintenance** (second half of REV-062; DCMMS-112 to 116) | **Not descoped: decided with REV-056** | Depends on the ML scope. |
+
 **Registered instead of deleted, but corrected to declared mocks (not descoped — see
 REV-025/REV-027a):** DCMMS-110 (ML Inference API) and DCMMS-119 (Governance Framework).
 Both back live frontend pages that were previously 404ing; both now honestly report

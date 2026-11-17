@@ -496,7 +496,6 @@ export type Permission =
   | "read:work-orders"
   | "update:work-orders"
   | "delete:work-orders"
-  | "approve:work-orders"
   | "assign:work-orders"
   | "close:work-orders"
   | "create:assets"

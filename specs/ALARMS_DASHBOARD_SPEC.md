@@ -1,5 +1,11 @@
 # Alarms Dashboard Specification (DCMMS-076)
 
+> **Implementation status (2026-11-17): NOT IMPLEMENTED; decision folded into REV-056.** Sensor-threshold alarms cannot exist
+> yet: `POST /telemetry` publishes to Kafka and **no consumer reads it**, so telemetry is never stored or evaluated. The
+> time-series store is now decided (TimescaleDB, a separate instance; REV-043 / REV-066), but the consumer is part of the
+> REV-056 scope decision. The rule-based `alerts` system is a different, live feature and is unaffected. See
+> `TasksTracking/15_Review_Remediation.md`, REV-056 / REV-063.
+
 Frontend dashboard for monitoring and managing alarms with real-time updates.
 
 ## Overview

@@ -51,9 +51,9 @@ If a task turns out to be bigger than expected, mark it `⚠️ PARTIAL` and spl
 | **Phase 2** — Deep code review (2 weeks) | WS-5, WS-6, WS-7 | 20 | 16 | ⚠️ In Progress |
 | **Phase 3** — Periphery (1 week) | WS-8, WS-9, WS-10 | 15 | 0 | 🔴 Not Started |
 | **Phase 4** — Re-baseline (3 days) | All | 4 | 0 | 🔴 Not Started |
-| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 1 | REV-061/062/063 decided 2026-11-17 (descope / descope / folded into REV-056); implementation TODOs recorded in each entry |
+| **Deferred** — real-feature product decisions (not a phase) | — | 4 | 4 | ✅ All four resolved: REV-061 and REV-062 descoped (docs and permissions aligned 2026-11-17), REV-063 folded into REV-056 (its work is carried there), REV-064 done |
 | **Follow-ups** — decided or postponed 2026-11-17 (not a phase) | — | 2 | 0 | 🔴 Not Started (REV-066, REV-067) |
-| **TOTAL** | | **79** | **34** | **43%** |
+| **TOTAL** | | **79** | **37** | **47%** |
 
 **By severity:** 🔴 P0: 6 · 🟠 P1: 34 · 🟡 P2: 23 · 🔵 P3: 3 _(REV-001a split from REV-001 on 2026-09-19; REV-025b and REV-027b split from REV-025/REV-027 on 2026-09-19; REV-061/062/063 added on 2026-09-19 as deferred product decisions, not remediation — see "DEFERRED — Real Feature Decisions" below Phase 4)_
 
@@ -1224,7 +1224,7 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
   - **Priority:** 🟠 P1
   - **Estimated:** 1–3 weeks depending on scope decisions
   - **Verify:** `grep -rn "TODO" backend/src/services` → every remaining TODO has a task ID beside it.
-  - **Status:** ⚠️ PARTIAL — dead code removed and the false-success bug fixed 2026-09-19 (REV-025, REV-027b); the actual "build real providers" product decision remains open (REV-062 for WO-approval/predictive-WO specifically)
+  - **Status:** ⚠️ PARTIAL — dead code removed and the false-success bug fixed 2026-09-19 (REV-025, REV-027b); the actual "build real providers" product decision remains open. _(The WO-approval / predictive-WO line is closed as of 2026-11-17: approval descoped under REV-062, predictive maintenance decided with REV-056.)_
 
 - [x] **REV-029** - Per-route review pass 🟠 **P1** ⚠️ **PARTIAL**
   - [x] 28 route modules reviewed (11 fewer than 39 — deleted under REV-025) against: registered · authenticated · authorised with the correct permission · Zod-validated at the boundary · tenant-scoped · errors handled without leaking internals · matches its `specs/` definition. 12 clean, 16 with findings.
@@ -1833,33 +1833,39 @@ exist so the question stays visible in the planner instead of disappearing into
 `TasksTracking/99_Descoped_Tasks.md`. All three are **blocked on Deepak**, not on
 code. Nothing here is scheduled into a phase until a decision lands.
 
-- [ ] **REV-061** - Decide: real Cost Management, or close it for good 🛑 **BLOCKED**
+- [x] **REV-061** - Decide: real Cost Management, or close it for good ✅ **COMPLETE** (descoped 2026-11-17)
   - **Decision (Deepak, 2026-11-17): DESCOPE now; keep capturing cost data** (part `unit_price`, `cost_per_unit`, labor `hourly_rate` stay in the schema). First slice if ever reopened: cost-per-work-order rollup per asset/site/period on existing columns, no new tables (~1-2 days + a UI screen); the full spec (budgets, billing integration, optimisation) is several weeks.
-  - [ ] **TODO:** add the descope to `TasksTracking/99_Descoped_Tasks.md`; mark `specs/23_COST_MANAGEMENT.md` as not implemented / reopenable backlog.
+  - [x] Recorded in `TasksTracking/99_Descoped_Tasks.md` (new 2026-11-17 section, with how to reopen); `specs/23_COST_MANAGEMENT.md` now states **NOT IMPLEMENTED** (its header used to say "Status: Complete", which read as implemented); `TasksTracking/10_Cost_Management.md`'s correction banner now points at this decision.
   - [ ] `budget-management`, `cost-calculation`, `cost-analytics` were deleted under REV-025 — in-memory-only storage and `Math.random()` fabricated figures, unsalvageable
-  - [ ] If wanted: from-scratch build against `specs/23_COST_MANAGEMENT.md` — real persistence, real cost aggregation, no reuse of deleted code
-  - [ ] If not wanted: mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md` (it's already there as removed; this would make "not building it" the final word rather than an open question) and update `TasksTracking/10_Cost_Management.md`'s framing accordingly
-  - **Priority:** 🛑 Blocked on product decision
-  - **Depends on:** Deepak's call
-  - **Status:** 🛑 BLOCKED — awaiting decision
+  - [ ] _(not chosen; reopenable)_ If wanted: from-scratch build against `specs/23_COST_MANAGEMENT.md` — real persistence, real cost aggregation, no reuse of deleted code
+  - [x] If not wanted: mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md` (it's already there as removed; this would make "not building it" the final word rather than an open question) and update `TasksTracking/10_Cost_Management.md`'s framing accordingly
+  - **Priority:** resolved by decision
+  - **Verify:** `grep -n "NOT IMPLEMENTED" specs/23_COST_MANAGEMENT.md` finds the banner; the descope is listed in `99_Descoped_Tasks.md`. (Docs-only change; nothing in the code or frontend referenced cost management.)
+  - **Status:** ✅ COMPLETE — descoped by decision, reopenable as backlog
 
-- [ ] **REV-062** - Decide: real WO Approval / Predictive Maintenance, or close it for good 🛑 **BLOCKED**
+- [x] **REV-062** - Decide: real WO Approval / Predictive Maintenance, or close it for good ✅ **COMPLETE** (approval descoped 2026-11-17; predictive maintenance is decided under REV-056)
   - [ ] `wo-approval`, `predictive-wo` were deleted under REV-025 (see REV-028) — in-memory only, core persistence left as `// TODO`, never shipped
-  - [ ] If wanted: from-scratch build — real approval workflow with persistence, real prediction pipeline reading/writing the DB, against whatever spec governs predictive maintenance
-  - [ ] If not wanted: close REV-028's open line and mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md`
-  - **Priority:** 🛑 Blocked on product decision
-  - **Depends on:** Deepak's call; closes out REV-028
-  - **Status:** 🛑 BLOCKED — awaiting decision
+  - [ ] _(not chosen; reopenable)_ If wanted: from-scratch build — real approval workflow with persistence, real prediction pipeline reading/writing the DB, against whatever spec governs predictive maintenance
+  - [x] If not wanted: close REV-028's open line and mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md`
+  - **Priority:** resolved by decision
+  - **Evidence (2026-11-17):**
+    ```
+    $ grep -rn "approve:work-orders" backend/src frontend/src | wc -l   ->  0
+    $ cd frontend && npx jest src/__tests__/rbac   ->  Tests: 25 passed, 25 total   (the backend/frontend parity test)
+    $ cd backend && npx jest --forceExit           ->  Tests: 2 failed, 267 passed, 269 total   (same pre-existing failures)
+    ```
+  - **Behaviour change:** none in practice — the permission was granted to super_admin / tenant_admin / site_manager but enforced by no route, so no role lost a real ability.
+  - **Status:** ✅ COMPLETE
 
-- [ ] **REV-063** - Decide: real sensor-driven Alarms, or close it for good 🛑 **BLOCKED**
+- [x] **REV-063** - Decide: real sensor-driven Alarms, or close it for good ✅ **RESOLVED** (folded into REV-056, 2026-11-17)
   - **Decision (Deepak, 2026-11-17): FOLD INTO REV-056** and decide there, together with the telemetry storage now chosen (TimescaleDB). Not a standalone blocked item any more. The rule-based `alerts` system is live and unaffected.
   - [ ] **TODO:** when REV-056 is decided, either build Alarms on the telemetry consumer (REV-056 / REV-066) or descope; `specs/ALARMS_DASHBOARD_SPEC.md` (638 lines) is the reference.
   - [ ] `routes/alarms.ts` was deleted under REV-025 — queried a table that never existed, and even the code that existed didn't implement what `specs/ALARMS_DASHBOARD_SPEC.md` actually describes (real-time sensor-threshold-driven alarms, distinct from the rule-based `alerts` system, which is live and unaffected)
   - [ ] If wanted: from-scratch build — new `alarms` table, threshold-breach-to-alarm generation wired into telemetry ingestion, the full dashboard spec (live updates, bulk actions, CSV export) on the frontend, where nothing exists today
   - [ ] If not wanted: mark permanently descoped in `TasksTracking/99_Descoped_Tasks.md`
-  - **Priority:** 🛑 Blocked on product decision
-  - **Depends on:** Deepak's call
-  - **Status:** 🛑 BLOCKED — awaiting decision
+  - [x] `specs/ALARMS_DASHBOARD_SPEC.md` now carries a status banner (NOT IMPLEMENTED; needs the telemetry consumer; folded into REV-056); recorded in `99_Descoped_Tasks.md` as folded, not descoped.
+  - **Priority:** carried by REV-056
+  - **Status:** ✅ RESOLVED as a decision — **the work is not done**; the open TODO above is carried by REV-056 / REV-066
 
 - [x] **REV-064** - Decide the authorization policy for 19 routes a read-only `viewer` could still write to ✅ **COMPLETE** (decided and implemented 2026-11-12)
   - [x] **Decisions (Deepak, 2026-11-12) and what was done:**

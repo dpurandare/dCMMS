@@ -1,8 +1,8 @@
 # dCMMS State Machine Specifications
 
-**Version:** 1.0
-**Date:** November 8, 2025
-**Status:** Draft - For Review
+**Version:** 1.1
+**Date:** November 8, 2025 (work-order section aligned with the implementation 2026-11-17)
+**Status:** Draft - For Review. **Section 1 now describes what is implemented**; the original 11-state work-order design is kept in section 1.6 as a descoped appendix. Sections 2-5 have not been checked against the code.
 **Priority:** P0 (Critical for MVP)
 
 ---
@@ -20,7 +20,46 @@
 
 ## 1. Work Order State Machine
 
-### 1.1 States
+### 1.0 As implemented (source of truth: `backend/src/services/work-order-state.ts` and `work-order.service.ts`)
+
+Eight states. Assignment is a **field** (`assignedTo`, `assignedCrewId`), not a state; there is no
+`submitted`, `approved`, `assigned` or `verified` state. `draft -> open` is the only "release" step.
+
+| State | Terminal | Allowed next states |
+|-------|----------|---------------------|
+| `draft` | No | `open`, `cancelled` |
+| `open` | No | `scheduled`, `in_progress`, `on_hold`, `cancelled` |
+| `scheduled` | No | `in_progress`, `on_hold`, `cancelled` |
+| `in_progress` | No | `completed`, `on_hold`, `cancelled` |
+| `on_hold` | No | `open`, `scheduled`, `in_progress`, `cancelled` |
+| `completed` | No | `closed` |
+| `closed` | **Yes** | none |
+| `cancelled` | **Yes** | none |
+
+```
+draft ──► open ──► scheduled ──► in_progress ──► completed ──► closed
+              └──────────────────►┘ (open may start directly)
+open | scheduled | in_progress ──► on_hold ──► open | scheduled | in_progress
+draft | open | scheduled | in_progress | on_hold ──► cancelled
+```
+
+**Rules enforced (one shared guard, used by both `POST /work-orders/:id/transition` and `PATCH /work-orders/:id`):**
+- Any pair not in the table is rejected with **409**, the stored status is unchanged, and a transition to the *same* state is also rejected.
+- Starting work (`-> in_progress`) on a **critical-priority or emergency-type** work order requires an **active, unexpired permit** linked to it; otherwise **403**. A `PATCH {status: "in_progress"}` cannot bypass this (it could until 2026-11-12).
+- Transitions require `update:work-orders` **or** `close:work-orders`. Create, update and delete use `create:`, `update:` and `delete:work-orders`. Sub-resources (tasks, parts, labor, attachments) require `update:work-orders`.
+- An unknown work order, or one belonging to another tenant, is **404**.
+
+**Not implemented (descoped under REV-062, 2026-11-17):** an approval step (`submitted -> approved | rejected`), the `approve:work-orders` permission, an `assigned` state, a `verified` state, per-state field mutability, and the automated SLA / reminder transitions. The original design is preserved in section 1.6 so it can be reopened as backlog.
+
+Test coverage: `backend/tests/critical-paths/work-order-lifecycle.spec.ts` checks all 64 from/to pairs against the table above.
+
+### 1.6 Appendix: original 11-state design (NOT IMPLEMENTED, descoped REV-062)
+
+> **Reference only.** Everything below describes a design that does not exist in the code. It is kept
+> so the approval workflow can be reopened as a normal backlog item (estimated 3-5 days for an optional
+> per-tenant approval gate, 1-2 weeks for the full lifecycle). Do not treat it as current behaviour.
+
+#### A.1 States (original design)
 
 | State | Description | Terminal | Cancelable |
 |-------|-------------|----------|------------|
@@ -36,7 +75,7 @@
 | `closed` | Fully closed and archived | Yes | No |
 | `cancelled` | Work order cancelled | Yes | No |
 
-### 1.2 State Transition Diagram
+#### A.2 State Transition Diagram (original design)
 
 ```mermaid
 stateDiagram-v2
@@ -75,9 +114,9 @@ stateDiagram-v2
     closed --> [*]
 ```
 
-### 1.3 Transition Rules
+#### A.3 Transition Rules (original design)
 
-#### draft → submitted
+##### draft → submitted
 **Trigger:** User submits work order for approval
 **Required Conditions:**
 - `title` is not empty
@@ -99,7 +138,7 @@ stateDiagram-v2
 
 ---
 
-#### submitted → approved
+##### submitted → approved
 **Trigger:** Approver approves work order
 **Required Conditions:**
 - User has `approve:work-orders` permission
@@ -119,7 +158,7 @@ stateDiagram-v2
 
 ---
 
-#### submitted → draft (reject)
+##### submitted → draft (reject)
 **Trigger:** Approver rejects work order
 **Required Conditions:**
 - User has `approve:work-orders` permission
@@ -136,7 +175,7 @@ stateDiagram-v2
 
 ---
 
-#### approved → scheduled
+##### approved → scheduled
 **Trigger:** Scheduler assigns date/time
 **Required Conditions:**
 - `scheduledStart` is set and in future
@@ -155,7 +194,7 @@ stateDiagram-v2
 
 ---
 
-#### scheduled → assigned
+##### scheduled → assigned
 **Trigger:** Work order assigned to specific technician/crew
 **Required Conditions:**
 - `assignedTo` is set
@@ -173,7 +212,7 @@ stateDiagram-v2
 
 ---
 
-#### assigned → in-progress
+##### assigned → in-progress
 **Trigger:** Technician starts work
 **Required Conditions:**
 - Current user is `assignedTo` or supervisor
@@ -192,7 +231,7 @@ stateDiagram-v2
 
 ---
 
-#### in-progress → on-hold
+##### in-progress → on-hold
 **Trigger:** Work paused for external reason
 **Required Conditions:**
 - User executing or supervisor
@@ -211,7 +250,7 @@ stateDiagram-v2
 
 ---
 
-#### on-hold → in-progress (resume)
+##### on-hold → in-progress (resume)
 **Trigger:** Work resumed
 **Required Conditions:**
 - Hold reason resolved or override provided
@@ -226,7 +265,7 @@ stateDiagram-v2
 
 ---
 
-#### in-progress → completed
+##### in-progress → completed
 **Trigger:** Work finished by technician
 **Required Conditions:**
 - All tasks in `tasks` array are `completed` or `skipped`
@@ -250,7 +289,7 @@ stateDiagram-v2
 
 ---
 
-#### completed → verified
+##### completed → verified
 **Trigger:** Supervisor verifies completed work
 **Required Conditions:**
 - User has `verify:work-orders` permission
@@ -269,7 +308,7 @@ stateDiagram-v2
 
 ---
 
-#### completed → in-progress (reopen)
+##### completed → in-progress (reopen)
 **Trigger:** Work needs rework
 **Required Conditions:**
 - User has `verify:work-orders` or `manage:work-orders` permission
@@ -286,7 +325,7 @@ stateDiagram-v2
 
 ---
 
-#### verified → closed
+##### verified → closed
 **Trigger:** Final closure
 **Required Conditions:**
 - All costs finalized
@@ -310,7 +349,7 @@ stateDiagram-v2
 
 ---
 
-#### * → cancelled
+##### * → cancelled
 **Trigger:** Work order cancelled
 **Allowed From States:** `draft`, `submitted`, `approved`, `scheduled`, `assigned`, `in-progress` (emergency only), `on-hold`
 **Required Conditions:**
@@ -334,7 +373,7 @@ stateDiagram-v2
 
 ---
 
-### 1.4 State-Specific Field Mutability
+#### A.4 State-Specific Field Mutability (original design)
 
 | Field | Mutable in States | Immutable After |
 |-------|-------------------|-----------------|
@@ -354,7 +393,7 @@ stateDiagram-v2
 | `completionNotes` | completed | closed |
 | `rootCause` | completed, verified | closed |
 
-### 1.5 Automated State Transitions
+#### A.5 Automated State Transitions (original design)
 
 **Trigger:** SLA breach
 - If `status=scheduled` and current time > `sla.responseDeadline` → Create alert, notify escalation chain
@@ -724,6 +763,7 @@ stateDiagram-v2
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-11-08 | System | Initial state machine definitions |
+| 1.1 | 2026-11-17 | Review (REV-062) | Section 1 rewritten to match the implemented 8-state work-order machine; original 11-state design moved to appendix 1.6 as not implemented |
 
 ---
 

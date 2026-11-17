@@ -282,7 +282,7 @@ System Administrator (global)
 | `read:work-orders` | ✓ All | ✓ Sites | ✓ Sites | ✓ Assigned | ✓ All | ✓ All | ✓ Sites | ✓ Assigned | ✓ All | ✓ All |
 | `update:work-orders` | ✓ All | ✓ Sites | ✓ Sites | ✓ Assigned* | ✗ | ✗ | ✗ | ✓ Assigned* | ✗ | ✓ Override |
 | `delete:work-orders` | ✓ All | ✓ Sites (draft) | ✓ Sites (draft) | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| `approve:work-orders` | ✓ | ✓ Sites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| `approve:work-orders` _(descoped 2026-11-17, REV-062: no approval step is implemented)_ | ✓ | ✓ Sites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | `assign:work-orders` | ✓ | ✓ Sites | ✓ Sites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
 | `execute:work-orders` | ✓ | ✓ | ✓ | ✓ Assigned | ✗ | ✗ | ✗ | ✓ Assigned | ✗ | ✓ |
 | `verify:work-orders` | ✓ | ✓ Sites | ✓ Sites | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
@@ -582,7 +582,7 @@ POST /api/v1/auth/revoke
 **Required For:**
 - System Administrator role
 - Emergency Responder role
-- Any user with `approve:work-orders` permission
+- Any user with `approve:work-orders` permission _(that permission is descoped, REV-062; this applies only if an approval step is reinstated)_
 - Contractor accounts
 - Access from untrusted networks
 
