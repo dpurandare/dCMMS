@@ -1974,6 +1974,7 @@ Items that were **decided but not yet implemented**, or **deliberately postponed
   - **Status:** 🔴 Not Started (interim mitigation done)
 
 - [ ] **REV-067** - Frontend / UI follow-ups from the 2026-11-12 backend changes 🟡 **P2**
+  - [ ] **TODO (found 2026-11-17 during REV-018a): the frontend test suite is red and was before the CSRF change** — 3 suites / 4 tests fail (`src/__tests__/auth/auth-flow.test.tsx` is written for the pre-ADR-005 `localStorage` login and an old `login()` signature; `src/__tests__/api/integration.test.ts`; `tests/unit/components/Button.test.tsx`), plus type errors in `auth-flow.test.tsx` and `tests/e2e/asset-hierarchy.spec.ts`. Fix or delete each; update the auth-flow test to the ADR-005 model (access token in memory, refresh cookie).
   - [ ] **TODO — UI walkthrough, never done:** REV-064 changed who can do what. Check no screen assumes otherwise: `operator` can no longer generate forecasts or ingest telemetry over HTTP; `operator` / `technician` / `viewer` can no longer create or edit dashboards; `site_manager` can no longer create or delete assets; `operator` / `viewer` lost report writes; non-admins lost model-governance writes.
   - [ ] **TODO:** `frontend/src/components/assets/asset-status-badge.tsx` still types status as `operational | maintenance | down | retired` — align to the database enum (`degraded`, `decommissioned`; there is no `retired`).
   - [ ] **TODO:** `frontend/src/types/api.ts` has `tags?: string` in one place and `string[]` in another; the backend now returns arrays everywhere.
