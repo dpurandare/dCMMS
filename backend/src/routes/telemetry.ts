@@ -3,6 +3,20 @@ import { kafkaService } from "../services/kafka.service";
 import { Pool } from "pg";
 import { authorize } from "../middleware/authorize";
 import { envOrDefault, requireSecret } from "../config/env";
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { sites } from "../db/schema";
+import { getTenantId } from "../utils/tenant";
+
+/**
+ * Telemetry rows carry a site_id string but no tenant column, so tenancy is enforced through
+ * site ownership: a tenant may write and read only the sites it owns (REV-054 proved the read
+ * returned every tenant's rows). Replaced by a tenant_id column in the Timescale design (REV-066).
+ */
+async function ownedSiteIds(tenantId: string): Promise<string[]> {
+  const rows = await db.select({ id: sites.id }).from(sites).where(eq(sites.tenantId, tenantId));
+  return rows.map((r) => r.id);
+}
 
 const telemetryRoutes: FastifyPluginAsync = async (server) => {
   // Import CSRF protection
@@ -124,10 +138,16 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
       const accepted: any[] = [];
       const rejected: any[] = [];
       const errors: any[] = [];
+      const ownedSites = new Set(await ownedSiteIds(getTenantId(request)));
 
       // Validate and enrich events
       for (const event of events) {
         try {
+          // A tenant may only write readings for its own sites (reported like a missing site)
+          if (!ownedSites.has(event.site_id)) {
+            throw new Error("site not found");
+          }
+
           // Generate event_id if not provided
           if (!event.event_id) {
             event.event_id = `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -267,10 +287,19 @@ const telemetryRoutes: FastifyPluginAsync = async (server) => {
           "timestamp, site_id, asset_id, sensor_type, sensor_id, value, unit, quality_flag";
       }
 
+      // Tenant scope: only sites this tenant owns, always applied (even with no filter)
+      const ownedSites = await ownedSiteIds(getTenantId(request));
+      if (query.site_id && !ownedSites.includes(query.site_id)) {
+        return reply.status(404).send({ statusCode: 404, error: "Not Found", message: "site not found" });
+      }
+      if (ownedSites.length === 0) {
+        return { data: [], count: 0, aggregation: aggregationLevel };
+      }
+
       // Build SQL query
-      let sql = `SELECT ${selectColumns} FROM ${tableName} WHERE 1=1`;
-      const params: any[] = [];
-      let paramIndex = 1;
+      let sql = `SELECT ${selectColumns} FROM ${tableName} WHERE site_id = ANY($1::text[])`;
+      const params: any[] = [ownedSites];
+      let paramIndex = 2;
 
       // Add filters
       if (query.site_id) {
