@@ -1606,6 +1606,16 @@ All five P0 items are code-complete. What remains in Phase 0 is not code: a push
     ```
   - **Status:** ✅ COMPLETE
 
+- [ ] **REV-065** - Residual tenant/ownership gaps the sweep does not reach or deliberately leaves 🟡 **P2**
+  - [ ] **Intra-tenant exposure, not cross-tenant (so out of the sweep's scope, but real):** any user with `read:notifications` can read a *colleague's* notification history and preferences (`/users/:userId/notification-…`); any admin with `update:users` can edit any user in their tenant; `DELETE /users/device-token` takes only a token, not the owner. Decide whether these should be self-or-admin.
+  - [ ] **Dashboards still have no ownership check** (carried from REV-064): `createdBy` is recorded but update/delete never compare it.
+  - [ ] **Role change is an unbuilt feature.** The edit-user form has a role selector but does not send it, and nothing uses the `manage:roles` permission. If wanted: a dedicated endpoint guarded by `manage:roles`, validated against the role enum, with an escalation limit (a `tenant_admin` must not be able to mint a `super_admin`). Do **not** re-open this by loosening the `PUT /users/:id` allow-list.
+  - [ ] **"Not found" reported as a 500 in places** (non-security, found by the sweep's coverage check): compliance report generation for an unknown template, `DELETE /users/device-token` for an unknown token. Same bare-`Error` pattern fixed in work orders, assets, crews and permits; worth one more pass over the remaining services.
+  - [ ] **Routes the sweep cannot exercise in a test environment** (declared in `EXPECTED_UNPROBED`): `POST /genai/chat` (needs `GEMINI_API_KEY`), `POST /telemetry` (publishes to Kafka), `POST /notifications/test` (real providers). They need a stubbed dependency before they can be swept.
+  - [ ] **Sweep blind spots to close:** multipart upload routes; a `super_admin` attacker (is cross-tenant access ever intended? it is currently undefined); more than one seeded row per table; foreign-key body fields not in `FK_FIELDS`; MQTT/Kafka ingestion.
+  - **Priority:** 🟡 P2
+  - **Status:** 🔴 Not Started
+
 ---
 
 # PHASE 3 — Periphery
@@ -1850,16 +1860,6 @@ code. Nothing here is scheduled into a phase until a decision lands.
     $ cd frontend && npx jest src/__tests__/rbac  ->  25 passed
     ```
   - **Status:** ✅ COMPLETE
-
-- [ ] **REV-065** - Residual tenant/ownership gaps the sweep does not reach or deliberately leaves 🟡 **P2**
-  - [ ] **Intra-tenant exposure, not cross-tenant (so out of the sweep's scope, but real):** any user with `read:notifications` can read a *colleague's* notification history and preferences (`/users/:userId/notification-…`); any admin with `update:users` can edit any user in their tenant; `DELETE /users/device-token` takes only a token, not the owner. Decide whether these should be self-or-admin.
-  - [ ] **Dashboards still have no ownership check** (carried from REV-064): `createdBy` is recorded but update/delete never compare it.
-  - [ ] **Role change is an unbuilt feature.** The edit-user form has a role selector but does not send it, and nothing uses the `manage:roles` permission. If wanted: a dedicated endpoint guarded by `manage:roles`, validated against the role enum, with an escalation limit (a `tenant_admin` must not be able to mint a `super_admin`). Do **not** re-open this by loosening the `PUT /users/:id` allow-list.
-  - [ ] **"Not found" reported as a 500 in places** (non-security, found by the sweep's coverage check): compliance report generation for an unknown template, `DELETE /users/device-token` for an unknown token. Same bare-`Error` pattern fixed in work orders, assets, crews and permits; worth one more pass over the remaining services.
-  - [ ] **Routes the sweep cannot exercise in a test environment** (declared in `EXPECTED_UNPROBED`): `POST /genai/chat` (needs `GEMINI_API_KEY`), `POST /telemetry` (publishes to Kafka), `POST /notifications/test` (real providers). They need a stubbed dependency before they can be swept.
-  - [ ] **Sweep blind spots to close:** multipart upload routes; a `super_admin` attacker (is cross-tenant access ever intended? it is currently undefined); more than one seeded row per table; foreign-key body fields not in `FK_FIELDS`; MQTT/Kafka ingestion.
-  - **Priority:** 🟡 P2
-  - **Status:** 🔴 Not Started
 
 **Not carried here — no decision needed:** Slack notifications (a real, working,
 already-registered integration exists at `routes/integrations.ts` +

@@ -34,7 +34,7 @@ This directory contains the master task list for the dCMMS project, broken down 
 | **12** | [Gap Remediation](12_Gap_Remediation.md) | 18 | 10 complete | ❓ Unverified | cross-cutting / frontend — no endpoint to probe; needs per-task review |
 | **13** | [GenAI Implementation](13_GenAI_Implementation.md) | 12 | 11 complete | 🔴 Not wired | 0/1 route files registered; never imported: genai.routes |
 | **14** | [Frontend Critical Fixes](14_Frontend_Critical_Fixes.md) | 30 | 20 complete | ❓ Unverified | cross-cutting / frontend — no endpoint to probe; needs per-task review |
-| **15** | [Review Remediation](15_Review_Remediation.md) | 70 | — | ⚠️ In Progress | Phases 0–1 executed 2026-09-19 |
+| **15** | [Review Remediation](15_Review_Remediation.md) | 77 | — | ⚠️ In Progress (34 of 77 done, 44%) | Phases 0–2 largely done; REV-038 (critical-path tests) complete 2026-11-12; Phase 3 not started; 3 product decisions BLOCKED on Deepak |
 | **99** | [Descoped Tasks](99_Descoped_Tasks.md)                     | Historical Archive                     | ⏹️ Archived |
 
 ## Status Legend
