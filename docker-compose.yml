@@ -16,10 +16,10 @@ services:
     environment:
       POSTGRES_DB: dcmms
       POSTGRES_USER: dcmms_user
-      POSTGRES_PASSWORD: dcmms_password_dev
+      POSTGRES_PASSWORD: ${DCMMS_POSTGRES_PASSWORD:-dcmms_password_dev}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
     ports:
-      - "5434:5432"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -40,13 +40,13 @@ services:
     restart: unless-stopped
     environment:
       QDB_PG_USER: admin
-      QDB_PG_PASSWORD: quest
+      QDB_PG_PASSWORD: ${DCMMS_QUESTDB_PASSWORD:-quest}
       QDB_HTTP_MIN_ENABLED: "true"
       QDB_TELEMETRY_ENABLED: "false"
     ports:
-      - "9000:9000" # HTTP/REST API
-      - "8812:8812" # PostgreSQL wire protocol
-      - "9009:9009" # InfluxDB line protocol
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9000:9000" # HTTP/REST API
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8812:8812" # PostgreSQL wire protocol
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9009:9009" # InfluxDB line protocol
     volumes:
       - questdb_data:/var/lib/questdb
     healthcheck:
@@ -67,9 +67,9 @@ services:
     environment:
       POSTGRES_DB: timescaledb
       POSTGRES_USER: timescale_user
-      POSTGRES_PASSWORD: timescale_password_dev
+      POSTGRES_PASSWORD: ${DCMMS_TIMESCALE_PASSWORD:-timescale_password_dev}
     ports:
-      - "5433:5432"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:5433:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./scripts/init-timescaledb.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -91,11 +91,11 @@ services:
     environment:
       CLICKHOUSE_DB: dcmms_analytics
       CLICKHOUSE_USER: clickhouse_user
-      CLICKHOUSE_PASSWORD: clickhouse_password_dev
+      CLICKHOUSE_PASSWORD: ${DCMMS_CLICKHOUSE_PASSWORD:-clickhouse_password_dev}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - "8123:8123" # HTTP interface
-      - "9004:9000" # Native client (port 9000 used by QuestDB)
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8123:8123" # HTTP interface
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9004:9000" # Native client (port 9000 used by QuestDB)
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./scripts/init-clickhouse.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -118,9 +118,9 @@ services:
     image: redis:7.2-alpine
     container_name: dcmms-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass redis_password_dev --bind 0.0.0.0
+    command: redis-server --appendonly yes --requirepass ${DCMMS_REDIS_PASSWORD:-redis_password_dev} --bind 0.0.0.0
     ports:
-      - "6379:6379"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -158,8 +158,8 @@ services:
       KAFKA_CFG_NUM_PARTITIONS: 12
       KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
     ports:
-      - "9093:9092" # Internal mapped to 9093 on host
-      - "9094:9094" # External
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9093:9092" # Internal mapped to 9093 on host
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9094:9094" # External
     volumes:
       - kafka_data:/bitnami/kafka
     healthcheck:
@@ -182,12 +182,12 @@ services:
       EMQX_HOST: 127.0.0.1
       EMQX_NODE__COOKIE: emqxsecretcookie
       EMQX_DASHBOARD__DEFAULT_USERNAME: admin
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: public
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${DCMMS_EMQX_DASHBOARD_PASSWORD:-public}
     ports:
-      - "1883:1883" # MQTT
-      - "8883:8883" # MQTT/SSL
-      - "8083:8083" # MQTT/WebSocket
-      - "18083:18083" # Dashboard
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:1883:1883" # MQTT
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8883:8883" # MQTT/SSL
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8083:8083" # MQTT/WebSocket
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:18083:18083" # Dashboard
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_log:/opt/emqx/log
@@ -209,10 +209,10 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_PASSWORD: ${DCMMS_MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9002:9000" # API (port 9000 used by QuestDB)
-      - "9001:9001" # Console
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9002:9000" # API (port 9000 used by QuestDB)
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9001:9001" # Console
     volumes:
       - minio_data:/data
     healthcheck:
@@ -232,11 +232,11 @@ services:
     restart: unless-stopped
     command: server -dev -dev-root-token-id="root"
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_ROOT_TOKEN_ID: ${DCMMS_VAULT_ROOT_TOKEN:-root}
       VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
       VAULT_ADDR: http://0.0.0.0:8200
     ports:
-      - "8200:8200"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8200:8200"
     cap_add:
       - IPC_LOCK
     healthcheck:
@@ -260,7 +260,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
     ports:
-      - "9095:9090"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:9095:9090"
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -281,10 +281,14 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${DCMMS_GRAFANA_ADMIN_PASSWORD:-admin}
+      # Read by the provisioned datasources (config/grafana-datasources.yml)
+      DCMMS_POSTGRES_PASSWORD: ${DCMMS_POSTGRES_PASSWORD:-dcmms_password_dev}
+      DCMMS_TIMESCALE_PASSWORD: ${DCMMS_TIMESCALE_PASSWORD:-timescale_password_dev}
+      DCMMS_QUESTDB_PASSWORD: ${DCMMS_QUESTDB_PASSWORD:-quest}
       GF_INSTALL_PLUGINS: grafana-clock-panel
     ports:
-      - "3002:3000"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
@@ -306,7 +310,7 @@ services:
     container_name: dcmms-loki
     restart: unless-stopped
     ports:
-      - "3100:3100"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki_data:/loki
@@ -330,7 +334,7 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       DYNAMIC_CONFIG_ENABLED: "true"
     ports:
-      - "8080:8080"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:8080:8080"
     depends_on:
       - kafka
     networks:
@@ -345,10 +349,10 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@dcmms.local
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${DCMMS_PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
-      - "5050:80"
+      - "${DCMMS_INFRA_BIND:-0.0.0.0}:5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -367,15 +371,24 @@ services:
     container_name: dcmms-backend
     restart: unless-stopped
     environment:
-      NODE_ENV: development
-      AUTO_SEED: "true"
+      NODE_ENV: ${DCMMS_NODE_ENV:-development}
+      AUTO_SEED: ${DCMMS_AUTO_SEED:-true}
       PORT: 3001
-      DATABASE_URL: postgresql://dcmms_user:dcmms_password_dev@postgres:5432/dcmms
-      REDIS_URL: redis://:redis_password_dev@redis:6379
+      DATABASE_URL: postgresql://dcmms_user:${DCMMS_POSTGRES_PASSWORD:-dcmms_password_dev}@postgres:5432/dcmms
+      REDIS_URL: redis://:${DCMMS_REDIS_PASSWORD:-redis_password_dev}@redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: redis_password_dev
+      REDIS_PASSWORD: ${DCMMS_REDIS_PASSWORD:-redis_password_dev}
       KAFKA_BROKERS: kafka:9092
+      # The backend REFUSES TO START without these (REV-001); the image has no .env (see .dockerignore),
+      # so before this they were never provided and this service could not boot. JWT_SECRET has no
+      # default on purpose: set DCMMS_JWT_SECRET (>= 64 chars) in .env.
+      JWT_SECRET: ${DCMMS_JWT_SECRET:-}
+      CLICKHOUSE_PASSWORD: ${DCMMS_CLICKHOUSE_PASSWORD:-clickhouse_password_dev}
+      QUESTDB_PASSWORD: ${DCMMS_QUESTDB_PASSWORD:-quest}
+      # Password for the seeded demo users (admin@example.com, ...). Empty = the publicly documented default.
+      SEED_USER_PASSWORD: ${DCMMS_SEED_USER_PASSWORD:-}
+      ADMIN_DEFAULT_PASSWORD: ${DCMMS_ADMIN_DEFAULT_PASSWORD:-}
     ports:
       - "3001:3001"
     volumes:
@@ -397,12 +410,12 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+        NEXT_PUBLIC_API_URL: ${DCMMS_PUBLIC_API_URL:-http://localhost:3001/api/v1}
       dockerfile: Dockerfile
     container_name: dcmms-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_API_URL: ${DCMMS_PUBLIC_API_URL:-http://localhost:3001/api/v1}
       HOSTNAME: "0.0.0.0"
     ports:
       - "3000:3000"

@@ -102,8 +102,15 @@ async function seed() {
       console.log(`  ✓ Using existing tenant: ${tenant.name}`);
     }
 
+    // Password for the seeded demo users. The default is documented in this public repo, so any
+    // environment that is reachable by anyone else MUST set SEED_USER_PASSWORD (a deployment sets
+    // DCMMS_SEED_USER_PASSWORD in .env; see docs/runbooks/rotate-secrets.md).
+    const DEFAULT_SEED_PASSWORD = "Password123!";
+    const seedPassword = process.env.SEED_USER_PASSWORD || DEFAULT_SEED_PASSWORD;
+    const usingDefaultSeedPassword = seedPassword === DEFAULT_SEED_PASSWORD;
+
     // Create password hash for dev users
-    const passwordHash = await AuthService.hashPassword("Password123!");
+    const passwordHash = await AuthService.hashPassword(seedPassword);
 
     // Create admin user
     await db
@@ -458,9 +465,18 @@ async function seed() {
     console.log(`   • 4 work orders`);
     console.log(`   • 4 work order tasks`);
     console.log("\n🔐 Login credentials:");
-    console.log("   • admin@example.com / Password123!");
-    console.log("   • manager@example.com / Password123!");
-    console.log("   • technician@example.com / Password123!");
+    if (usingDefaultSeedPassword) {
+      console.log("   • admin@example.com / Password123!");
+      console.log("   • manager@example.com / Password123!");
+      console.log("   • technician@example.com / Password123!");
+      console.log(
+        "   ⚠ This password is public (it is in the repository). Set SEED_USER_PASSWORD on anything reachable by others.",
+      );
+    } else {
+      // Never print a custom password into logs.
+      console.log("   • admin@example.com, manager@example.com, technician@example.com");
+      console.log("     (password: the value of SEED_USER_PASSWORD)");
+    }
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;

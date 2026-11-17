@@ -1,3 +1,6 @@
+# Passwords come from the Grafana container's environment (set in docker-compose.yml from the
+# DCMMS_* variables in .env), which Grafana expands in provisioning files. They are not literals here
+# because this file is in a public repository.
 # ==========================================
 # Grafana Data Sources Configuration
 # ==========================================
@@ -42,7 +45,7 @@ datasources:
     user: dcmms_user
     editable: true
     secureJsonData:
-      password: dcmms_password_dev
+      password: ${DCMMS_POSTGRES_PASSWORD}
     jsonData:
       sslmode: disable
       postgresVersion: 1600
@@ -57,7 +60,7 @@ datasources:
     user: timescale_user
     editable: true
     secureJsonData:
-      password: timescale_password_dev
+      password: ${DCMMS_TIMESCALE_PASSWORD}
     jsonData:
       sslmode: disable
       postgresVersion: 1600
@@ -72,7 +75,7 @@ datasources:
     user: admin
     editable: true
     secureJsonData:
-      password: quest
+      password: ${DCMMS_QUESTDB_PASSWORD}
     jsonData:
       sslmode: disable
       postgresVersion: 1200

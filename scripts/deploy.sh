@@ -53,6 +53,32 @@ echo -e "   • Secrets: HashiCorp Vault"
 echo -e "   • Monitoring: Prometheus, Grafana, Loki"
 echo ""
 
+# ── Preflight: secrets (see docs/runbooks/rotate-secrets.md) ──────────────────
+# The backend refuses to start without a JWT_SECRET (REV-001), and compose only passes one if
+# DCMMS_JWT_SECRET is set in .env. Without this check the backend crash-loops with no obvious cause.
+# Fail SAFE: anything other than positive evidence of a non-empty secret blocks the deploy (an earlier
+# version of this check used an invalid regex, which made grep error out and silently pass).
+if ! RENDERED_CONFIG=$($DOCKER_COMPOSE config 2>/dev/null); then
+  echo -e "${RED}❌ 'docker compose config' failed, so the secrets cannot be checked. Fix docker-compose.yml / .env first.${NC}"
+  exit 1
+fi
+JWT_LINE=$(echo "$RENDERED_CONFIG" | grep -E '^[[:space:]]+JWT_SECRET:' | head -1 || true)
+JWT_VALUE=$(echo "$JWT_LINE" | sed -E 's/^[[:space:]]*JWT_SECRET:[[:space:]]*//; s/^"(.*)"$/\1/; s/^'"'"'(.*)'"'"'$/\1/')
+if [ -z "$JWT_LINE" ] || [ -z "$JWT_VALUE" ] || [ "${#JWT_VALUE}" -lt 64 ]; then
+  echo -e "${RED}❌ DCMMS_JWT_SECRET is missing or shorter than 64 characters. The backend will refuse to start.${NC}"
+  echo -e "   Add it to .env:  ${YELLOW}DCMMS_JWT_SECRET=\$(openssl rand -base64 64 | tr -d '\\n')${NC}"
+  echo -e "   See docs/runbooks/rotate-secrets.md"
+  exit 1
+fi
+if echo "$RENDERED_CONFIG" | grep -q 'CHANGE-ME'; then
+  echo -e "${RED}❌ .env still contains the placeholder CHANGE-ME (DCMMS_PUBLIC_API_URL). Set the real address first.${NC}"
+  exit 1
+fi
+if echo "$RENDERED_CONFIG" | grep -qE 'host_ip: 0\.0\.0\.0' && [ -z "${DCMMS_INFRA_BIND:-}" ] && ! grep -qs '^DCMMS_INFRA_BIND=' .env; then
+  echo -e "${YELLOW}⚠️  DCMMS_INFRA_BIND is not set: database, cache, broker and admin ports are published on ALL interfaces.${NC}"
+  echo -e "   On a host reachable by others, set DCMMS_INFRA_BIND=127.0.0.1 in .env (see docs/runbooks/rotate-secrets.md)."
+fi
+
 # Start all infrastructure services
 $DOCKER_COMPOSE up -d \
   postgres \
@@ -151,7 +177,7 @@ echo -e "   ${GREEN}• ClickHouse:${NC}     http://localhost:8123"
 echo -e "   ${GREEN}• Redis:${NC}          localhost:6379"
 echo -e "   ${GREEN}• Kafka:${NC}          localhost:9094"
 echo -e "   ${GREEN}• EMQX Dashboard:${NC} http://localhost:18083 (admin/public)"
-echo -e "   ${GREEN}• MinIO Console:${NC}  http://localhost:9001 (minioadmin/minioadmin)"
+echo -e "   ${GREEN}• MinIO Console:${NC}  http://localhost:9001 (user minioadmin; password DCMMS_MINIO_ROOT_PASSWORD from .env, default minioadmin)"
 echo -e "   ${GREEN}• Vault:${NC}          http://localhost:8200 (token: root)"
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -164,9 +190,9 @@ echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}🔐 Default Login Credentials${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "   ${GREEN}• Admin:${NC}          admin@example.com / Password123!"
-echo -e "   ${GREEN}• Manager:${NC}        manager@example.com / Password123!"
-echo -e "   ${GREEN}• Technician:${NC}     technician@example.com / Password123!"
+echo -e "   ${GREEN}• Admin:${NC}          admin@example.com  (password: DCMMS_SEED_USER_PASSWORD from .env; the public default Password123! if unset)"
+echo -e "   ${GREEN}• Manager:${NC}        manager@example.com  (same password)"
+echo -e "   ${GREEN}• Technician:${NC}     technician@example.com  (same password)"
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
